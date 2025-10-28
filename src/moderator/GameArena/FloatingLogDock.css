@@ -1,0 +1,73 @@
+/* src/components/moderator/GameArena/FloatingLogDock.css */
+.fab-log {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: radial-gradient(circle, #223, #111);
+  color: #ffd700;
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  transition: transform .2s, background .2s, box-shadow .2s;
+}
+.fab-log:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,0.55); }
+
+.log-sheet {
+  position: fixed;
+  right: 10px;
+  bottom: 86px; /* nad FAB */
+  width: min(520px, 90vw);
+  max-height: 50vh;
+  background: rgba(0,0,0,0.85);
+  border: 2px solid #00d4ff;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  transform: translateY(20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .2s ease, opacity .2s ease;
+  z-index: 40;
+}
+.log-sheet.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.sheet-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 2px solid rgba(0,212,255,0.2);
+  color: #00d4ff;
+}
+.sheet-header h3 { margin: 0; font-size: 1.1rem; }
+.quick-stats { display: flex; gap: 8px; }
+.qs { padding: 4px 8px; border-radius: 6px; font-weight: 700; }
+.qs.good { background: rgba(76,175,80,0.2); border: 1px solid #4caf50; color: #aef1b0; }
+.qs.evil { background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #ffc4bd; }
+
+.sheet-content {
+  padding: 10px 12px;
+  max-height: calc(50vh - 54px);
+  overflow-y: auto;
+}
+.sheet-content::-webkit-scrollbar { width: 8px; }
+.sheet-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+.sheet-content::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 6px; }
+
+.event-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 6px; border-left: 3px solid rgba(0,212,255,0.25);
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px; margin-bottom: 6px;
+}
+.dot { color: #00d4ff; font-weight: 900; }
+.text { color: #ddd; line-height: 1.35; font-size: 0.95rem; }
+
+.log-empty { opacity: 0.6; text-align: center; padding: 20px; }

@@ -1,0 +1,44 @@
+.center-circle {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 280px; height: 280px; z-index: 10;
+  z-index: 3; /* nad hráči, pokud chceš mít ovládání vždy klikatelné */
+}
+.center-info {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,212,255,0.1) 0%, rgba(0,0,0,0.8) 100%);
+  border: 4px solid #00d4ff;
+  box-shadow: 0 0 30px rgba(0,212,255,0.4), inset 0 0 30px rgba(0,212,255,0.2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+}
+.phase-display { font-size: 4rem; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.8} }
+.round-display { font-size: 1.8rem; font-weight: bold; color: #00d4ff; text-shadow: 0 0 10px rgba(0,212,255,0.8); }
+.alive-count { font-size: 1.2rem; color: #ffd700; opacity: 0.9; }
+
+.center-controls { position: absolute; bottom: -80px; left: 50%; transform: translateX(-50%); width: 100%; display: flex; justify-content: center; }
+.btn-phase-center {
+  padding: 15px 35px; font-size: 1.2rem; border: none; border-radius: 25px; color: #fff; font-weight: bold; cursor: pointer;
+  transition: all .3s; box-shadow: 0 5px 20px rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+}
+.btn-night { background: linear-gradient(135deg, #2c3e50, #34495e); }
+.btn-night:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(44,62,80,0.6); }
+.btn-day { background: linear-gradient(135deg, #f39c12, #e67e22); }
+.btn-day:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(243,156,18,0.6); }
+
+.game-over-center { text-align: center; color: #e74c3c; }
+.game-over-center h3 { margin: 0; font-size: 1.5rem; text-shadow: 0 0 10px rgba(231,76,60,0.8); }
+.countdown {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(0,0,0,0.5);
+}
+
+.center-info::after {
+  content: '';
+  position: absolute; inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(#ffd54f var(--pct, 0%), rgba(255,255,255,0.1) 0);
+  z-index: -1;
+  filter: blur(0.5px);
+}

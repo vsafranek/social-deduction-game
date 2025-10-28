@@ -1,0 +1,24 @@
+.game-arena {
+  position: fixed;         /* bylo relative */
+  inset: 0;                /* full screen bez ohledu na rodiče */
+  overflow: hidden;
+  transition: background 1s ease;
+  z-index: 1;              /* pod floating panely */
+}
+.game-arena.night { background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a14 100%); }
+.game-arena.day { background: radial-gradient(circle at center, #3a4f70 0%, #1e2a3a 100%); }
+.game-arena.end { background: radial-gradient(circle at center, #2c1a1a 0%, #1a0a0a 100%); }
+
+.atmosphere-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.3; }
+.atmosphere-overlay.night {
+  background:
+    radial-gradient(2px 2px at 20% 30%, white, transparent),
+    radial-gradient(2px 2px at 60% 70%, white, transparent),
+    radial-gradient(1px 1px at 50% 50%, white, transparent),
+    radial-gradient(1px 1px at 80% 10%, white, transparent),
+    radial-gradient(2px 2px at 90% 60%, white, transparent);
+  background-size: 200% 200%;
+  animation: stars 3s ease-in-out infinite;
+}
+@keyframes stars { 0%,100%{opacity:.3} 50%{opacity:.6} }
+.atmosphere-overlay.day { background: radial-gradient(circle at 50% 20%, rgba(255,223,0,0.1) 0%, transparent 50%); }

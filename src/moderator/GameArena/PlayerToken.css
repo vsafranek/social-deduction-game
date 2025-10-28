@@ -1,0 +1,83 @@
+.player-token {
+  position: absolute; transform: translate(-50%, -50%); transition: all .5s ease; cursor: pointer;
+}
+.player-avatar { position: relative; width: 80px; height: 80px; }
+.avatar-ring {
+  position: absolute; inset: 0; border-radius: 50%; border: 4px solid #00d4ff;
+  box-shadow: 0 0 20px rgba(0,212,255,0.5), inset 0 0 20px rgba(0,212,255,0.2);
+  animation: ring-pulse 2s ease-in-out infinite;
+}
+@keyframes ring-pulse {
+  0%,100% { box-shadow: 0 0 20px rgba(0,212,255,0.5), inset 0 0 20px rgba(0,212,255,0.2); }
+  50% { box-shadow: 0 0 30px rgba(0,212,255,0.8), inset 0 0 30px rgba(0,212,255,0.4); }
+}
+.avatar-content {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 68px; height: 68px; border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display:flex; align-items:center; justify-content:center;
+  font-size: 2rem; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.player-token.dead .avatar-ring { border-color: #e74c3c; box-shadow: 0 0 20px rgba(231,76,60,0.5), inset 0 0 20px rgba(231,76,60,0.2); animation: none; }
+.player-token.dead .avatar-content { background: linear-gradient(135deg, #555, #333); opacity: .5; filter: grayscale(100%); }
+.death-shroud { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 3rem; z-index: 10; animation: death-float 3s ease-in-out infinite; }
+@keyframes death-float { 0%,100%{transform:translate(-50%,-50%) translateY(0)} 50%{transform:translate(-50%,-50%) translateY(-5px)} }
+
+.player-token-info {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 10px;
+  background: rgba(0,0,0,0.9); padding: 12px 16px; border-radius: 10px; border: 2px solid #00d4ff;
+  min-width: 150px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 100; backdrop-filter: blur(10px);
+}
+.player-token:hover .player-token-info { opacity: 1; }
+.token-name { font-size: 1rem; font-weight: bold; color: #00d4ff; margin-bottom: 5px; text-align: center; }
+.token-role { font-size: 0.9rem; color: #ffd700; text-align: center; }
+.token-modifier { opacity: 0.8; }
+
+.action-glow { position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; border-radius: 50%; z-index: 5; }
+.night-glow { background: #64b5f6; box-shadow: 0 0 15px #64b5f6; animation: glow-pulse 1.5s ease-in-out infinite; }
+.day-glow { background: #ffd700; box-shadow: 0 0 15px #ffd700; animation: glow-pulse 1.5s ease-in-out infinite; }
+@keyframes glow-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.2)} }
+
+
+.player-public-info {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  min-width: 100px;
+  text-align: center;
+  backdrop-filter: blur(6px);
+}
+
+.token-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e6f7ff;
+  margin: 0;
+}
+
+.token-dead {
+  margin-top: 3px;
+  font-size: 0.8rem;
+  color: #ffb3b3;
+}
+
+/* hlasovací badge */
+.vote-badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+  color: #111;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 16px;
+  border: 2px solid rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  font-size: 0.9rem;
+}

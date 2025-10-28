@@ -1,0 +1,36 @@
+{
+  "name": "social-deduction-game",
+  "version": "1.0.0",
+  "description": "Sociální dedukční hra s moderátorem a mobilními hráči",
+  "main": "electron/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "vite": "vite --host 0.0.0.0",
+    "electron": "wait-on http://localhost:5173 && electron .",
+    "start": "concurrently \"npm:vite\" \"npm:electron\"",
+    "build": "vite build",
+    "package": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@ngrok/ngrok": "^1.5.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.5",
+    "mongoose": "^8.19.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "uui": "^1.0.7",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0",
+    "vite": "^5.4.0",
+    "wait-on": "^8.0.0"
+  }
+}
