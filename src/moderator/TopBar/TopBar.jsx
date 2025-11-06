@@ -1,30 +1,56 @@
-import React from 'react';
+// src/moderator/TopBar/TopBar.jsx
+import React, { useState } from 'react';
 import './TopBar.css';
 
-function TopBar({ gameState, onConnectionClick }) {
+function TopBar({ gameState, onConnectionClick, onDevToggle }) {
+  const [isDevPanelOpen, setIsDevPanelOpen] = useState(false);
+  
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isInLobby = gameState?.game?.phase === 'lobby';
+
+  // TopBar se zobrazí pouze v lobby
+  if (!isInLobby) {
+    return null;
+  }
+
+  const handleDevToggle = () => {
+    setIsDevPanelOpen(!isDevPanelOpen);
+    if (onDevToggle) {
+      onDevToggle(!isDevPanelOpen);
+    }
+  };
+
   return (
-    <div className="top-bar">
-      <div className="top-bar-left">
-        <h1>🎮 Moderátor</h1>
-        {gameState && (
-          <div className="game-status">
-            <span className={`phase-badge ${gameState.game.phase}`}>
-              {gameState.game.phase === 'lobby' && '🏠 LOBBY'}
-              {gameState.game.phase === 'night' && '🌙 NOC'}
-              {gameState.game.phase === 'day' && '☀️ DEN'}
-              {gameState.game.phase === 'end' && '🏁 KONEC'}
-            </span>
-            {gameState.game.phase !== 'lobby' && (
-              <span className="round-badge">Kolo {gameState.game.round}</span>
-            )}
-          </div>
-        )}
+    <div className="topbar">
+      <div className="topbar-left">
+        <h1>🎮 Lobby - Čekání na Hráče</h1>
       </div>
-      
-      <div className="top-bar-right">
-        <button className="btn-connection" onClick={onConnectionClick}>
-          📱 Připojení
+
+      <div className="topbar-right">
+        {/* Počet připojených hráčů */}
+        <div className="player-count">
+          👥 {gameState?.players?.length || 0} hráčů
+        </div>
+
+        {/* Info tlačítko */}
+        <button 
+          className="topbar-button info-button"
+          onClick={onConnectionClick}
+          title="Zobrazit room code a URL pro připojení"
+        >
+          ℹ️ Připojení
         </button>
+
+        {/* Dev tlačítko - pouze v development */}
+        {isDevelopment && (
+          <button 
+            className={`topbar-button dev-button ${isDevPanelOpen ? 'active' : ''}`}
+            onClick={handleDevToggle}
+            title="Otevřít dev panel (pro testování)"
+          >
+            🛠️ Dev Panel
+          </button>
+        )}
       </div>
     </div>
   );

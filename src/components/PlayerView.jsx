@@ -1,3 +1,4 @@
+// src/player/PlayerView.jsx
 import React, { useEffect, useState } from 'react';
 import { gameApi } from '../api/gameApi';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,7 +14,6 @@ function PlayerView() {
     const urlParams = new URLSearchParams(window.location.search);
     const urlRoomCode = urlParams.get('room');
     const forceNew = urlParams.get('newSession');
-    
     const storageKey = `sessionId_${urlRoomCode || 'default'}`;
     
     if (forceNew === '1') {
@@ -24,7 +24,6 @@ function PlayerView() {
     }
     
     let sid = localStorage.getItem(storageKey);
-    
     if (!sid) {
       sid = uuidv4();
       localStorage.setItem(storageKey, sid);
@@ -32,26 +31,39 @@ function PlayerView() {
     } else {
       console.log('🆔 Using EXISTING session (reconnect):', sid);
     }
-    
     return sid;
   });
-  
+
   const [playerId, setPlayerId] = useState(null);
   const [myRole, setMyRole] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // ✅ Auto-join z URL parametrů (pro dev hráče)
   useEffect(() => {
-    // Zkus načíst room code z URL (pokud přišel přes link)
     const urlParams = new URLSearchParams(window.location.search);
     const urlRoomCode = urlParams.get('room');
+    const urlPlayerName = urlParams.get('playerName');
     
     if (urlRoomCode) {
       setRoomCode(urlRoomCode);
       console.log('🔑 Room code z URL:', urlRoomCode);
     }
+    
+    if (urlPlayerName) {
+      setPlayerName(urlPlayerName);
+      console.log('👤 Player name z URL:', urlPlayerName);
+    }
   }, []);
+
+  // ✅ Automatické přihlášení, pokud máme room code a jméno z URL
+  useEffect(() => {
+    if (playerName && roomCode && step === 'login' && !loading) {
+      console.log('🤖 Auto-login z URL:', { roomCode, playerName });
+      performLogin(playerName, roomCode);
+    }
+  }, [playerName, roomCode]);
 
   useEffect(() => {
     if (gameId && playerId) {
@@ -62,43 +74,35 @@ function PlayerView() {
     }
   }, [gameId, playerId]);
 
-  const handleLogin = async () => {
-    // Validace
-    if (!playerName.trim()) {
-      setError('Zadej své jméno');
+  const performLogin = async (name, room) => {
+    if (!name.trim() || !room.trim()) {
+      setError('Chybí jméno nebo room kód');
       return;
     }
-    
-    if (!roomCode.trim()) {
-      setError('Zadej room kód');
-      return;
-    }
-    
-    if (roomCode.length !== 4 || !/^\d+$/.test(roomCode)) {
+
+    if (room.length !== 4 || !/^\d+$/.test(room)) {
       setError('Room kód musí být 4 číslice');
       return;
     }
 
     setLoading(true);
     setError('');
-    
+
     try {
-      console.log('🚪 Joining with:', { roomCode, playerName, sessionId });
+      console.log('🚪 Joining with:', { room, name, sessionId });
+      const result = await gameApi.joinGameByCode(room, name, sessionId);
       
-      const result = await gameApi.joinGameByCode(roomCode, playerName, sessionId);
       console.log('Join result:', result);
-      
       if (result.error) {
         setError(result.error);
         setLoading(false);
         return;
       }
-      
+
       console.log('✅ Připojen! GameId:', result.gameId, 'PlayerId:', result.playerId);
       
       // Uložit sessionId pro tento room code
-      localStorage.setItem(`sessionId_${roomCode}`, sessionId);
-      
+      localStorage.setItem(`sessionId_${room}`, sessionId);
       setGameId(result.gameId);
       setPlayerId(result.playerId);
       setStep('playing');
@@ -113,13 +117,25 @@ function PlayerView() {
     }
   };
 
+  const handleLogin = async () => {
+    // Manuální login
+    if (!playerName.trim()) {
+      setError('Zadej své jméno');
+      return;
+    }
+    if (!roomCode.trim()) {
+      setError('Zadej room kód');
+      return;
+    }
+
+    await performLogin(playerName, roomCode);
+  };
+
   const fetchGameState = async () => {
     if (!gameId) return;
-    
     try {
       const data = await gameApi.getGameState(gameId);
       setGameState(data);
-      
       if (data.game.phase !== 'lobby' && !myRole) {
         const roleData = await gameApi.getPlayerRole(gameId, sessionId);
         setMyRole(roleData.role);
@@ -130,12 +146,8 @@ function PlayerView() {
   };
 
   const performNightAction = async (targetId) => {
-    const action = myRole === 'Šerif' ? 'investigate' : 
-                   myRole === 'Doktor' ? 'heal' : 
-                   myRole === 'Mafián' ? 'kill' : null;
-    
+    const action = myRole === 'Šerif' ? 'investigate' : myRole === 'Doktor' ? 'heal' : myRole === 'Mafián' ? 'kill' : null;
     if (!action || !playerId) return;
-    
     try {
       await gameApi.nightAction(gameId, playerId, targetId, action);
       await fetchGameState();
@@ -146,7 +158,6 @@ function PlayerView() {
 
   const vote = async (targetId) => {
     if (!playerId) return;
-    
     try {
       await gameApi.vote(gameId, playerId, targetId);
       await fetchGameState();
@@ -159,211 +170,109 @@ function PlayerView() {
   if (step === 'login') {
     return (
       <div className="player-login">
-        <h1>🎮 Připoj se do hry</h1>
-        <p className="welcome-text">Zadej room kód a své jméno</p>
-        
-        <div className="login-form">
-          {/* Room Code Input */}
-          <div className="form-group">
-            <label htmlFor="roomCode">Room Kód</label>
-            <input
-              id="roomCode"
-              type="text"
-              placeholder="4 číslice (např. 1234)"
-              value={roomCode}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                setRoomCode(value);
-              }}
-              maxLength={4}
-              disabled={loading}
-              autoFocus={!roomCode}
-              className="room-code-input"
-              style={{
-                fontSize: '1.5rem',
-                letterSpacing: '0.5rem',
-                textAlign: 'center',
-                fontFamily: 'monospace'
-              }}
-            />
-          </div>
-          
-          {/* Player Name Input */}
-          <div className="form-group">
-            <label htmlFor="playerName">Tvé Jméno</label>
-            <input
-              id="playerName"
-              type="text"
-              placeholder="Zadej své jméno"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-              maxLength={20}
-              disabled={loading}
-              autoFocus={roomCode.length === 4}
-            />
-          </div>
-          
-          {error && <div className="error-message">{error}</div>}
-          
-          <button 
-            onClick={handleLogin}
-            className="btn-connect"
-            disabled={!playerName.trim() || !roomCode.trim() || loading}
-          >
-            {loading ? 'Připojuji se...' : '🚀 Vstoupit do hry'}
-          </button>
-        </div>
-        
-        <div className="help-section">
-          <h3>💡 Jak se připojit?</h3>
-          <ol>
-            <li>Získej <strong>room kód</strong> od moderátora (4 číslice)</li>
-            <li>Zadej room kód výše</li>
-            <li>Zadej své jméno</li>
-            <li>Klikni "Vstoupit do hry"</li>
-          </ol>
-          
-          <div style={{marginTop: '20px', padding: '10px', background: 'rgba(0,212,255,0.1)', borderRadius: '8px'}}>
-            <p style={{fontSize: '0.9rem', margin: 0}}>
-              💡 <strong>Tip:</strong> Ujisti se že jsi na stejné WiFi síti jako moderátor
-            </p>
-          </div>
-          
-          {/* Debug info */}
-          <details style={{marginTop: '20px', fontSize: '0.85rem', opacity: 0.7}}>
-            <summary style={{cursor: 'pointer'}}>🔧 Info pro vývojáře</summary>
-            <p style={{marginTop: '10px', wordBreak: 'break-all'}}>
-              SessionId: {sessionId.substring(0, 12)}...
-            </p>
-          </details>
-        </div>
+        <h2>🎮 Připoj se ke hře</h2>
+        <p>Zadej room kód a své jméno</p>
+
+        <input
+          type="text"
+          placeholder="Room kód (4 číslice)"
+          value={roomCode}
+          onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+          disabled={loading}
+          maxLength="4"
+        />
+
+        <input
+          type="text"
+          placeholder="Tvoje jméno"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          disabled={loading}
+        />
+
+        <button onClick={handleLogin} disabled={loading}>
+          {loading ? 'Připojuji...' : '✅ Připojit se'}
+        </button>
+
+        {error && <div className="error">{error}</div>}
+
+        <small>Tip: Ujisti se že jsi na stejné WiFi síti jako moderátor</small>
+        <small>SessionId: {sessionId.substring(0, 12)}...</small>
       </div>
     );
   }
 
-  // Loading
   if (!gameState) {
     return (
-      <div className="loading">
+      <div className="player-loading">
         <div className="spinner"></div>
         <p>Načítání hry...</p>
       </div>
     );
   }
 
-  const me = gameState.players.find(p => p._id === playerId);
-  const canAct = me && me.alive;
+  const aliveCount = gameState.players.filter(p => p.alive).length;
 
+  // Playing screen
   return (
     <div className="player-view">
-      <div className="player-header">
-        <h1>👤 {playerName}</h1>
-        <h2>🎭 {myRole || 'Čekám na start...'}</h2>
-        <div className="phase-indicator">
-          Fáze: <span className={`phase ${gameState.game.phase}`}>
-            {gameState.game.phase.toUpperCase()}
-          </span>
-        </div>
+      <h1>{playerName}</h1>
+      
+      <div className="game-info">
+        <p><strong>Fáze:</strong> {gameState.game.phase}</p>
+        <p><strong>Připojeno hráčů:</strong> {gameState.players.length}</p>
+        <p><strong>Živých hráčů:</strong> {aliveCount}</p>
+        {myRole && <p><strong>Tvá role:</strong> {myRole}</p>}
       </div>
 
-      {gameState.game.phase === 'lobby' && (
-        <div className="waiting">
-          <h2>⏳ Čekáme na start hry...</h2>
-          <p>Připojeno hráčů: <strong>{gameState.players.length}</strong></p>
-          <div className="player-list">
-            {gameState.players.map(p => (
-              <span key={p._id} className="player-badge">{p.name}</span>
+      {gameState.game.phase === 'night' && myRole && (
+        <div className="night-actions">
+          <h3>{myRole === 'Šerif' && '🔍 Vyber hráče k vyšetření'}
+                {myRole === 'Doktor' && '💉 Vyber hráče k zachránění'}
+                {myRole === 'Mafián' && '🔪 Vyber oběť k zabití'}</h3>
+          
+          <div className="players-list">
+            {gameState.players.map(player => (
+              <button 
+                key={player._id}
+                onClick={() => performNightAction(player._id)}
+                disabled={!player.alive}
+                className={`player-button ${player.alive ? 'alive' : 'dead'}`}
+              >
+                {player.name} {player.alive ? '✅' : '💀'}
+              </button>
             ))}
           </div>
+          <p>✅ Akce provedena</p>
         </div>
       )}
 
-      {gameState.game.phase === 'night' && canAct && myRole !== 'Občan' && (
-        <div className="night-actions">
-          <h2>🌙 Noční Akce</h2>
-          <p className="role-description">
-            {myRole === 'Šerif' && '🔍 Vyber hráče k vyšetření'}
-            {myRole === 'Doktor' && '💉 Vyber hráče k zachránění'}
-            {myRole === 'Mafián' && '🔪 Vyber oběť k zabití'}
-          </p>
-          
-          <div className="target-list">
-            {gameState.players
-              .filter(p => p._id !== playerId && p.alive)
-              .map(player => (
-                <button
-                  key={player._id}
-                  onClick={() => performNightAction(player._id)}
-                  disabled={me.nightAction?.targetId !== null}
-                  className="target-button"
-                >
-                  {player.name}
-                </button>
-              ))}
-          </div>
-          
-          {me.nightAction?.targetId && (
-            <p className="action-done">✅ Akce provedena</p>
-          )}
-        </div>
-      )}
-
-      {gameState.game.phase === 'night' && (myRole === 'Občan' || !canAct) && (
-        <div className="waiting">
-          <h2>🌙 Je noc...</h2>
-          <p>Ostatní provádějí své akce. Vyčkej na rozhodnutí moderátora.</p>
-        </div>
-      )}
-
-      {gameState.game.phase === 'day' && canAct && (
+      {gameState.game.phase === 'day' && (
         <div className="day-voting">
-          <h2>☀️ Denní Hlasování</h2>
-          <p>Hlasuj o tom, kdo bude popraven</p>
+          <h3>🗳️ Hlasuj o tom, kdo bude popraven</h3>
           
-          <div className="target-list">
-            {gameState.players
-              .filter(p => p._id !== playerId && p.alive)
-              .map(player => (
-                <button
-                  key={player._id}
-                  onClick={() => vote(player._id)}
-                  disabled={me.hasVoted}
-                  className="target-button"
-                >
-                  {player.name}
-                </button>
-              ))}
+          <div className="players-list">
+            {gameState.players.map(player => (
+              <button 
+                key={player._id}
+                onClick={() => vote(player._id)}
+                disabled={!player.alive}
+                className={`player-button ${player.alive ? 'alive' : 'dead'}`}
+              >
+                {player.name} {player.alive ? '✅' : '💀'}
+              </button>
+            ))}
           </div>
-          
-          {me.hasVoted && (
-            <p className="action-done">✅ Hlasoval jsi</p>
-          )}
+          <p>✅ Hlasoval jsi</p>
         </div>
       )}
 
-      {!canAct && gameState.game.phase !== 'lobby' && gameState.game.phase !== 'end' && (
-        <div className="dead-screen">
-          <h2>💀 Jsi mrtvý</h2>
+      {gameState.game.phase === 'spectator' && (
+        <div className="spectator">
           <p>Sleduj zbývající hru jako divák</p>
-        </div>
-      )}
-
-      {gameState.game.phase === 'end' && (
-        <div className="game-over">
-          <h2>🏁 Hra Skončila!</h2>
           <p>Zkontroluj hlavní obrazovku pro výsledky</p>
         </div>
       )}
-
-      <div className="alive-players">
-        <h3>👥 Živí Hráči ({gameState.players.filter(p => p.alive).length}):</h3>
-        <div className="player-chips">
-          {gameState.players.filter(p => p.alive).map(p => (
-            <span key={p._id} className="player-chip">{p.name}</span>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

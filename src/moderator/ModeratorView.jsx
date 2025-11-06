@@ -4,6 +4,7 @@ import TopBar from './TopBar/TopBar';
 import ConnectionDropdown from './ConnectionDropdown/ConnectionDropdown';
 import LobbyLayout from './Lobby/LobbyLayout';
 import GameArena from './GameArena/GameArena';
+import DevMultiPlayerTool from './DevMultiPlayerTool/DevMultiPlayerTool';
 import './ModeratorView.css';
 
 function ModeratorView() {
@@ -13,6 +14,7 @@ function ModeratorView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showConnectionBox, setShowConnectionBox] = useState(false);
+  const [showDevPanel, setShowDevPanel] = useState(false);
 
   useEffect(() => {
     initializeGame();
@@ -32,7 +34,6 @@ function ModeratorView() {
       if (!healthResponse.ok) {
         throw new Error(`Health check failed: ${healthResponse.status}`);
       }
-      
       const health = await healthResponse.json();
       const { ip, port } = health;
       
@@ -58,13 +59,18 @@ function ModeratorView() {
 
   const fetchGameState = async () => {
     if (!gameId) return;
-    
     try {
       const data = await gameApi.getGameState(gameId);
       setGameState(data);
     } catch (error) {
       console.error('❌ Chyba při načítání stavu:', error);
     }
+  };
+
+  const handleDevPlayersConnected = async (players) => {
+    console.log('✅ Dev hráči připojeni:', players);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await fetchGameState();
   };
 
   const startGame = async (finalRoleConfig, modifierConfig) => {
@@ -100,57 +106,65 @@ function ModeratorView() {
 
   if (error) {
     return (
-      <div className="loading-screen">
+      <div className="error-container">
         <h2>❌ Chyba</h2>
         <p>{error}</p>
-        <button onClick={initializeGame}>Zkusit znovu</button>
+        <button onClick={() => window.location.reload()}>
+          Vytvářím novou hru...
+        </button>
       </div>
     );
   }
 
-  if (loading || !connectionInfo) {
+  if (loading || !gameState) {
     return (
-      <div className="loading-screen">
+      <div className="loading-container">
         <div className="spinner"></div>
-        <h2>Připravuji hru...</h2>
-        <p>Vytvářím novou hru...</p>
+        <p>Vytvářím hru...</p>
       </div>
     );
   }
+
+  const isInLobby = gameState?.game?.phase === 'lobby';
 
   return (
     <div className="moderator-view">
-      
+      {/* TopBar - pouze v lobby */}
+      {isInLobby && (
+        <TopBar 
+          gameState={gameState} 
+          onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
+          onDevToggle={setShowDevPanel}
+        />
+      )}
 
-      {gameState && (
-        <>
-        {gameState.game.phase === 'lobby' ? (
-          <>
-              <TopBar 
-              gameState={gameState}
-              onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
-              />
-              
-              {showConnectionBox && (
-                <ConnectionDropdown 
-                  connectionInfo={connectionInfo}
-                  onClose={() => setShowConnectionBox(false)}
-                />
-              )}
+      {showConnectionBox && (
+        <ConnectionDropdown
+          connectionInfo={connectionInfo}
+          onClose={() => setShowConnectionBox(false)}
+        />
+      )}
 
-              <LobbyLayout 
-                gameState={gameState}
-                onStartGame={startGame}
-              />
-            </>
-          ) : (
-            // ModeratorView.jsx
-            <GameArena 
-              gameState={gameState} 
-              onRefresh={fetchGameState}  // ← předej funkci pro refresh
-            />
-          )}
-        </>
+      {/* DEV TOOL - zobrazí se pouze v dev módu a v lobby */}
+      {isInLobby && (
+        <DevMultiPlayerTool 
+          roomCode={connectionInfo?.roomCode}
+          onPlayersConnected={handleDevPlayersConnected}
+          isVisible={showDevPanel}
+        />
+      )}
+
+      {isInLobby ? (
+        <LobbyLayout
+          gameState={gameState}
+          onStartGame={startGame}
+        />
+      ) : (
+        <GameArena
+          gameState={gameState}
+          onEndNight={endNight}
+          onEndDay={endDay}
+        />
       )}
     </div>
   );

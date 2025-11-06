@@ -369,11 +369,19 @@ router.post('/create', async (req, res) => {
   try {
     const roomCode = (Math.floor(1000 + Math.random() * 9000)).toString();
     const { ip, port } = req.body || {};
-    const game = new Game({ roomCode, ip, port });
+    
+    const game = new Game({ 
+      roomCode, 
+      ip, 
+      port,
+      phase: 'lobby',  
+      round: 0,
+      timerState: { phaseEndsAt: null }  
+    });
+    
     await game.save();
-
     await GameLog.create({ gameId: game._id, message: `Game created. Room: ${roomCode}` });
-
+    
     res.json({ success: true, gameId: game._id, roomCode });
   } catch (e) {
     console.error('create error:', e);

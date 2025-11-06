@@ -1,4 +1,5 @@
-const { app, BrowserWindow } = require('electron');
+// electron/main.js
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -7,6 +8,8 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const os = require('os');
 
 let mainWindow;
+let playerWindows = {}; // Ukládáme otevřená player okna
+
 const expressApp = express();
 const PORT = 3001;
 const VITE_PORT = 5173;
@@ -44,34 +47,29 @@ console.log('📦 Middleware configured');
 
 app.whenReady().then(async () => {
   console.log('⚡ Electron ready, starting server...');
-  
   try {
     console.log('🔌 Connecting to MongoDB...');
     const connectDB = require('./database');
     await connectDB();
     console.log('✅ MongoDB connected successfully');
-    
     console.log('📡 Registering API routes...');
     const gameRoutes = require('./routes/gameRoutes');
     expressApp.use('/api/game', gameRoutes);
     console.log('✅ API routes registered at /api/game');
-    
+
     // Health check
     expressApp.get('/api/health', (req, res) => {
       res.json({ status: 'ok', ip: LOCAL_IP, port: PORT });
     });
-    
-    // Vite proxy in development - FIX MEMORY LEAK
+
+    // Vite proxy in development
     if (isDev) {
       console.log('🔧 Development mode - setting up Vite proxy...');
-      
-      // Create proxy ONCE
       const viteProxy = createProxyMiddleware({
         target: `http://localhost:${VITE_PORT}`,
         changeOrigin: true,
         ws: true,
         logLevel: 'silent',
-        // FIX: Increase max listeners
         onProxyReq: (proxyReq) => {
           proxyReq.setMaxListeners(50);
         },
@@ -79,15 +77,13 @@ app.whenReady().then(async () => {
           proxyRes.setMaxListeners(50);
         }
       });
-      
-      // Use proxy for non-API requests
+
       expressApp.use((req, res, next) => {
         if (req.path.startsWith('/api')) {
           return next();
         }
         viteProxy(req, res, next);
       });
-      
     } else {
       console.log('📦 Production mode - serving static files...');
       expressApp.use(express.static(path.join(__dirname, '../dist')));
@@ -96,35 +92,31 @@ app.whenReady().then(async () => {
         res.sendFile(path.join(__dirname, '../dist/index.html'));
       });
     }
-    
-    // 404 handler for unmatched API routes
+
     expressApp.use('/api/*', (req, res) => {
       res.status(404).json({ error: 'API endpoint not found', path: req.path });
     });
-    
+
     // Start server
     const serverInstance = expressApp.listen(PORT, '0.0.0.0', () => {
       console.log('');
       console.log('╔═══════════════════════════════════════════════════════╗');
-      console.log('║         🎮  SOCIÁLNÍ DEDUKČNÍ HRA  🎮                ║');
+      console.log('║ 🎮 SOCIÁLNÍ DEDUKČNÍ HRA 🎮 ║');
       console.log('╚═══════════════════════════════════════════════════════╝');
       console.log('');
-      console.log(`  🌐  Server: http://${LOCAL_IP}:${PORT}`);
-      console.log(`  🔌  API: http://${LOCAL_IP}:${PORT}/api`);
-      console.log(`  📊  MongoDB: Connected`);
+      console.log(` 🌐 Server: http://${LOCAL_IP}:${PORT}`);
+      console.log(` 🔌 API: http://${LOCAL_IP}:${PORT}/api`);
+      console.log(` 📊 MongoDB: Connected`);
       console.log('');
-      console.log('  📱  Hráči zadají do mobilu:');
-      console.log(`      http://${LOCAL_IP}:${PORT}`);
+      console.log(' 📱 Hráči zadají do mobilu:');
+      console.log(` http://${LOCAL_IP}:${PORT}`);
       console.log('');
       console.log('╚═══════════════════════════════════════════════════════╝');
       console.log('');
     });
-    
-    // Increase max listeners for server
+
     serverInstance.setMaxListeners(50);
-    
     createWindow();
-    
   } catch (error) {
     console.error('❌ FATAL ERROR during startup:', error);
     process.exit(1);
@@ -132,27 +124,86 @@ app.whenReady().then(async () => {
 });
 
 function createWindow() {
-  console.log('🪟 Creating Electron window...');
-  
+  console.log('🪟 Creating Moderator window...');
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js') // ✅ PŘIDÁNO
     },
     title: 'Moderátorská Obrazovka'
   });
-  
-  // Connect to port 3001 (Express)
+
   mainWindow.loadURL(`http://localhost:${PORT}?mode=moderator`);
-  
   if (isDev) {
     mainWindow.webContents.openDevTools();
   }
-  
-  console.log('✅ Window created');
+
+  console.log('✅ Moderator window created');
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 }
+
+// ✅ Funkce pro vytvoření player okna
+function createPlayerWindow(playerName, roomCode) {
+  console.log(`🎮 Creating player window for: ${playerName}`);
+  
+  const playerWindow = new BrowserWindow({
+    width: 500,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js') // ✅ PŘIDÁNO
+    },
+    title: `Hráč: ${playerName}`
+  });
+
+  const playerUrl = `http://localhost:${PORT}?mode=player&room=${roomCode}&playerName=${encodeURIComponent(playerName)}`;
+  playerWindow.loadURL(playerUrl);
+
+  //if (isDev) {
+  //  playerWindow.webContents.openDevTools({ mode: 'detach' });
+  //}
+
+  playerWindow.on('closed', () => {
+    delete playerWindows[playerName];
+    console.log(`❌ Player window closed: ${playerName}`);
+  });
+
+  playerWindows[playerName] = playerWindow;
+  console.log(`✅ Player window created: ${playerName}`);
+  
+  return playerWindow;
+}
+
+// ✅ IPC HANDLERS - Komunikace s renderer procesem
+ipcMain.handle('create-player-window', (event, playerName, roomCode) => {
+  createPlayerWindow(playerName, roomCode);
+  return { success: true };
+});
+
+ipcMain.handle('close-player-window', (event, playerName) => {
+  if (playerWindows[playerName]) {
+    playerWindows[playerName].close();
+    delete playerWindows[playerName];
+  }
+  return { success: true };
+});
+
+ipcMain.handle('close-all-player-windows', () => {
+  Object.values(playerWindows).forEach(window => {
+    if (window && !window.isDestroyed()) {
+      window.close();
+    }
+  });
+  playerWindows = {};
+  return { success: true };
+});
 
 app.on('window-all-closed', () => {
   console.log('👋 All windows closed');

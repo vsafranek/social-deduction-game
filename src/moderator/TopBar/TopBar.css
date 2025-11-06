@@ -1,85 +1,102 @@
-.top-bar {
+/* src/moderator/TopBar/TopBar.css */
+.topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 30px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  padding: 16px 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
-.top-bar-left {
+.topbar-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
-.top-bar-left h1 {
+.topbar-left h1 {
+  color: white;
   margin: 0;
-  font-size: 2rem;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
-.game-status {
+.topbar-right {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 12px;
 }
 
-.phase-badge {
+.player-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
   padding: 8px 16px;
   border-radius: 20px;
-  font-weight: bold;
-  font-size: 1.1rem;
-  background: rgba(255,255,255,0.2);
+  font-weight: 600;
+  font-size: 14px;
   backdrop-filter: blur(10px);
 }
 
-.phase-badge.lobby {
-  background: #4caf50;
-}
-
-.phase-badge.night {
-  background: #2c3e50;
-}
-
-.phase-badge.day {
-  background: #f39c12;
-}
-
-.phase-badge.end {
-  background: #e74c3c;
-}
-
-.round-badge {
-  padding: 6px 14px;
-  background: rgba(255,255,255,0.15);
-  border-radius: 15px;
-  font-size: 0.95rem;
-}
-
-.top-bar-right {
-  display: flex;
-  gap: 15px;
-}
-
-.btn-connection {
-  padding: 12px 24px;
-  font-size: 1.1rem;
-  background: rgba(255,255,255,0.2);
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 10px;
+.topbar-button {
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
   backdrop-filter: blur(10px);
 }
 
-.btn-connection:hover {
-  background: rgba(255,255,255,0.3);
+.topbar-button:hover {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.6);
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.topbar-button.active {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.info-button {
+  padding: 10px 20px;
+}
+
+.dev-button {
+  background: rgba(251, 191, 36, 0.25);
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.dev-button:hover {
+  background: rgba(251, 191, 36, 0.35);
+  border-color: rgba(251, 191, 36, 0.8);
+}
+
+.dev-button.active {
+  background: rgba(251, 191, 36, 0.4);
+  border-color: rgba(251, 191, 36, 0.8);
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .topbar-left h1 {
+    font-size: 18px;
+  }
+
+  .topbar-right {
+    width: 100%;
+  }
 }
