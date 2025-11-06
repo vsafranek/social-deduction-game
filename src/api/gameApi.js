@@ -10,84 +10,68 @@ export const gameApi = {
     });
     return res.json();
   },
-  
-  // Get game state
-  async getGameState(gameId) {
-    const res = await fetch(`${API_BASE}/game/${gameId}`);
-    return res.json();
-  },
-  
-  // Join game
-  async joinGame(gameId, playerName, sessionId) {
-    const res = await fetch(`${API_BASE}/game/${gameId}/join`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playerName, sessionId })
+
+  getGameState(gameId) {
+    return fetch(`${API_BASE}/game/${gameId}/state`).then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
+      return data;
     });
-    return res.json();
   },
 
-   // Join game by room code
+  // Join game by room code (unified endpoint)
   async joinGameByCode(roomCode, playerName, sessionId) {
     console.log('🚪 gameApi.joinGameByCode called with room:', roomCode);
     try {
-      const res = await fetch(`${API_BASE}/game/join-by-code`, {
+      const res = await fetch(`${API_BASE}/game/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode, playerName, sessionId })
+        body: JSON.stringify({ roomCode, name: playerName, sessionId })
       });
-      
       const data = await res.json();
       console.log('Join response:', data);
+      if (!res.ok) {
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
       return data;
     } catch (error) {
       console.error('❌ joinGameByCode error:', error);
       throw error;
     }
   },
-  async tick(gameId) {
-    const res = await fetch(`/api/game/${gameId}/tick`, { method: 'POST' });
-    return res.json();
-  },
 
-  
-  // Start game
-  async startGame(gameId) {
-    const res = await fetch(`${API_BASE}/game/${gameId}/start`, {
-      method: 'POST'
-    });
+  async tick(gameId) {
+    const res = await fetch(`${API_BASE}/game/${gameId}/tick`, { method: 'POST' });
     return res.json();
   },
 
   async startGameWithConfig(gameId, finalRoleConfig, modifierConfig) {
-        // finalRoleConfig: { [playerId]: 'Doktor' }
-        // modifierConfig: { opilýChance: number, poustevníkChance: number }
-        const res = await fetch(`${API_BASE}/game/${gameId}/start-config`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            assignments: finalRoleConfig,
-            modifiers: modifierConfig
-          })
-        });
-        return res.json();
-    },
+    const res = await fetch(`${API_BASE}/game/${gameId}/start-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assignments: finalRoleConfig,
+        modifiers: modifierConfig
+      })
+    });
+    return res.json();
+  },
 
- async updateTimers(gameId, { nightSeconds, daySeconds }) {
-    const res = await fetch(`/api/game/${gameId}/timers`, {
+  async updateTimers(gameId, { nightSeconds, daySeconds }) {
+    const res = await fetch(`${API_BASE}/game/${gameId}/timers`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nightSeconds, daySeconds })
     });
     return res.json();
-  }, 
+  },
 
   // Get player role
   async getPlayerRole(gameId, sessionId) {
     const res = await fetch(`${API_BASE}/game/${gameId}/player/${sessionId}/role`);
     return res.json();
   },
-  
+
   // Night action
   async nightAction(gameId, playerId, targetId, action) {
     const res = await fetch(`${API_BASE}/game/${gameId}/night-action`, {
@@ -97,7 +81,7 @@ export const gameApi = {
     });
     return res.json();
   },
-  
+
   // End night
   async endNight(gameId) {
     const res = await fetch(`${API_BASE}/game/${gameId}/end-night`, {
@@ -105,7 +89,7 @@ export const gameApi = {
     });
     return res.json();
   },
-  
+
   // Vote
   async vote(gameId, playerId, targetId) {
     const res = await fetch(`${API_BASE}/game/${gameId}/vote`, {
@@ -115,12 +99,26 @@ export const gameApi = {
     });
     return res.json();
   },
-  
+
   // End day
   async endDay(gameId) {
     const res = await fetch(`${API_BASE}/game/${gameId}/end-day`, {
       method: 'POST'
     });
     return res.json();
-  }
+  },
+  async resetToLobby(gameId) {
+    const res = await fetch(`${API_BASE}/game/${gameId}/reset-to-lobby`, {
+      method: 'POST'
+    });
+    return res.json();
+},
+async endPhase(gameId) {
+  const res = await fetch(`${API_BASE}/game/${gameId}/end-phase`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  return res.json();
+}
+
 };

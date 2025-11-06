@@ -1,24 +1,200 @@
+/* Game Arena base */
 .game-arena {
-  position: fixed;         /* bylo relative */
-  inset: 0;                /* full screen bez ohledu na rodiče */
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  transition: background-image 1.5s ease-in-out;
   overflow: hidden;
-  transition: background 1s ease;
-  z-index: 1;              /* pod floating panely */
 }
-.game-arena.night { background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a14 100%); }
-.game-arena.day { background: radial-gradient(circle at center, #3a4f70 0%, #1e2a3a 100%); }
-.game-arena.end { background: radial-gradient(circle at center, #2c1a1a 0%, #1a0a0a 100%); }
 
-.atmosphere-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.3; }
-.atmosphere-overlay.night {
-  background:
+/* Day background */
+.game-arena.day {
+  /* Používej vygenerovaný obrázek nebo fallback gradient */
+  background-image: url('/backgrounds/day.png');
+  background-color: #87CEEB; /* Fallback: sky blue */
+}
+
+/* Night background */
+.game-arena.night {
+  /* Používej vygenerovaný obrázek nebo fallback gradient */
+  background-image: url('/backgrounds/night.png');
+  background-color: #0a0a1a; /* Fallback: dark blue */
+}
+
+/* Lobby background (pokud není game arena) */
+.game-arena.lobby {
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Fallback gradients pokud obrázky neexistují */
+.game-arena.day::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 245, 220, 0.3) 0%,
+    rgba(255, 235, 200, 0.2) 50%,
+    rgba(200, 220, 255, 0.1) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+.game-arena.night::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(10, 10, 30, 0.7) 0%,
+    rgba(20, 20, 50, 0.5) 50%,
+    rgba(30, 30, 60, 0.3) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Atmosphere overlay */
+.atmosphere-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Night stars */
+.stars {
+  position: absolute;
+  inset: 0;
+  background-image: 
     radial-gradient(2px 2px at 20% 30%, white, transparent),
     radial-gradient(2px 2px at 60% 70%, white, transparent),
     radial-gradient(1px 1px at 50% 50%, white, transparent),
-    radial-gradient(1px 1px at 80% 10%, white, transparent),
-    radial-gradient(2px 2px at 90% 60%, white, transparent);
-  background-size: 200% 200%;
-  animation: stars 3s ease-in-out infinite;
+    radial-gradient(2px 2px at 80% 20%, white, transparent),
+    radial-gradient(1px 1px at 30% 80%, white, transparent);
+  background-size: 200px 200px, 300px 300px, 150px 150px, 250px 250px, 180px 180px;
+  opacity: 0.5;
+  animation: twinkle 8s infinite ease-in-out;
 }
-@keyframes stars { 0%,100%{opacity:.3} 50%{opacity:.6} }
-.atmosphere-overlay.day { background: radial-gradient(circle at 50% 20%, rgba(255,223,0,0.1) 0%, transparent 50%); }
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* Day fog - více viditelný pohyb */
+.fog {
+  position: absolute;
+  width: 300%; /* Větší plocha pro plynulejší pohyb */
+  height: 300%;
+  filter: blur(100px); /* Více rozmazaná pro měkčí efekt */
+  opacity: 0.5;
+  will-change: transform; /* Optimalizace pro animaci */
+}
+
+.fog-1 {
+  background: 
+    radial-gradient(ellipse at 15% 25%, rgba(255, 154, 2, 0.6), transparent 10%),
+    radial-gradient(ellipse at 65% 45%, rgba(235, 235, 245, 0.5), transparent 45%),
+    radial-gradient(ellipse at 35% 75%, rgba(80, 80, 82, 0.4), transparent 50%);
+  animation: fogDrift1 50s ease-in-out infinite;
+}
+
+.fog-2 {
+  background:
+    radial-gradient(ellipse at 75% 35%, rgb(255, 255, 255), transparent 10%),
+    radial-gradient(ellipse at 25% 65%, rgba(215, 215, 235, 0.45), transparent 48%),
+    radial-gradient(ellipse at 85% 15%, rgba(240, 240, 250, 0.5), transparent 42%);
+  animation: fogDrift2 70s ease-in-out infinite;
+  animation-delay: -10s;
+}
+
+.fog-3 {
+  background:
+    radial-gradient(ellipse at 55% 55%, rgba(250, 250, 255, 0.45), transparent 58%),
+    radial-gradient(ellipse at 10% 85%, rgba(230, 230, 245, 0.4), transparent 50%),
+    radial-gradient(ellipse at 90% 70%, rgba(220, 220, 240, 0.42), transparent 48%);
+  animation: fogDrift3 90s ease-in-out infinite;
+  animation-delay: -25s;
+}
+
+/* Výraznější pohybové animace */
+@keyframes fogDrift1 {
+  0%, 100% {
+    transform: translate(-50%, -30%) scale(1.1) rotate(0deg);
+  }
+  25% {
+    transform: translate(-20%, 10%) scale(1.15) rotate(5deg);
+  }
+  50% {
+    transform: translate(20%, -20%) scale(1.08) rotate(-3deg);
+  }
+  75% {
+    transform: translate(-10%, 15%) scale(1.12) rotate(2deg);
+  }
+}
+
+@keyframes fogDrift2 {
+  0%, 100% {
+    transform: translate(40%, 20%) scale(1.05) rotate(0deg);
+  }
+  30% {
+    transform: translate(-15%, -15%) scale(1.12) rotate(-4deg);
+  }
+  60% {
+    transform: translate(15%, 25%) scale(1.07) rotate(3deg);
+  }
+  90% {
+    transform: translate(-5%, -10%) scale(1.1) rotate(-1deg);
+  }
+}
+
+@keyframes fogDrift3 {
+  0%, 100% {
+    transform: translate(-20%, 15%) scale(1.15) rotate(0deg);
+  }
+  20% {
+    transform: translate(10%, -20%) scale(1.1) rotate(3deg);
+  }
+  40% {
+    transform: translate(30%, 10%) scale(1.12) rotate(-2deg);
+  }
+  60% {
+    transform: translate(-25%, -15%) scale(1.08) rotate(4deg);
+  }
+  80% {
+    transform: translate(5%, 20%) scale(1.14) rotate(-3deg);
+  }
+}
+
+
+/* Ambient glow */
+.atmosphere-overlay.day::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    rgba(255, 250, 235, 0.2),
+    transparent 60%
+  );
+  animation: ambientPulse 12s ease-in-out infinite;
+}
+
+@keyframes ambientPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}

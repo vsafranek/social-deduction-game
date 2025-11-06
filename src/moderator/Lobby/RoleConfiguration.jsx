@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { gameApi } from '../../api/gameApi';
+import RoleConfigModal from './RoleConfigModal';
 import './RoleConfiguration.css';
 
 function RoleConfiguration({
+  gameId,
   availableRoles,
   roleCount,
   setRoleCountValue,
@@ -9,187 +12,157 @@ function RoleConfiguration({
   toggleRoleInPool,
   teamLimits,
   updateTeamLimit,
-  initialTimers 
+  initialTimers
 }) {
-
-    const [nightSeconds, setNightSeconds] = useState(initialTimers?.nightSeconds ?? 90);
+  const [showModal, setShowModal] = useState(false);
+  const [nightSeconds, setNightSeconds] = useState(initialTimers?.nightSeconds ?? 90);
   const [daySeconds, setDaySeconds] = useState(initialTimers?.daySeconds ?? 150);
-  const [savingTimers, setSavingTimers] = useState(false);
 
- useEffect(() => {
+  useEffect(() => {
     if (initialTimers?.nightSeconds) setNightSeconds(initialTimers.nightSeconds);
     if (initialTimers?.daySeconds) setDaySeconds(initialTimers.daySeconds);
-  }, [initialTimers?.nightSeconds, initialTimers?.daySeconds]);
+  }, [initialTimers]);
 
   const clamp = (v) => Math.max(10, Math.min(1800, Number.isFinite(+v) ? +v : 10));
 
-    const saveTimers = async () => {
-        try {
-        setSavingTimers(true);
+  // Debounced auto-save
+  const debouncedSaveTimers = useCallback(
+    debounce(async (night, day) => {
+      try {
         await gameApi.updateTimers(gameId, {
-            nightSeconds: clamp(nightSeconds),
-            daySeconds: clamp(daySeconds)
+          nightSeconds: clamp(night),
+          daySeconds: clamp(day)
         });
-        } finally {
-        setSavingTimers(false);
-        }
-    };
+      } catch (e) {
+        console.error('Auto-save timers error:', e);
+      }
+    }, 800),
+    [gameId]
+  );
 
-  const roleKeys = Object.keys(availableRoles);
-  const teamOf = (r) => availableRoles[r]?.team || 'good';
-  const emojiOf = (r) => availableRoles[r]?.emoji || '❓';
+  useEffect(() => {
+    debouncedSaveTimers(nightSeconds, daySeconds);
+  }, [nightSeconds, daySeconds, debouncedSaveTimers]);
 
-  const configuredSum = Object.values(roleCount).reduce((s, n) => s + (n || 0), 0);
+  // Fallback pro availableRoles, pokud není definován
+  const roles = availableRoles || {};
+  const roleKeys = Object.keys(roles);
+  const teamOf = (r) => roles[r]?.team || 'good';
+
   const configuredByTeam = roleKeys.reduce((acc, r) => {
     const t = teamOf(r);
     acc[t] = (acc[t] || 0) + (roleCount[r] || 0);
     return acc;
   }, {});
 
-
-
   return (
     <div className="lobby-column roles-column">
-        <div className="team-limits-section">
-        <h3>⏱️ Timery</h3>
-        <div className="team-limits">
-            <div className="team-limit-item">
-            <label><span>Night (s):</span></label>
-            <input
-                className="team-limit-input"
-                type="number" min="10" max="1800"
-                value={nightSeconds}
-                onChange={(e) => setNightSeconds(Math.max(10, Math.min(1800, parseInt(e.target.value || 0))))}
-            />
-            </div>
-            <div className="team-limit-item">
-            <label><span>Day (s):</span></label>
-            <input
-                className="team-limit-input"
-                type="number" min="10" max="1800"
-                value={daySeconds}
-                onChange={(e) => setDaySeconds(Math.max(10, Math.min(1800, parseInt(e.target.value || 0))))}
-            />
-            </div>
-            <button className="btn-save" onClick={saveTimers}>💾 Uložit Timery</button>
-        </div>
-        </div>
-
-
-
       <div className="column-header">
-        <h2>🎭 Konfigurace Rolí</h2>
+        <h2>🎭 Game Configuration</h2>
       </div>
 
       <div className="roles-section">
-        {/* Team Limits */}
+        {/* ⏱️ Phase Timers */}
         <div className="team-limits-section">
-          <h3>⚖️ Limity Týmů</h3>
+          <h3>⏱️ Phase Timers</h3>
+          <div className="timer-sliders">
+            <div className="timer-slider-item">
+              <label>
+                <span>🌙 Night:</span>
+                <strong>{nightSeconds}s</strong>
+              </label>
+              <input
+                type="range"
+                min="10"
+                max="300"
+                value={nightSeconds}
+                onChange={(e) => setNightSeconds(parseInt(e.target.value))}
+              />
+            </div>
+            <div className="timer-slider-item">
+              <label>
+                <span>☀️ Day:</span>
+                <strong>{daySeconds}s</strong>
+              </label>
+              <input
+                type="range"
+                min="30"
+                max="600"
+                value={daySeconds}
+                onChange={(e) => setDaySeconds(parseInt(e.target.value))}
+              />
+            </div>
+          </div>
+          <small className="auto-save-hint">✓ Auto-saved</small>
+        </div>
+
+        {/* ⚖️ Team Limits */}
+        <div className="team-limits-section">
+          <h3>⚖️ Team Limits</h3>
           <div className="team-limits">
             <div className="team-limit-item">
-              <label><span className="team-icon good">🟢</span><span>Dobré role:</span></label>
+              <label><span className="team-icon good">🟢</span><span>Good roles:</span></label>
               <input
                 className="team-limit-input"
-                type="number" min="0" placeholder="Neomezeno"
-                value={teamLimits.good ?? ''}
+                type="number" min="0" placeholder="Unlimited"
+                value={teamLimits.good === null ? '' : teamLimits.good}
                 onChange={(e) => updateTeamLimit('good', e.target.value)}
               />
-              <small>({configuredByTeam.good || 0} nakonfig.)</small>
+              <small>({configuredByTeam.good || 0} configured)</small>
             </div>
 
             <div className="team-limit-item">
-              <label><span className="team-icon evil">🔴</span><span>Zlé role:</span></label>
+              <label><span className="team-icon evil">🔴</span><span>Evil roles:</span></label>
               <input
                 className="team-limit-input"
-                type="number" min="0" placeholder="Neomezeno"
-                value={teamLimits.evil ?? ''}
+                type="number" min="0" placeholder="Unlimited"
+                value={teamLimits.evil === null ? '' : teamLimits.evil}
                 onChange={(e) => updateTeamLimit('evil', e.target.value)}
               />
-              <small>({configuredByTeam.evil || 0} nakonfig.)</small>
+              <small>({configuredByTeam.evil || 0} configured)</small>
             </div>
 
             <div className="team-limit-item">
-              <label><span className="team-icon neutral">⚪</span><span>Neutrální:</span></label>
+              <label><span className="team-icon neutral">⚪</span><span>Neutral:</span></label>
               <input
                 className="team-limit-input"
-                type="number" min="0" placeholder="Neomezeno"
-                value={teamLimits.neutral ?? ''}
+                type="number" min="0" placeholder="Unlimited"
+                value={teamLimits.neutral === null ? '' : teamLimits.neutral}
                 onChange={(e) => updateTeamLimit('neutral', e.target.value)}
               />
-              <small>({configuredByTeam.neutral || 0} nakonfig.)</small>
+              <small>({configuredByTeam.neutral || 0} configured)</small>
             </div>
           </div>
         </div>
 
-        {/* Good roles */}
-        <h3 className="team-header good">🟢 Dobré Role</h3>
-        <div className="role-config-grid">
-          {roleKeys.filter(r => teamOf(r) === 'good').map(role => (
-            <div key={role} className={`role-config-card ${randomPoolRoles[role] ? 'active' : 'inactive'}`}>
-              <div className="role-config-header" onClick={() => toggleRoleInPool(role)}>
-                <span className="role-emoji">{emojiOf(role)}</span>
-                <span className="role-name">{role}</span>
-                <span className="role-toggle">{randomPoolRoles[role] ? '✓' : '✕'}</span>
-              </div>
-              <div className="role-config-counter">
-                <button
-                  className="counter-btn minus"
-                  onClick={() => setRoleCountValue(role, Math.max(0, (roleCount[role] || 0) - 1))}
-                  disabled={(roleCount[role] || 0) === 0}
-                >−</button>
-                <input
-                  className="count-input"
-                  type="number" min="0"
-                  value={roleCount[role] || 0}
-                  onChange={(e) => setRoleCountValue(role, e.target.value)}
-                />
-                <button
-                  className="counter-btn plus"
-                  onClick={() => setRoleCountValue(role, (roleCount[role] || 0) + 1)}
-                >+</button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Evil roles */}
-        <h3 className="team-header evil">🔴 Zlé Role</h3>
-        <div className="role-config-grid">
-          {roleKeys.filter(r => teamOf(r) === 'evil').map(role => (
-            <div key={role} className={`role-config-card ${randomPoolRoles[role] ? 'active' : 'inactive'}`}>
-              <div className="role-config-header" onClick={() => toggleRoleInPool(role)}>
-                <span className="role-emoji">{emojiOf(role)}</span>
-                <span className="role-name">{role}</span>
-                <span className="role-toggle">{randomPoolRoles[role] ? '✓' : '✕'}</span>
-              </div>
-              <div className="role-config-counter">
-                <button
-                  className="counter-btn minus"
-                  onClick={() => setRoleCountValue(role, Math.max(0, (roleCount[role] || 0) - 1))}
-                  disabled={(roleCount[role] || 0) === 0}
-                >−</button>
-                <input
-                  className="count-input"
-                  type="number" min="0"
-                  value={roleCount[role] || 0}
-                  onChange={(e) => setRoleCountValue(role, e.target.value)}
-                />
-                <button
-                  className="counter-btn plus"
-                  onClick={() => setRoleCountValue(role, (roleCount[role] || 0) + 1)}
-                >+</button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="role-config-summary">
-          <p>Celkem nakonfigurováno: <strong>{configuredSum} rolí</strong></p>
-          <small>Klikni na roli pro aktivaci/deaktivaci | Občan se doplní automaticky</small>
-        </div>
+        {/* Tlačítko pro otevření role config */}
+        <button className="btn-open-role-config" onClick={() => setShowModal(true)}>
+          ⚙️ Configure Roles
+        </button>
       </div>
+
+      {/* Modal jen s role gridem */}
+      {showModal && (
+        <RoleConfigModal
+          availableRoles={roles} 
+          roleCount={roleCount}
+          setRoleCountValue={setRoleCountValue}
+          randomPoolRoles={randomPoolRoles}
+          toggleRoleInPool={toggleRoleInPool}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
+}
+
+// Debounce helper
+function debounce(func, wait) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
 }
 
 export default RoleConfiguration;

@@ -1,5 +1,19 @@
 const mongoose = require('mongoose');
 
+const VictoryConditionsSchema = new mongoose.Schema({
+  canWinWithTeams: { type: [String], default: [] },
+  soloWin: { type: Boolean, default: false },
+  customRules: { type: [mongoose.Schema.Types.Mixed], default: [] }
+}, { _id: false });
+
+const EffectSchema = new mongoose.Schema({
+  type: { type: String, required: true },
+  source: { type: mongoose.Schema.Types.ObjectId, ref: 'Player', default: null },
+  addedAt: { type: Date, default: Date.now },
+  expiresAt: { type: Date, default: null },
+  meta: { type: mongoose.Schema.Types.Mixed, default: {} }
+}, { _id: false });
+
 const PlayerSchema = new mongoose.Schema({
   gameId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -16,22 +30,28 @@ const PlayerSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  
-  // ✅ AKTIVNÍ ROLE (hráč vidí)
   role: {
     type: String,
-    enum: ['Doktor', 'Policie', 'Vyšetřovatel', 'Pozorovatel', 'Pastičkář', 
-           'Stopař', 'Občan', 'Vrah', 'Uklízeč', 'Falšovač', null],
+    // ← OPRAVENO: anglické názvy rolí + null
+    enum: ['Doctor', 'Jailer', 'Investigator', 'Lookout', 'Trapper', 'Tracker', 
+           'Citizen', 'Killer', 'Cleaner', 'Framer', 'Diplomat', 'Survivor', 'Infected', null],
     default: null
   },
-  
-  // ✅ PASIVNÍ MODIFIKÁTOR (hráč NEVIDÍ)
   modifier: {
     type: String,
-    enum: ['Opilý', 'Poustevník', null],
+    // ← OPRAVENO: přidány anglické varianty + null
+    enum: ['Opilý', 'Poustevník', 'Drunk', 'Recluse', null],
     default: null
   },
-  
+  effects: { type: [EffectSchema], default: [] },
+  affiliations: {
+    type: [String],
+    default: []
+  },
+  victoryConditions: {
+    type: VictoryConditionsSchema,
+    default: () => ({})
+  },
   alive: {
     type: Boolean,
     default: true
@@ -52,17 +72,15 @@ const PlayerSchema = new mongoose.Schema({
     },
     action: {
       type: String,
+      // ← OPRAVENO: přidána 'infect' + null
       enum: ['protect', 'block', 'investigate', 'watch', 'trap', 'track', 
-             'kill', 'clean_kill', 'frame', null]
+             'kill', 'clean_kill', 'frame', 'infect', null]
     }
   },
-  
-  // ✅ VÝSLEDKY AKCÍ (ukládají se zde)
   actionResults: {
     type: [String],
     default: []
   },
-  
   createdAt: {
     type: Date,
     default: Date.now

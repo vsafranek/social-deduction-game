@@ -5,48 +5,46 @@ import ModifierSettings from './ModifierSettings';
 import './LobbyLayout.css';
 
 function LobbyLayout({ gameState, onStartGame }) {
-  // Stav pro manuální přiřazení
-  const [assignedRoles, setAssignedRoles] = useState({}); // {playerId: role}
-  const [nightSeconds, setNightSeconds] = useState(90);
-  const [daySeconds, setDaySeconds] = useState(150);
-
-    const saveTimers = async () => {
-    await gameApi.updateTimers(gameState.game._id, { nightSeconds, daySeconds });
-    // volitelně zobraz toast
-    };
-
-
-  // Základní seznam rolí s týmem a emoji
+  // Anglické názvy rolí (musí odpovídat backend Role.js)
   const availableRoles = useMemo(() => ({
-    'Doktor': { team: 'good', emoji: '💉' },
-    'Policie': { team: 'good', emoji: '👮' },
-    'Vyšetřovatel': { team: 'good', emoji: '🔍' },
-    'Pozorovatel': { team: 'good', emoji: '👁️' },
-    'Pastičkář': { team: 'good', emoji: '🪤' },
-    'Stopař': { team: 'good', emoji: '👣' },
-    'Občan': { team: 'good', emoji: '👤' },
-    'Vrah': { team: 'evil', emoji: '🔪' },
-    'Uklízeč': { team: 'evil', emoji: '🧹' },
-    'Falšovač': { team: 'evil', emoji: '🖼️' }
+    // Good roles
+    'Doctor': { team: 'good', emoji: '💉' },
+    'Jailer': { team: 'good', emoji: '👮' },
+    'Investigator': { team: 'good', emoji: '🔍' },
+    'Lookout': { team: 'good', emoji: '👁️' },
+    'Trapper': { team: 'good', emoji: '🪤' },
+    'Tracker': { team: 'good', emoji: '👣' },
+    'Citizen': { team: 'good', emoji: '👤' },
+    // Evil roles
+    'Killer': { team: 'evil', emoji: '🔪' },
+    'Cleaner': { team: 'evil', emoji: '🧹' },
+    'Framer': { team: 'evil', emoji: '🖼️' },
+    // Neutral roles
+    'Diplomat': { team: 'neutral', emoji: '🕊️' },
+    'Survivor': { team: 'neutral', emoji: '🛡️' },
+    'Infected': { team: 'neutral', emoji: '🦠' }
   }), []);
 
-  // Počty rolí (kolikrát se daná role objeví)
+  // Výchozí počty rolí
   const [roleCount, setRoleCount] = useState({
-    'Doktor': 1,
-    'Policie': 1,
-    'Vyšetřovatel': 1,
-    'Pozorovatel': 1,
-    'Pastičkář': 0,
-    'Stopař': 1,
-    'Občan': 0,     // Občan se doplňuje automaticky
-    'Vrah': 2,
-    'Uklízeč': 0,
-    'Falšovač': 0
+    'Doctor': 1,
+    'Jailer': 1,
+    'Investigator': 1,
+    'Lookout': 1,
+    'Trapper': 0,
+    'Tracker': 1,
+    'Citizen': 0, // auto-fill fallback
+    'Killer': 2,
+    'Cleaner': 0,
+    'Framer': 0,
+    'Diplomat': 0,
+    'Survivor': 0,
+    'Infected': 0
   });
 
   // Limity týmů
   const [teamLimits, setTeamLimits] = useState({
-    good: null,
+    good: null, // unlimited
     evil: 2,
     neutral: 0
   });
@@ -56,16 +54,20 @@ function LobbyLayout({ gameState, onStartGame }) {
     Object.fromEntries(Object.keys(availableRoles).map(r => [r, true]))
   );
 
-  // Pasivní modifikátory
+  // Manuální přiřazení
+  const [assignedRoles, setAssignedRoles] = useState({});
+
+  // Pasivní modifikátory (anglické klíče pro backend)
   const [modifierConfig, setModifierConfig] = useState({
-    opilýChance: 20,
-    poustevníkChance: 15
+    drunkChance: 20,      // backend bere drunkChance i opilýChance
+    recluseChance: 15
   });
 
-  // Handlery pro podkomponenty
+  // Handlery
   const handleAssignRole = (playerId, role) => {
     setAssignedRoles(prev => ({ ...prev, [playerId]: role }));
   };
+
   const handleUnassignRole = (playerId) => {
     setAssignedRoles(prev => {
       const next = { ...prev };
@@ -118,12 +120,10 @@ function LobbyLayout({ gameState, onStartGame }) {
 
     for (const p of unassigned) {
       let chosen = null;
-
       for (let i = 0; i < shuffledPool.length; i++) {
         const candidate = shuffledPool[i];
         const team = availableRoles[candidate]?.team || 'good';
         const limit = teamLimits[team];
-
         if (limit === null || countByTeam[team] < limit) {
           chosen = candidate;
           shuffledPool.splice(i, 1);
@@ -131,8 +131,7 @@ function LobbyLayout({ gameState, onStartGame }) {
           break;
         }
       }
-
-      finalRoles[p._id] = chosen || 'Občan';
+      finalRoles[p._id] = chosen || 'Citizen'; // fallback
       if (!chosen) countByTeam.good++;
     }
 
@@ -146,16 +145,16 @@ function LobbyLayout({ gameState, onStartGame }) {
 
   return (
     <div className="lobby-layout">
-      <PlayersList 
+      <PlayersList
         players={gameState.players}
         availableRoles={availableRoles}
         assignedRoles={assignedRoles}
         onAssignRole={handleAssignRole}
         onUnassignRole={handleUnassignRole}
-        onStartGame={onClickStartGame}
       />
 
       <RoleConfiguration
+        gameId={gameState.game._id}
         availableRoles={availableRoles}
         roleCount={roleCount}
         setRoleCountValue={setRoleCountValue}
@@ -167,10 +166,15 @@ function LobbyLayout({ gameState, onStartGame }) {
       />
 
       <ModifierSettings
-        playersCount={gameState.players.length}
         modifierConfig={modifierConfig}
         setModifierConfig={setModifierConfig}
       />
+
+      <div className="lobby-footer">
+        <button className="btn-start-game" onClick={onClickStartGame}>
+          🚀 Start Game
+        </button>
+      </div>
     </div>
   );
 }

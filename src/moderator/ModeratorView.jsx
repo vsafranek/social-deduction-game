@@ -120,30 +120,34 @@ function ModeratorView() {
 
   return (
     <div className="moderator-view">
-      <TopBar 
-        gameState={gameState}
-        onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
-      />
       
-      {showConnectionBox && (
-        <ConnectionDropdown 
-          connectionInfo={connectionInfo}
-          onClose={() => setShowConnectionBox(false)}
-        />
-      )}
 
       {gameState && (
         <>
-          {gameState.game.phase === 'lobby' ? (
-            <LobbyLayout 
+        {gameState.game.phase === 'lobby' ? (
+          <>
+              <TopBar 
               gameState={gameState}
-              onStartGame={startGame}
-            />
+              onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
+              />
+              
+              {showConnectionBox && (
+                <ConnectionDropdown 
+                  connectionInfo={connectionInfo}
+                  onClose={() => setShowConnectionBox(false)}
+                />
+              )}
+
+              <LobbyLayout 
+                gameState={gameState}
+                onStartGame={startGame}
+              />
+            </>
           ) : (
+            // ModeratorView.jsx
             <GameArena 
-              gameState={gameState}
-              onEndNight={endNight}
-              onEndDay={endDay}
+              gameState={gameState} 
+              onRefresh={fetchGameState}  // ← předej funkci pro refresh
             />
           )}
         </>

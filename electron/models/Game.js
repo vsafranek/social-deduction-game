@@ -33,28 +33,28 @@ const GameSchema = new mongoose.Schema({
     type: Map,
     of: Number,
     default: {
-      'Doktor': 1,
-      'Policie': 1,
-      'Vyšetřovatel': 1,
-      'Pozorovatel': 1,
-      'Pastičkář': 0,
-      'Stopař': 1,
-      'Občan': 1,
-      'Vrah': 2,
-      'Uklízeč': 0,
+      'Doctor': 1,
+      'Police': 1,
+      'Investigator': 1,
+      'Lookout': 1,
+      'Trapper': 0,
+      'Tracker': 1,
+      'Citizen': 1,
+      'Killer': 2,
+      'Cleaner': 0,
       'Falšovač': 0
     }
   },
   
   // ✅ KONFIGURACE PASIVNÍCH MODIFIKÁTORŮ
   modifierConfiguration: {
-    opilýChance: {
+    drunkChance: {
       type: Number,
       default: 0.2, // 20% šance
       min: 0,
       max: 1
     },
-    poustevníkChance: {
+    recluseChance: {
       type: Number,
       default: 0.15, // 15% šance
       min: 0,

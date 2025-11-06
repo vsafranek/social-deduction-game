@@ -1,0 +1,168 @@
+/* src/components/moderator/GameArena/PhaseTransition.css */
+.phase-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: fadeInOut 2s ease-in-out forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.transition-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.8), rgba(0,0,0,0.95));
+}
+
+/* Sunrise particles (night → day) */
+.sunrise-particles {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(2px 2px at 20% 80%, #ffd700, transparent),
+    radial-gradient(3px 3px at 60% 70%, #ffeb3b, transparent),
+    radial-gradient(2px 2px at 40% 90%, #ffa726, transparent),
+    radial-gradient(4px 4px at 80% 85%, #ff9800, transparent);
+  background-size: 100px 100px, 150px 150px, 120px 120px, 80px 80px;
+  animation: riseUp 2s ease-out;
+  opacity: 0.7;
+}
+
+@keyframes riseUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+}
+
+.light-burst {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(255,215,0,0.4), transparent 60%);
+  animation: burstExpand 2s ease-out;
+}
+
+@keyframes burstExpand {
+  from {
+    transform: scale(0);
+    opacity: 1;
+  }
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+/* Nightfall particles (day → night) */
+.nightfall-particles {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(1px 1px at 10% 20%, white, transparent),
+    radial-gradient(2px 2px at 80% 30%, white, transparent),
+    radial-gradient(1px 1px at 50% 10%, white, transparent),
+    radial-gradient(2px 2px at 30% 40%, white, transparent);
+  background-size: 200px 200px, 250px 250px, 180px 180px, 220px 220px;
+  animation: fadeInStars 2s ease-in;
+  opacity: 0.5;
+}
+
+@keyframes fadeInStars {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
+.darkness-veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent, rgba(0,20,40,0.6));
+  animation: fadeInDark 2s ease-in;
+}
+
+@keyframes fadeInDark {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Content */
+.transition-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  animation: scaleInText 2s ease-out;
+}
+
+@keyframes scaleInText {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.transition-icon {
+  font-size: 8rem;
+  margin-bottom: 20px;
+  animation: iconPulse 2s ease-out;
+  filter: drop-shadow(0 0 40px rgba(255,255,255,0.8));
+}
+
+@keyframes iconPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.transition-text {
+  font-size: 4rem;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 32px rgba(255,255,255,0.8);
+  letter-spacing: 8px;
+  margin-bottom: 10px;
+}
+
+.transition-subtitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+  text-shadow: 0 0 16px rgba(255,255,255,0.5);
+  letter-spacing: 3px;
+}
+
+/* Phase specific colors */
+.phase-transition.day .transition-text {
+  color: #ffd700;
+  text-shadow: 0 0 40px rgba(255,215,0,0.9);
+}
+
+.phase-transition.night .transition-text {
+  color: #00d4ff;
+  text-shadow: 0 0 40px rgba(0,212,255,0.9);
+}

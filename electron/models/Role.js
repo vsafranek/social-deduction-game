@@ -1,91 +1,154 @@
-// electron/models/Role.js - Definice všech rolí
 const ROLES = {
-  // 🟢 DOBRÉ ROLE
-  'Doktor': {
+  // Town (Good)
+  'Doctor': {
     team: 'good',
     emoji: '💉',
-    description: 'Každou noc chrání jednoho hráče před smrtí',
+    description: 'Protects one player each night from death',
     actionType: 'protect',
-    canUseEveryNight: true
+    canUseEveryNight: true,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  'Policie': {
+  'Jailer': {
     team: 'good',
     emoji: '👮',
-    description: 'Každou noc uzamkne hráče - nemůže použít schopnost',
+    description: 'Locks a player each night; the target cannot act',
     actionType: 'block',
-    canUseEveryNight: true
+    canUseEveryNight: true,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  'Vyšetřovatel': {
+  'Investigator': {
     team: 'good',
     emoji: '🔍',
-    description: 'Každou noc zjistí 2 možné role hráče',
+    description: 'Learns two possible roles of the target each night (one is correct)',
     actionType: 'investigate',
-    canUseEveryNight: true
+    canUseEveryNight: true,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  'Pozorovatel': {
+  'Lookout': {
     team: 'good',
     emoji: '👁️',
-    description: 'Každou noc vidí kdo navštívil vybraný dům',
+    description: 'Watches a house and sees who visited the target',
     actionType: 'watch',
-    canUseEveryNight: true
+    canUseEveryNight: true,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  'Pastičkář': {
+  'Trapper': {
     team: 'good',
     emoji: '🪤',
-    description: 'Každou noc nastraží past - chytí návštěvníky',
+    description: 'Sets a trap; visitors are revealed and their action fails',
     actionType: 'trap',
-    canUseEveryNight: true
+    canUseEveryNight: true,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  'Stopař': {
+  'Tracker': {
     team: 'good',
     emoji: '👣',
-    description: 'Každou noc sleduje hráče a zjistí koho navštívil',
+    description: 'Follows the target and learns whom they visited',
     actionType: 'track',
-    canUseEveryNight: true
+    canUseEveryNight: true,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  'Občan': {
+  'Citizen': {
     team: 'good',
     emoji: '👤',
-    description: 'Nemá speciální schopnost',
+    description: 'No special ability',
     actionType: 'none',
-    canUseEveryNight: false
+    canUseEveryNight: false,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
-  // 🔴 ZLÉ ROLE
-  'Vrah': {
+
+  // Mafia (Evil)
+  'Killer': {
     team: 'evil',
     emoji: '🔪',
-    description: 'Každou noc zabije jednoho hráče',
+    description: 'Kills one player each night',
     actionType: 'kill',
-    canUseEveryNight: true
+    canUseEveryNight: true,
+    defaultAffiliations: ['evil'],
+    defaultVictory: { canWinWithTeams: ['evil'], soloWin: false, customRules: [
+      { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
+    ] }
   },
-  'Uklízeč': {
+  'Cleaner': {
     team: 'evil',
     emoji: '🧹',
-    description: 'Zabije hráče a skryje jeho roli',
+    description: "Kills and hides the victim's role",
     actionType: 'clean_kill',
-    canUseEveryNight: true
+    canUseEveryNight: true,
+    defaultAffiliations: ['evil'],
+    defaultVictory: { canWinWithTeams: ['evil'], soloWin: false, customRules: [
+      { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
+    ] }
   },
-  'Falšovač': {
+  'Framer': {
     team: 'evil',
     emoji: '🖼️',
-    description: 'Označí hráče aby vypadal jako zlý',
+    description: 'Makes a player appear as evil to investigations',
     actionType: 'frame',
-    canUseEveryNight: true
-  }
+    canUseEveryNight: true,
+    defaultAffiliations: ['evil'],
+    defaultVictory: { canWinWithTeams: ['evil'], soloWin: false, customRules: [
+      { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
+    ] }
+  },
+
+  // Neutral
+  'Diplomat': {
+    team: 'neutral',
+    emoji: '🕊️',
+    description: 'May win with either side',
+    actionType: 'none',
+    canUseEveryNight: false,
+    defaultAffiliations: ['neutral'],
+    defaultVictory: { canWinWithTeams: ['good','evil'], soloWin: false, customRules: [] }
+  },
+  'Survivor': {
+    team: 'neutral',
+    emoji: '🛡️',
+    description: 'Aims to survive alone',
+    actionType: 'none',
+    canUseEveryNight: false,
+    defaultAffiliations: ['neutral','solo'],
+    defaultVictory: { canWinWithTeams: [], soloWin: true, customRules: [
+      { type: 'aliveExactly', team: 'neutral', count: 1 },
+      { type: 'aliveExactly', team: 'good', count: 0 },
+      { type: 'aliveExactly', team: 'evil', count: 0 }
+    ] }
+  },
+  'Infected': {
+    team: 'neutral',
+    emoji: '🦠',
+    description: 'Visits players at night to infect them; wins when all others are infected',
+    actionType: 'infect',
+    canUseEveryNight: true,
+    defaultAffiliations: ['neutral'],
+    defaultVictory: {
+      canWinWithTeams: [],
+      soloWin: false,
+      customRules: [
+        { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
+      ]
+    }
+  }  // ← OPRAVENO: chyběly uzavírací závorky
 };
 
-// 🟡 PASIVNÍ MODIFIKÁTORY (skryté před hráčem)
 const MODIFIERS = {
-  'Opilý': {
+  'Drunk': {
     emoji: '🍺',
-    description: 'Jeho schopnost má 50% šanci nefungovat',
+    description: '50% chance the ability fails or returns false info',
     effect: 'random_fail',
     showToPlayer: false
   },
-  'Poustevník': {
+  'Recluse': {
     emoji: '🏚️',
-    description: 'Vypadá jako zlý při vyšetřování',
+    description: 'Appears as evil to investigations even if good',
     effect: 'appears_evil',
     showToPlayer: false
   }
