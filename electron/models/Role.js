@@ -136,7 +136,7 @@ const ROLES = {
         { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
       ]
     }
-  }  // ← OPRAVENO: chyběly uzavírací závorky
+  }  
 };
 
 const MODIFIERS = {

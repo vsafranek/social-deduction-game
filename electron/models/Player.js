@@ -32,14 +32,12 @@ const PlayerSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    // ← OPRAVENO: anglické názvy rolí + null
-    enum: ['Doctor', 'Jailer', 'Investigator', 'Lookout', 'Trapper', 'Tracker', 
+    enum: ['Doctor', 'Jailer', 'Investigator', 'Lookout', 'Trapper', 'Tracker',
            'Citizen', 'Killer', 'Cleaner', 'Framer', 'Diplomat', 'Survivor', 'Infected', null],
     default: null
   },
   modifier: {
     type: String,
-    // ← OPRAVENO: přidány anglické varianty + null
     enum: ['Opilý', 'Poustevník', 'Drunk', 'Recluse', null],
     default: null
   },
@@ -72,14 +70,13 @@ const PlayerSchema = new mongoose.Schema({
     },
     action: {
       type: String,
-      // ← OPRAVENO: přidána 'infect' + null
-      enum: ['protect', 'block', 'investigate', 'watch', 'trap', 'track', 
+      enum: ['protect', 'block', 'investigate', 'watch', 'trap', 'track',
              'kill', 'clean_kill', 'frame', 'infect', null]
+    },
+    results: {
+      type: [String],
+      default: []
     }
-  },
-  actionResults: {
-    type: [String],
-    default: []
   },
   createdAt: {
     type: Date,

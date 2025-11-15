@@ -1,0 +1,283 @@
+/* src/player/components/RoleCard/RoleCard.css */
+.role-card {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 2px solid;
+}
+
+/* Day styling */
+.phase-day .role-card {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.phase-day .role-card.expanded {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Night styling */
+.phase-night .role-card {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.phase-night .role-card.expanded {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Dead player styling */
+.role-card.dead {
+  opacity: 0.7;
+  filter: grayscale(0.8);
+}
+
+.phase-day .role-card.dead {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.phase-night .role-card.dead {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Team colors */
+.role-card.good {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.role-card.good.expanded {
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.role-card.evil {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.role-card.evil.expanded {
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.role-card.neutral {
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.role-card.neutral.expanded {
+  border-color: rgba(168, 85, 247, 0.6);
+}
+
+.role-card-button {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  color: inherit;
+}
+
+.role-card-button:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.phase-night .role-card-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.role-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.role-emoji {
+  font-size: 32px;
+  flex-shrink: 0;
+  animation: bounce 0.6s infinite;
+}
+
+.role-card.dead .role-emoji {
+  animation: none;
+  filter: grayscale(1);
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.role-name-status {
+  flex: 1;
+  min-width: 0;
+}
+
+.role-name-status h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  transition: color 0.3s ease;
+}
+
+.phase-day .role-name-status h2 {
+  color: #1a1a2e;
+}
+
+.phase-night .role-name-status h2 {
+  color: #fff;
+}
+
+.team-label {
+  font-size: 11px;
+  margin: 2px 0 0 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.team-label.good { color: #10b981; }
+.team-label.evil { color: #ef4444; }
+.team-label.neutral { color: #a855f7; }
+
+.role-name-status .status {
+  font-size: 11px;
+  margin: 2px 0 0 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status.alive { color: #10b981; }
+.status.dead { color: #ef4444; }
+
+.expand-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.phase-day .expand-icon {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.phase-night .expand-icon {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.expand-icon.open {
+  transform: rotate(180deg);
+}
+
+.role-details {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid;
+  animation: slideDown 0.3s ease;
+}
+
+.phase-day .role-details {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+.phase-night .role-details {
+  border-top-color: rgba(102, 126, 234, 0.2);
+}
+
+.role-description p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  transition: color 0.3s ease;
+}
+
+.phase-day .role-description p {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.phase-night .role-description p {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.role-modifier {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: rgba(251, 191, 36, 0.2);
+  border-left: 3px solid rgba(251, 191, 36, 0.6);
+  border-radius: 4px;
+}
+
+.role-modifier h4 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: #fbbf24;
+}
+
+.modifier-warning {
+  font-size: 11px;
+  margin: 0;
+  color: rgba(251, 191, 36, 0.9);
+}
+
+.role-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid;
+}
+
+.phase-day .role-footer {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+.phase-night .role-footer {
+  border-top-color: rgba(102, 126, 234, 0.2);
+}
+
+.action-label {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
+}
+
+.phase-day .action-label {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.phase-night .action-label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.action-label strong {
+  font-weight: 700;
+  transition: color 0.3s ease;
+}
+
+.phase-day .action-label strong {
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.phase-night .action-label strong {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -9,11 +9,11 @@ const GameSchema = new mongoose.Schema({
   },
 
   timers: {
-    nightSeconds: { type: Number, default: 90 }, // konfigurovatelné v lobby
-    daySeconds: { type: Number, default: 150 }
+    nightSeconds: { type: Number, default: 30 }, 
+    daySeconds: { type: Number, default: 30 }
   },
   timerState: {
-    phaseEndsAt: { type: Date, default: null } // kdy fáze skončí (server time)
+    phaseEndsAt: { type: Date, default: null } 
   },
 
   phase: {
@@ -28,7 +28,7 @@ const GameSchema = new mongoose.Schema({
   ip: String,
   port: Number,
   
-  // ✅ KONFIGURACE AKTIVNÍCH ROLÍ
+
   roleConfiguration: {
     type: Map,
     of: Number,
@@ -37,7 +37,7 @@ const GameSchema = new mongoose.Schema({
       'Police': 1,
       'Investigator': 1,
       'Lookout': 1,
-      'Trapper': 0,
+      'Trapper': 1,
       'Tracker': 1,
       'Citizen': 1,
       'Killer': 2,

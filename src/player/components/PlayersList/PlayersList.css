@@ -1,0 +1,115 @@
+/* src/player/components/PlayersList/PlayersList.css */
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.players-list-empty {
+  padding: 20px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+.players-list-empty p {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.player-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.player-list-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(102, 126, 234, 0.5);
+  transform: translateX(4px);
+}
+
+.player-list-item.selected {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.8);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.player-avatar {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.player-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.player-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phase-day .player-name {
+  color: #1a1a2e;
+}
+
+.player-status {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.phase-day .player-status {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.player-check {
+  font-size: 20px;
+  color: #10b981;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .player-list-item {
+    padding: 10px;
+  }
+
+  .player-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+
+  .player-name {
+    font-size: 14px;
+  }
+}

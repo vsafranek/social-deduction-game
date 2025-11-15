@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ModeratorView from './moderator/ModeratorView';
-import PlayerView from './components/PlayerView';
+import PlayerView from './player/PlayerView';
 import './App.css';
 
 function App() {

@@ -30,73 +30,74 @@ function DevMultiPlayerTool({ roomCode, onPlayersConnected, isVisible = true }) 
     return `Hráč${Math.floor(Math.random() * 10000)}`;
   };
 
-  const openPlayerWindow = async (playerName) => {
-    try {
-      if (window.electronAPI) {
-        await window.electronAPI.createPlayerWindow(playerName, roomCode);
-        console.log(`🪟 Otevřeno okno pro hráče: ${playerName}`);
+  const openPlayerWindow = async (playerName, sessionId) => {
+  try {
+    if (window.electronAPI) {
+      // ✅ Předej sessionId do player window
+      await window.electronAPI.createPlayerWindow(playerName, roomCode, sessionId);
+      console.log(`🪟 Otevřeno okno pro hráče: ${playerName} (session: ${sessionId.substring(0, 12)}...)`);
+    }
+  } catch (error) {
+    console.error('Chyba při otevírání okna:', error);
+    setError(`Chyba: ${error.message}`);
+  }
+};
+
+const connectMultiplePlayers = async () => {
+  setIsConnecting(true);
+  setError('');
+  const newPlayers = [];
+  const usedNames = [...connectedPlayers.map(p => p.name)];
+
+  try {
+    for (let i = 0; i < playerCount; i++) {
+      const playerName = generateRandomName(usedNames);
+      usedNames.push(playerName);
+      
+      // ✅ Vytvoř unikátní sessionId PRO KAŽDÉHO hráče
+      const sessionId = `dev_${uuidv4()}`;
+      
+      console.log(`🎮 Připojuji hráče ${i + 1}/${playerCount}: ${playerName}`);
+      console.log(`   SessionId: ${sessionId}`);
+      
+      const result = await gameApi.joinGameByCode(roomCode, playerName, sessionId);
+      
+      if (result.success) {
+        newPlayers.push({
+          name: playerName,
+          sessionId,
+          playerId: result.playerId,
+          gameId: result.gameId
+        });
+        console.log(`✅ ${playerName} připojen (PlayerId: ${result.playerId})`);
+        
+        // ✅ Otevři okno S unikátním sessionId
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await openPlayerWindow(playerName, sessionId);
       } else {
-        console.warn('⚠️ Electron API není dostupné');
+        console.error(`❌ Chyba při připojení ${playerName}:`, result.error);
+        setError(`❌ ${playerName}: ${result.error}`);
       }
-    } catch (error) {
-      console.error('Chyba při otevírání okna:', error);
-      setError(`Chyba: ${error.message}`);
+      
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
-  };
-
-  const connectMultiplePlayers = async () => {
-    setIsConnecting(true);
-    setError('');
-    const newPlayers = [];
-    const usedNames = [...connectedPlayers.map(p => p.name)];
-
-    try {
-      for (let i = 0; i < playerCount; i++) {
-        const playerName = generateRandomName(usedNames);
-        usedNames.push(playerName);
-        
-        const sessionId = `dev_${uuidv4()}`;
-        
-        console.log(`🎮 Připojuji hráče ${i + 1}/${playerCount}: ${playerName}`);
-        
-        // ✅ NOVÝ FLOW: Bez otevírání okna zde - player se přihlásí z URL
-        const result = await gameApi.joinGameByCode(roomCode, playerName, sessionId);
-        
-        if (result.success) {
-          newPlayers.push({
-            name: playerName,
-            sessionId,
-            playerId: result.playerId,
-            gameId: result.gameId
-          });
-          console.log(`✅ ${playerName} připojen (ID: ${result.playerId})`);
-          
-          // ✅ Otevři okno S URL parametry pro auto-login
-          await new Promise(resolve => setTimeout(resolve, 300));
-          await openPlayerWindow(playerName);
-        } else {
-          console.error(`❌ Chyba při připojení ${playerName}:`, result.error);
-          setError(`❌ ${playerName}: ${result.error}`);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
-      
-      setConnectedPlayers(prev => [...prev, ...newPlayers]);
-      
-      if (onPlayersConnected) {
-        onPlayersConnected(newPlayers);
-      }
-      
-      console.log(`✅ Úspěšně připojeno ${newPlayers.length} hráčů`);
-      
-    } catch (err) {
-      console.error('❌ Chyba při připojování hráčů:', err);
-      setError(`Chyba: ${err.message}`);
-    } finally {
-      setIsConnecting(false);
+    
+    setConnectedPlayers(prev => [...prev, ...newPlayers]);
+    
+    if (onPlayersConnected) {
+      onPlayersConnected(newPlayers);
     }
-  };
+    
+    console.log(`✅ Úspěšně připojeno ${newPlayers.length} hráčů`);
+    
+  } catch (err) {
+    console.error('❌ Chyba při připojování hráčů:', err);
+    setError(`Chyba: ${err.message}`);
+  } finally {
+    setIsConnecting(false);
+  }
+};
+
 
   const closeAllWindows = async () => {
     try {

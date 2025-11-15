@@ -149,7 +149,7 @@ function createWindow() {
 }
 
 // ✅ Funkce pro vytvoření player okna
-function createPlayerWindow(playerName, roomCode) {
+function createPlayerWindow(playerName, roomCode, sessionId) {
   console.log(`🎮 Creating player window for: ${playerName}`);
   
   const playerWindow = new BrowserWindow({
@@ -158,17 +158,14 @@ function createPlayerWindow(playerName, roomCode) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js') // ✅ PŘIDÁNO
+      preload: path.join(__dirname, 'preload.js')
     },
     title: `Hráč: ${playerName}`
   });
 
-  const playerUrl = `http://localhost:${PORT}?mode=player&room=${roomCode}&playerName=${encodeURIComponent(playerName)}`;
+  // ✅ Přidej sessionId do URL
+  const playerUrl = `http://localhost:${PORT}?mode=player&room=${roomCode}&playerName=${encodeURIComponent(playerName)}&sessionId=${sessionId}`;
   playerWindow.loadURL(playerUrl);
-
-  //if (isDev) {
-  //  playerWindow.webContents.openDevTools({ mode: 'detach' });
-  //}
 
   playerWindow.on('closed', () => {
     delete playerWindows[playerName];
@@ -176,14 +173,14 @@ function createPlayerWindow(playerName, roomCode) {
   });
 
   playerWindows[playerName] = playerWindow;
-  console.log(`✅ Player window created: ${playerName}`);
+  console.log(`✅ Player window created: ${playerName} (session: ${sessionId.substring(0, 12)}...)`);
   
   return playerWindow;
 }
 
-// ✅ IPC HANDLERS - Komunikace s renderer procesem
-ipcMain.handle('create-player-window', (event, playerName, roomCode) => {
-  createPlayerWindow(playerName, roomCode);
+// ✅ IPC handler s sessionId
+ipcMain.handle('create-player-window', (event, playerName, roomCode, sessionId) => {
+  createPlayerWindow(playerName, roomCode, sessionId);
   return { success: true };
 });
 

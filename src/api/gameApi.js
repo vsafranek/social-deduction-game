@@ -119,6 +119,28 @@ async endPhase(gameId) {
     headers: { 'Content-Type': 'application/json' }
   });
   return res.json();
-}
+},
 
+//  Get player role by playerId 
+async getPlayerRoleByPlayerId(gameId, playerId) {
+  console.log('📖 Fetching role for player:', playerId);
+  const res = await fetch(`${API_BASE}/game/${gameId}/player/${playerId}/role-by-id`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+},
+
+// Get player by sessionId
+async getPlayerBySessionId(gameId, sessionId) {
+  console.log('🔍 Fetching player by sessionId:', sessionId);
+  const res = await fetch(`${API_BASE}/game/${gameId}/player-by-session/${sessionId}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
 };
+

@@ -7,6 +7,7 @@ const Game = require('../models/Game');
 const Player = require('../models/Player');
 const GameLog = require('../models/GameLog');
 const { ROLES, MODIFIERS } = require('../models/Role');
+const { resolveNightActions } = require('../game/nightActionResolver');
 
 // -----------------------------
 // Helpers: validation & utils
@@ -176,134 +177,6 @@ function evaluateVictory(players) {
   return null;
 }
 
-// -----------------------------
-// Night resolution
-// -----------------------------
-async function resolveNightActions(game, players) {
-  // This is a minimal but extensible resolver; tune priorities as you wish.
-  const idMap = new Map(players.map(p => [p._id.toString(), p]));
-  const blocked = new Set(); // actors who cannot act
-  const trapped = new Set(); // actors caught by trap
-  const visits = [];         // collected visits/actions
-
-  // 0) Clear expired effects
-  clearExpiredEffects(players);
-
-  // 1) Pre-process blocks and collect visits
-  for (const actor of players) {
-    if (!actor.alive) continue;
-    const action = actor.nightAction?.action;
-    const targetId = actor.nightAction?.targetId?.toString();
-    if (!action || !targetId) continue;
-    const target = idMap.get(targetId);
-    if (!target || !target.alive) continue;
-
-    // Blocked actor cannot act (e.g., Jailer or prior effects)
-    if (hasEffect(actor, 'blocked')) {
-      blocked.add(actor._id.toString());
-      continue;
-    }
-
-    // Trapper: if target has trap effect, any actor visiting is trapped
-    if (hasEffect(target, 'trap')) {
-      trapped.add(actor._id.toString());
-      // option: add 'trapped' effect
-      addEffect(actor, 'trapped', null, null, {});
-      continue;
-    }
-
-    // Drunk 50% fail
-    if (actor.modifier === 'Opilý' || actor.modifier === 'Drunk') {
-      if (Math.random() < 0.5) {
-        blocked.add(actor._id.toString());
-        continue;
-      }
-    }
-
-    visits.push({ actorId: actor._id.toString(), targetId, action });
-  }
-
-  // 2) Apply effects by action 
-  const toSave = new Set();
-  for (const v of visits) {
-    if (blocked.has(v.actorId) || trapped.has(v.actorId)) continue;
-    const actor = idMap.get(v.actorId);
-    const target = idMap.get(v.targetId);
-    if (!actor || !target) continue;
-
-    switch (v.action) {
-      case 'infect': {
-        if (!hasEffect(target, 'infected')) {
-          addEffect(target, 'infected', actor._id, null, {});
-          toSave.add(target._id.toString());
-        }
-        break;
-      }
-      case 'frame': {
-        // framed until end of next day unless cleared
-        addEffect(target, 'framed', actor._id, null, {});
-        toSave.add(target._id.toString());
-        break;
-      }
-      case 'kill':
-      case 'clean_kill': {
-        addEffect(target, 'pendingKill', actor._id, null, { clean: v.action === 'clean_kill' });
-        toSave.add(target._id.toString());
-        break;
-      }
-      case 'protect': {
-        addEffect(target, 'protected', actor._id, null, {});
-        toSave.add(target._id.toString());
-        break;
-      }
-      case 'block': {
-        addEffect(target, 'blocked', actor._id, null, {});
-        toSave.add(target._id.toString());
-        break;
-      }
-      case 'trap': {
-        // Add trap effect on target’s house
-        addEffect(target, 'trap', actor._id, null, {});
-        toSave.add(target._id.toString());
-        break;
-      }
-      case 'watch':
-      case 'track':
-      case 'investigate':
-        // Information roles handled in logs or separate info channels (omitted here for public UI)
-        break;
-      default:
-        break;
-    }
-  }
-
-  // 3) Resolve kill vs protect and apply deaths
-  for (const p of players) {
-    if (!p.alive) continue;
-    const pending = (p.effects || []).filter(e => e.type === 'pendingKill');
-    if (!pending.length) continue;
-    const isProtected = hasEffect(p, 'protected');
-    if (!isProtected) {
-      p.alive = false;
-      // Optionally, write clean-kill info into GameLog (hide role if meta.clean)
-    }
-    // Clear all pendingKill effects
-    removeEffects(p, e => e.type === 'pendingKill');
-    toSave.add(p._id.toString());
-  }
-
-  // 4) Persist updated players
-  for (const id of toSave) {
-    const pl = idMap.get(id);
-    await pl.save();
-  }
-
-  // 5) Clean one-shot effects that should not persist past resolution window
-  for (const p of players) {
-    // Example: protected, blocked, trap could expire at end of night
-    // If you want duration per effect, set expiresAt when adding.
-  }
-}
 
 // -----------------------------
 // Day resolution (voting)
@@ -425,10 +298,11 @@ router.get('/:gameId/state', async (req, res) => {
     const publicPlayers = players.map(p => ({
       _id: p._id,
       name: p.name,
-      role: p.role,          // if you want to hide roles from public UI, set null here
+      role: p.role,
       alive: p.alive,
       hasVoted: p.hasVoted,
-      voteFor: p.voteFor      // front-end uses this only to aggregate counts; no names shown
+      voteFor: p.voteFor,
+      nightResults: p.nightAction?.results || []
     }));
 
     res.json({
@@ -496,7 +370,7 @@ router.get('/:gameId/player/:sessionId/role', async (req, res) => {
 router.post('/:gameId/night-action', async (req, res) => {
   try {
     const { gameId } = req.params;
-    const { playerId, targetId, action } = req.body || {};
+    const { playerId, targetId, action } = req.body;
 
     if (!ensureObjectId(gameId) || !ensureObjectId(playerId) || !ensureObjectId(targetId)) {
       return res.status(400).json({ error: 'Invalid IDs' });
@@ -507,15 +381,23 @@ router.post('/:gameId/night-action', async (req, res) => {
       return res.status(404).json({ error: 'Player not found' });
     }
 
-    player.nightAction = { targetId, action };
-    await player.save();
+    player.nightAction = {
+      targetId,
+      action,
+      results: []  
+    };
 
+    await player.save();
+    
+    console.log(`✅ Night action set: ${player.name} → ${action} → ${targetId}`);
     res.json({ success: true });
+
   } catch (e) {
     console.error('nightAction error:', e);
     res.status(500).json({ error: e.message });
   }
 });
+
 // Vote
 // Vote endpoint with auto-shorten when all alive voted
 router.post('/:gameId/vote', async (req, res) => {
@@ -620,11 +502,12 @@ router.put('/:gameId/timers', async (req, res) => {
   }
 });
 
-// Start with explicit assignments and modifiers; inject affiliations/victoryConditions from ROLES
+// V gameRoutes.js - oprav endpoint /start-config
 router.post('/:gameId/start-config', async (req, res) => {
   try {
     const { gameId } = req.params;
     const { assignments, modifiers } = req.body || {};
+
     if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
 
     const game = await Game.findById(gameId);
@@ -634,25 +517,37 @@ router.post('/:gameId/start-config', async (req, res) => {
     const players = await Player.find({ gameId });
     if (players.length < 3) return res.status(400).json({ error: 'At least 3 players required' });
 
-    const byId = new Map(players.map(p => [p._id.toString(), p]));
-    for (const [pid, role] of Object.entries(assignments || {})) {
-      const p = byId.get(pid.toString());
-      if (p) p.role = role || 'Citizen';
+    // ✅ OPRAVA: Mapuj role na hráče podle ID
+    console.log('📋 Assigning roles:', assignments);
+    
+    for (const [playerId, roleName] of Object.entries(assignments || {})) {
+      const player = players.find(p => p._id.toString() === playerId);
+      if (player) {
+        player.role = roleName || 'Citizen';
+        console.log(`  ✓ ${player.name} ← ${player.role}`);
+        await player.save();
+      }
     }
-    // Fallback to Citizen
-    for (const p of players) if (!p.role) p.role = 'Citizen';
 
-    // Inject affiliations & victory per role definition
     for (const p of players) {
+      if (!p.role) {
+        p.role = 'Citizen';
+        await p.save();
+        console.log(`  ✓ ${p.name} ← Citizen (default)`);
+      }
+    }
+
+    const updatedPlayers = await Player.find({ gameId });
+    for (const p of updatedPlayers) {
       const def = ROLES[p.role];
-      p.affiliations = def?.defaultAffiliations || [];
-      p.victoryConditions = def?.defaultVictory || { canWinWithTeams: [], soloWin: false, customRules: [] };
+      p.affiliations = def?.defaultAffiliations || ['good'];
+      p.victoryConditions = def?.defaultVictory || { canWinWithTeams: ['good'], soloWin: false, customRules: [] };
       await p.save();
     }
 
-    // Modifiers probabilities
-    const drunkChance = normalizeChance(modifiers?.opilýChance ?? modifiers?.drunkChance, game.modifierConfiguration?.opilýChance ?? 0.2);
-    const recluseChance = normalizeChance(modifiers?.poustevníkChance ?? modifiers?.recluseChance, game.modifierConfiguration?.poustevníkChance ?? 0.15);
+    // ✅ Modifiers
+    const drunkChance = normalizeChance(modifiers?.opilýChance ?? modifiers?.drunkChance, 0.2);
+    const recluseChance = normalizeChance(modifiers?.poustevníkChance ?? modifiers?.recluseChance, 0.15);
 
     for (const p of players) {
       const r = Math.random();
@@ -672,88 +567,11 @@ router.post('/:gameId/start-config', async (req, res) => {
     await GameLog.create({ gameId, message: '--- GAME START ---' });
     await GameLog.create({ gameId, message: `Round ${game.round} - DAY (⏱ ${daySec}s)` });
 
+    console.log('✅ Game started with role assignments');
     res.json({ success: true });
+
   } catch (e) {
     console.error('start-config error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Tick: auto switch phases, resolve actions/voting, evaluate victory
-router.post('/:gameId/tick', async (req, res) => {
-  try {
-    const { gameId } = req.params;
-    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
-
-    const game = await Game.findById(gameId);
-    if (!game) return res.status(404).json({ error: 'Game not found' });
-
-    if (game.phase === 'end') return res.json({ success: true, phase: 'end' });
-
-    const endsAt = game.timerState?.phaseEndsAt ? new Date(game.timerState.phaseEndsAt).getTime() : null;
-    const currentMs = nowMs();
-
-    // If no deadline set, initialize for current phase
-    if (!endsAt) {
-      const dur = game.phase === 'day' ? Number(game.timers?.daySeconds ?? 150) : Number(game.timers?.nightSeconds ?? 90);
-      game.timerState = { phaseEndsAt: endInMs(dur) };
-      await game.save();
-      return res.json({ success: true, phase: game.phase, phaseEndsAt: game.timerState.phaseEndsAt });
-    }
-
-    if (currentMs < endsAt) {
-      return res.json({ success: true, phase: game.phase, remainingMs: (endsAt - currentMs), phaseEndsAt: game.timerState.phaseEndsAt });
-    }
-
-    // Phase expired -> resolve and switch
-    let players = await Player.find({ gameId });
-
-    if (game.phase === 'night') {
-      await resolveNightActions(game, players);
-      players = await Player.find({ gameId });
-
-      const win = evaluateVictory(players);
-      if (win) {
-        game.phase = 'end';
-        await game.save();
-        await GameLog.create({ gameId, message: `🏁 Victory: ${win.winner}` });
-        return res.json({ success: true, phase: 'end', winner: win.winner, winners: win.players });
-      }
-
-      // switch to day
-      const daySec = Number(game.timers?.daySeconds ?? 150);
-      game.phase = 'day';
-      game.timerState.phaseEndsAt = endInMs(daySec);
-      await game.save();
-      await GameLog.create({ gameId, message: `Round ${game.round} - DAY (⏱ ${daySec}s)` });
-      return res.json({ success: true, phase: 'day', phaseEndsAt: game.timerState.phaseEndsAt });
-    }
-
-    if (game.phase === 'day') {
-      await resolveDayVoting(game, players);
-      players = await Player.find({ gameId });
-
-      const win = evaluateVictory(players);
-      if (win) {
-        game.phase = 'end';
-        await game.save();
-        await GameLog.create({ gameId, message: `🏁 Victory: ${win.winner}` });
-        return res.json({ success: true, phase: 'end', winner: win.winner, winners: win.players });
-      }
-
-      // switch to night, new round
-      const nightSec = Number(game.timers?.nightSeconds ?? 90);
-      game.phase = 'night';
-      game.round = (game.round || 0) + 1;
-      game.timerState.phaseEndsAt = endInMs(nightSec);
-      await game.save();
-      await GameLog.create({ gameId, message: `Round ${game.round} - NIGHT (⏱ ${nightSec}s)` });
-      return res.json({ success: true, phase: 'night', phaseEndsAt: game.timerState.phaseEndsAt });
-    }
-
-    return res.json({ success: true, phase: game.phase });
-  } catch (e) {
-    console.error('tick error:', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -837,13 +655,11 @@ router.post('/:gameId/reset-to-lobby', async (req, res) => {
     const game = await Game.findById(gameId);
     if (!game) return res.status(404).json({ error: 'Game not found' });
 
-    // Reset game state
     game.phase = 'lobby';
     game.round = 0;
     game.timerState = { phaseEndsAt: null };
     await game.save();
 
-    // Reset all players
     const players = await Player.find({ gameId });
     for (const p of players) {
       p.alive = true;
@@ -854,13 +670,11 @@ router.post('/:gameId/reset-to-lobby', async (req, res) => {
       p.effects = [];
       p.hasVoted = false;
       p.voteFor = null;
-      p.nightAction = { targetId: null, action: null };
-      p.actionResults = [];
+      p.nightAction = { targetId: null, action: null, results: [] };
       await p.save();
     }
 
     await GameLog.create({ gameId, message: '🔄 Game reset to lobby by moderator' });
-
     console.log('✅ Game reset to lobby');
     res.json({ success: true });
   } catch (e) {
@@ -873,7 +687,6 @@ router.post('/:gameId/reset-to-lobby', async (req, res) => {
 router.post('/:gameId/end-phase', async (req, res) => {
   try {
     const { gameId } = req.params;
-    
     if (!ensureObjectId(gameId)) {
       return res.status(400).json({ error: 'Invalid game id' });
     }
@@ -887,107 +700,113 @@ router.post('/:gameId/end-phase', async (req, res) => {
     console.log(`🔄 [END-PHASE] Current phase: ${currentPhase}`);
 
     if (currentPhase === 'day') {
-      // Day → Night: process voting
+      // Day → Night: process voting + RESET night actions
       console.log('📋 Processing day voting...');
       
-      // Najdi hráče s nejvíce hlasy
-      const voteCounts = {};
-      const players = await Player.find({ gameId, alive: true });
+      let players = await Player.find({ gameId });
+      await resolveDayVoting(game, players);
       
+      // Reload players after voting
+      players = await Player.find({ gameId });
+      
+      // ✅ RESET nočních akcí pro novou noc
+      console.log('🧹 Resetting night actions for new night...');
       for (const p of players) {
-        if (p.voteFor) {
-          voteCounts[p.voteFor.toString()] = (voteCounts[p.voteFor.toString()] || 0) + 1;
-        }
+        p.nightAction = {
+          targetId: null,
+          action: null,
+          results: []
+        };
+        await p.save();
       }
-
-      // Hráč s nejvíce hlasy zemře
-      let maxVotes = 0;
-      let eliminatedId = null;
-      for (const [pid, count] of Object.entries(voteCounts)) {
-        if (count > maxVotes) {
-          maxVotes = count;
-          eliminatedId = pid;
-        }
-      }
-
-      if (eliminatedId) {
-        const eliminated = await Player.findById(eliminatedId);
-        eliminated.alive = false;
-        await eliminated.save();
-        await GameLog.create({ 
-          gameId, 
-          message: `💀 ${eliminated.name} was eliminated by vote.` 
+      console.log('✅ Night actions reset complete');
+      
+      // Check victory
+      const win = evaluateVictory(players);
+      if (win) {
+        game.phase = 'end';
+        game.winner = win.winner;
+        await game.save();
+        await GameLog.create({ gameId, message: `🏁 Victory: ${win.winner}` });
+        console.log(`✅ Victory: ${win.winner}`);
+        return res.json({
+          success: true,
+          phase: 'end',
+          winner: win.winner,
+          winners: win.players
         });
-        console.log(`💀 Eliminated: ${eliminated.name}`);
       }
 
-      // Reset votes
-      await Player.updateMany(
-        { gameId },
-        { hasVoted: false, voteFor: null }
-      );
-
+      // Switch to night
+      const nightSec = Number(game.timers?.nightSeconds ?? 90);
       game.phase = 'night';
-    } 
-    else if (currentPhase === 'night') {
+      game.round = (game.round || 0) + 1;
+      game.timerState = {
+        phaseEndsAt: new Date(Date.now() + nightSec * 1000)
+      };
+      await game.save();
+      await GameLog.create({ gameId, message: `Round ${game.round} - NIGHT (⏱ ${nightSec}s)` });
+      console.log(`✅ [END-PHASE] Day → Night (Round ${game.round})`);
+
+    } else if (currentPhase === 'night') {
       // Night → Day: process night actions
       console.log('🌙 Processing night actions...');
       
-      // Zde můžeš později přidat logiku pro noční akce
-      // Zatím jen změníme fázi
+      let players = await Player.find({ gameId });
+      await resolveNightActions(game, players);
       
+      // Reload players after night resolution
+      players = await Player.find({ gameId });
+      
+      // Check victory
+      const win = evaluateVictory(players);
+      if (win) {
+        game.phase = 'end';
+        game.winner = win.winner;
+        await game.save();
+        await GameLog.create({ gameId, message: `🏁 Victory: ${win.winner}` });
+        console.log(`✅ Victory: ${win.winner}`);
+        return res.json({
+          success: true,
+          phase: 'end',
+          winner: win.winner,
+          winners: win.players
+        });
+      }
+
+      // Switch to day
+      const daySec = Number(game.timers?.daySeconds ?? 150);
       game.phase = 'day';
+      game.timerState = {
+        phaseEndsAt: new Date(Date.now() + daySec * 1000)
+      };
+      await game.save();
+      await GameLog.create({ gameId, message: `Round ${game.round} - DAY (⏱ ${daySec}s)` });
+      console.log(`✅ [END-PHASE] Night → Day (Round ${game.round})`);
     }
 
-    // Nastav nový deadline
-    const phaseSeconds = game.phase === 'day' 
-      ? (game.timers?.daySeconds ?? 150) 
-      : (game.timers?.nightSeconds ?? 90);
-    
-    game.timerState = { 
-      phaseEndsAt: new Date(Date.now() + phaseSeconds * 1000)
-    };
-
-    // Check victory
-    const allPlayers = await Player.find({ gameId });
-    const alive = allPlayers.filter(p => p.alive);
-    const aliveBad = alive.filter(p => p.affiliations?.includes('evil') || p.team === 'evil');
-    const aliveGood = alive.filter(p => p.affiliations?.includes('good') || p.team === 'good');
-
-    if (aliveBad.length === 0) {
-      console.log('✅ Good team wins!');
-      game.phase = 'end';
-      game.winner = 'good';
-      await GameLog.create({ gameId, message: '🎉 Good team wins!' });
-    } else if (aliveBad.length >= aliveGood.length) {
-      console.log('✅ Evil team wins!');
-      game.phase = 'end';
-      game.winner = 'evil';
-      await GameLog.create({ gameId, message: '🎉 Evil team wins!' });
-    }
-
-    await game.save();
-
-    await GameLog.create({ 
-      gameId, 
-      message: `🔄 Phase ended: ${currentPhase} → ${game.phase}` 
+    await GameLog.create({
+      gameId,
+      message: `🔄 Phase ended: ${currentPhase} → ${game.phase}`
     });
 
     console.log(`✅ [END-PHASE] Phase changed: ${currentPhase} → ${game.phase}`);
     
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       phase: game.phase,
       round: game.round,
       phaseEndsAt: game.timerState.phaseEndsAt,
       winner: game.winner || null
     });
+
   } catch (e) {
     console.error('❌ end-phase error:', e);
     console.error('Stack:', e.stack);
     res.status(500).json({ error: e.message });
   }
 });
+
 
 
 module.exports = router;
