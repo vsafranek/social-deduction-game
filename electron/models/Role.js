@@ -1,3 +1,5 @@
+// electron/models/Role.js
+
 const ROLES = {
   // Town (Good)
   'Doctor': {
@@ -5,7 +7,9 @@ const ROLES = {
     emoji: '💉',
     description: 'Protects one player each night from death',
     actionType: 'protect',
+    nightPriority: 9,
     canUseEveryNight: true,
+    visitsTarget: true,
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
@@ -14,7 +18,9 @@ const ROLES = {
     emoji: '👮',
     description: 'Locks a player each night; the target cannot act',
     actionType: 'block',
+    nightPriority: 2,
     canUseEveryNight: true,
+    visitsTarget: true,
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
@@ -23,7 +29,9 @@ const ROLES = {
     emoji: '🔍',
     description: 'Learns two possible roles of the target each night (one is correct)',
     actionType: 'investigate',
+    nightPriority: 5,
     canUseEveryNight: true,
+    visitsTarget: true,
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
@@ -32,7 +40,9 @@ const ROLES = {
     emoji: '👁️',
     description: 'Watches a house and sees who visited the target',
     actionType: 'watch',
+    nightPriority: 4,
     canUseEveryNight: true,
+    visitsTarget: false,
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
@@ -41,7 +51,9 @@ const ROLES = {
     emoji: '🪤',
     description: 'Sets a trap; visitors are revealed and their action fails',
     actionType: 'trap',
+    nightPriority: 3,
     canUseEveryNight: true,
+    visitsTarget: false,
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
@@ -50,7 +62,9 @@ const ROLES = {
     emoji: '👣',
     description: 'Follows the target and learns whom they visited',
     actionType: 'track',
+    nightPriority: 4,
     canUseEveryNight: true,
+    visitsTarget: false,
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
@@ -59,7 +73,9 @@ const ROLES = {
     emoji: '👤',
     description: 'No special ability',
     actionType: 'none',
+    nightPriority: 0,
     canUseEveryNight: false,
+    visitsTarget: false,
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
@@ -70,33 +86,51 @@ const ROLES = {
     emoji: '🔪',
     description: 'Kills one player each night',
     actionType: 'kill',
+    nightPriority: 7,
     canUseEveryNight: true,
+    visitsTarget: true,
     defaultAffiliations: ['evil'],
-    defaultVictory: { canWinWithTeams: ['evil'], soloWin: false, customRules: [
-      { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
-    ] }
+    defaultVictory: { 
+      canWinWithTeams: ['evil'], 
+      soloWin: false, 
+      customRules: [
+        { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
+      ] 
+    }
   },
   'Cleaner': {
     team: 'evil',
     emoji: '🧹',
     description: "Kills and hides the victim's role",
     actionType: 'clean_kill',
+    nightPriority: 7,
     canUseEveryNight: true,
+    visitsTarget: true,
     defaultAffiliations: ['evil'],
-    defaultVictory: { canWinWithTeams: ['evil'], soloWin: false, customRules: [
-      { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
-    ] }
+    defaultVictory: { 
+      canWinWithTeams: ['evil'], 
+      soloWin: false, 
+      customRules: [
+        { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
+      ] 
+    }
   },
   'Framer': {
     team: 'evil',
     emoji: '🖼️',
     description: 'Makes a player appear as evil to investigations',
     actionType: 'frame',
+    nightPriority: 7,
     canUseEveryNight: true,
+    visitsTarget: true,
     defaultAffiliations: ['evil'],
-    defaultVictory: { canWinWithTeams: ['evil'], soloWin: false, customRules: [
-      { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
-    ] }
+    defaultVictory: { 
+      canWinWithTeams: ['evil'], 
+      soloWin: false, 
+      customRules: [
+        { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
+      ] 
+    }
   },
 
   // Neutral
@@ -105,29 +139,39 @@ const ROLES = {
     emoji: '🕊️',
     description: 'May win with either side',
     actionType: 'none',
+    nightPriority: 0,
     canUseEveryNight: false,
+    visitsTarget: false,
     defaultAffiliations: ['neutral'],
     defaultVictory: { canWinWithTeams: ['good','evil'], soloWin: false, customRules: [] }
   },
   'Survivor': {
     team: 'neutral',
     emoji: '🛡️',
-    description: 'Aims to survive alone',
-    actionType: 'none',
-    canUseEveryNight: false,
+    description: 'Serial killer - aims to survive alone',
+    actionType: 'kill',
+    nightPriority: 1,
+    canUseEveryNight: true,
+    visitsTarget: true,
     defaultAffiliations: ['neutral','solo'],
-    defaultVictory: { canWinWithTeams: [], soloWin: true, customRules: [
-      { type: 'aliveExactly', team: 'neutral', count: 1 },
-      { type: 'aliveExactly', team: 'good', count: 0 },
-      { type: 'aliveExactly', team: 'evil', count: 0 }
-    ] }
+    defaultVictory: { 
+      canWinWithTeams: [], 
+      soloWin: true, 
+      customRules: [
+        { type: 'aliveExactly', team: 'neutral', count: 1 },
+        { type: 'aliveExactly', team: 'good', count: 0 },
+        { type: 'aliveExactly', team: 'evil', count: 0 }
+      ] 
+    }
   },
   'Infected': {
     team: 'neutral',
     emoji: '🦠',
     description: 'Visits players at night to infect them; wins when all others are infected',
     actionType: 'infect',
+    nightPriority: 6,
     canUseEveryNight: true,
+    visitsTarget: true,
     defaultAffiliations: ['neutral'],
     defaultVictory: {
       canWinWithTeams: [],
@@ -136,7 +180,7 @@ const ROLES = {
         { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
       ]
     }
-  }  
+  }
 };
 
 const MODIFIERS = {

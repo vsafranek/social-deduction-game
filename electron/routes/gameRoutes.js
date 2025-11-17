@@ -8,6 +8,8 @@ const Player = require('../models/Player');
 const GameLog = require('../models/GameLog');
 const { ROLES, MODIFIERS } = require('../models/Role');
 const { resolveNightActions } = require('../game/nightActionResolver');
+const { evaluateVictory } = require('../game/victoryEvaluator');
+const { resolveDayVoting } = require('../game/votingResolver');
 
 // -----------------------------
 // Helpers: validation & utils
@@ -62,175 +64,6 @@ function clearExpiredEffects(players) {
   for (const p of players) {
     p.effects = (p.effects || []).filter(e => !e.expiresAt || e.expiresAt > now);
   }
-}
-
-// -----------------------------
-// Victory evaluation (declarative)
-// -----------------------------
-function liveTeamCounts(players) {
-  const counts = new Map(); // team -> count
-  for (const p of players) {
-    if (!p.alive) continue;
-    for (const t of (p.affiliations || [])) {
-      counts.set(t, (counts.get(t) || 0) + 1);
-    }
-  }
-  return counts;
-}
-
-function groupByAffiliation(players) {
-  const map = new Map(); // team -> [players]
-  for (const p of players) {
-    if (!p.alive) continue;
-    for (const t of (p.affiliations || [])) {
-      if (!map.has(t)) map.set(t, []);
-      map.get(t).push(p);
-    }
-  }
-  return map;
-}
-
-function evaluateCustomRule(rule, ctx) {
-  switch (rule.type) {
-    case 'eliminate': {
-      const n = ctx.counts.get(rule.targetTeam) || 0;
-      return n === 0;
-    }
-    case 'parity': {
-      const a = ctx.counts.get(rule.team) || 0;
-      const b = ctx.counts.get(rule.against || 'good') || 0;
-      const cmp = rule.comparator || '>=';
-      if (cmp === '>=') return a >= b;
-      if (cmp === '>') return a > b;
-      if (cmp === '===') return a === b;
-      return false;
-    }
-    case 'aliveExactly': {
-      const n = ctx.counts.get(rule.team) || 0;
-      return n === rule.count;
-    }
-    case 'aliveAtMost': {
-      const n = ctx.counts.get(rule.team) || 0;
-      return n <= rule.count;
-    }
-    case 'aliveAtLeast': {
-      const n = ctx.counts.get(rule.team) || 0;
-      return n >= rule.count;
-    }
-    case 'allOthersHaveEffect': {
-      const { effect, negate } = rule;
-      const alive = ctx.players.filter(pl => pl.alive);
-      const selfId = ctx.self?._id?.toString();
-      for (const pl of alive) {
-        if (selfId && pl._id.toString() === selfId) continue;
-        const has = hasEffect(pl, effect);
-        if (negate ? has : !has) return false;
-      }
-      return true;
-    }
-    default:
-      return false;
-  }
-}
-
-function evaluateVictory(players) {
-  const alive = players.filter(p => p.alive);
-  const counts = liveTeamCounts(players);
-  const byTeam = groupByAffiliation(players);
-
-  // 1) Solo wins
-  for (const p of alive) {
-    if (p.victoryConditions?.soloWin) {
-      const others = alive.filter(x => x._id.toString() !== p._id.toString());
-      if (others.length === 0) {
-        return { winner: 'solo', players: [p._id], teams: ['solo'] };
-      }
-    }
-  }
-
-  // 2) Coalition defaults (good/evil)
-  const evilAlive = (byTeam.get('evil') || []).length;
-  const goodAlive = (byTeam.get('good') || []).length;
-  const neutralAlive = (byTeam.get('neutral') || []).length;
-
-  // Good win: no evil alive and at least someone else alive (good or neutral)
-  if (evilAlive === 0 && (goodAlive > 0 || neutralAlive > 0)) {
-    const winners = alive.filter(p => p.victoryConditions?.canWinWithTeams?.includes('good'));
-    if (winners.length) return { winner: 'good', players: winners.map(w => w._id), teams: ['good'] };
-  }
-
-  // Evil win: no good alive OR parity/majority against good
-  if (goodAlive === 0 || (evilAlive >= goodAlive)) {
-    const winners = alive.filter(p => p.victoryConditions?.canWinWithTeams?.includes('evil'));
-    if (winners.length) return { winner: 'evil', players: winners.map(w => w._id), teams: ['evil'] };
-  }
-
-  // 3) Custom rules per player
-  for (const p of alive) {
-    const rules = p.victoryConditions?.customRules || [];
-    if (rules.length) {
-      const ok = rules.every(rule => evaluateCustomRule(rule, { counts, byTeam, players, self: p }));
-      if (ok) return { winner: 'custom', players: [p._id], teams: p.affiliations || [] };
-    }
-  }
-
-  return null;
-}
-
-
-// -----------------------------
-// Day resolution (voting)
-// -----------------------------
-async function resolveDayVoting(game, players) {
-  // Simple majority: player with max votes is executed; tie -> no execution
-  const alive = players.filter(p => p.alive);
-  const counts = new Map(); // targetId -> votes
-  for (const p of alive) {
-    if (p.voteFor) {
-      const key = p.voteFor.toString();
-      counts.set(key, (counts.get(key) || 0) + 1);
-    }
-  }
-
-  if (!counts.size) {
-    await GameLog.create({ gameId: game._id, message: 'No execution (no votes).' });
-    return;
-  }
-
-  let topId = null;
-  let topVotes = 0;
-  let tied = false;
-  for (const [k, v] of counts) {
-    if (v > topVotes) {
-      topVotes = v;
-      topId = k;
-      tied = false;
-    } else if (v === topVotes) {
-      tied = true;
-    }
-  }
-
-  if (tied) {
-    await GameLog.create({ gameId: game._id, message: 'No execution (tie).' });
-    return;
-  }
-
-  const target = await Player.findById(topId);
-  if (target && target.alive) {
-    target.alive = false;
-    await target.save();
-    await GameLog.create({ gameId: game._id, message: `Executed: ${target.name}` });
-  }
-
-  // Clear daily votes
-  for (const p of alive) {
-    p.hasVoted = false;
-    p.voteFor = null;
-    await p.save();
-  }
-
-  // Optionally clear day-scoped effects like 'framed' at end of day
-  // for (const p of players) removeEffects(p, e => e.type === 'framed');
 }
 
 // -----------------------------
@@ -704,7 +537,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
       console.log('📋 Processing day voting...');
       
       let players = await Player.find({ gameId });
-      await resolveDayVoting(game, players);
+      await resolveDayVoting(game, players, GameLog);
       
       // Reload players after voting
       players = await Player.find({ gameId });

@@ -80,7 +80,13 @@ const RESULT_MAPPING = {
     label: 'Klidná noc',
     bgGradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
     severity: 'positive'
-  }
+  },
+  'protect': { 
+    emoji: '💉', 
+    label: 'Ochrana',
+    bgGradient: 'linear-gradient(135deg, #10b981, #059669)',
+    severity: 'neutral'
+  },
 };
 
 function NightResults({ player, results = [] }) {

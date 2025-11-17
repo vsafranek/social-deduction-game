@@ -86,10 +86,17 @@ const RESULT_MAPPING = {
     subtitle: 'Nic se ti nestalo',
     bgGradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
     hideDetails: false
-  }
+  },
+  'protect': { 
+    emoji: '💉', 
+    label: 'Ochrana', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #10b981, #059669)',
+    hideDetails: false
+  },
 };
 
-const STORY_DURATION = 3000;
+const STORY_DURATION = 6000;
 
 function NightResultsStories({ results = [], onComplete }) {
   const [currentIndex, setCurrentIndex] = useState(0);

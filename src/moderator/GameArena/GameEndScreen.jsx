@@ -1,90 +1,232 @@
-// src/components/moderator/GameArena/GameEndScreen.jsx
-import React from 'react';
+// src/player/components/GameEndScreen/GameEndScreen.jsx
+import React, { useEffect, useState } from 'react';
 import './GameEndScreen.css';
 
-function GameEndScreen({ gameState, onReturnToLobby }) {
-  const winner = gameState.game.winner; // 'good' | 'evil' | 'neutral'
-  const players = gameState.players;
-  
-  // Rozdělení hráčů
-  const winners = players.filter(p => {
-    if (winner === 'good') return p.affiliations?.includes('good');
-    if (winner === 'evil') return p.affiliations?.includes('evil');
-    return p.affiliations?.includes('neutral');
+const ROLE_INFO = {
+  'Doctor': { emoji: '💉', team: 'good', teamLabel: 'Město' },
+  'Jailer': { emoji: '👮', team: 'good', teamLabel: 'Město' },
+  'Investigator': { emoji: '🔍', team: 'good', teamLabel: 'Město' },
+  'Lookout': { emoji: '👁️', team: 'good', teamLabel: 'Město' },
+  'Trapper': { emoji: '🪤', team: 'good', teamLabel: 'Město' },
+  'Tracker': { emoji: '👣', team: 'good', teamLabel: 'Město' },
+  'Citizen': { emoji: '👤', team: 'good', teamLabel: 'Město' },
+  'Killer': { emoji: '🔪', team: 'evil', teamLabel: 'Mafie' },
+  'Cleaner': { emoji: '🧹', team: 'evil', teamLabel: 'Mafie' },
+  'Framer': { emoji: '🖼️', team: 'evil', teamLabel: 'Mafie' },
+  'Diplomat': { emoji: '🕊️', team: 'neutral', teamLabel: 'Neutrální' },
+  'Survivor': { emoji: '🛡️', team: 'neutral', teamLabel: 'Sériový vrah' },
+  'Infected': { emoji: '🦠', team: 'neutral', teamLabel: 'Nakažlivý' }
+};
+
+const MODIFIER_INFO = {
+  'Drunk': { emoji: '🍺', label: 'Opilý' },
+  'Recluse': { emoji: '🏚️', label: 'Poustevník' }
+};
+
+const WINNER_LABELS = {
+  'good': { label: 'Město vyhrává!', emoji: '✨', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
+  'evil': { label: 'Mafie vyhrává!', emoji: '🔥', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)' },
+  'solo': { label: 'Sólové vítězství!', emoji: '👑', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)' },
+  'custom': { label: 'Speciální vítězství!', emoji: '🌟', gradient: 'linear-gradient(135deg, #a855f7, #9333ea)' },
+  'draw': { label: 'Remíza', emoji: '🤝', gradient: 'linear-gradient(135deg, #6b7280, #4b5563)' }
+};
+
+function GameEndScreen({ gameState, currentPlayer }) {
+  const [showAnimation, setShowAnimation] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowAnimation(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!gameState || !gameState.game) return null;
+
+  const winner = gameState.game.winner || 'draw';
+  const winnerInfo = WINNER_LABELS[winner] || WINNER_LABELS['draw'];
+  const players = gameState.players || [];
+  const winnerIds = gameState.game.winnerPlayerIds || [];
+
+  // Rozdělení hráčů podle teamu
+  const goodPlayers = players.filter(p => {
+    const role = ROLE_INFO[p.role];
+    return role && role.team === 'good';
   });
-  
-  const losers = players.filter(p => !winners.includes(p));
-  const dead = players.filter(p => !p.alive);
+
+  const evilPlayers = players.filter(p => {
+    const role = ROLE_INFO[p.role];
+    return role && role.team === 'evil';
+  });
+
+  const neutralPlayers = players.filter(p => {
+    const role = ROLE_INFO[p.role];
+    return role && role.team === 'neutral';
+  });
+
+  const isWinner = (playerId) => {
+    return winnerIds.some(id => id.toString() === playerId.toString());
+  };
+
+  const isCurrentPlayer = (playerId) => {
+    return currentPlayer && playerId.toString() === currentPlayer._id.toString();
+  };
 
   return (
-    <div className={`game-end-screen ${winner}`}>
-      {/* Background overlay */}
-      <div className="end-bg-overlay"></div>
-      
-      {/* Confetti pro výherce */}
-      <div className="confetti-container">
-        {[...Array(50)].map((_, i) => (
-          <div key={i} className="confetti" style={{
-            left: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 3}s`,
-            animationDuration: `${3 + Math.random() * 2}s`
-          }}></div>
-        ))}
-      </div>
-
-      {/* Main content */}
-      <div className="end-content">
-        <h1 className="end-title">
-          {winner === 'good' && '🎉 GOOD TEAM WINS! 🎉'}
-          {winner === 'evil' && '💀 EVIL TEAM WINS! 💀'}
-          {winner === 'neutral' && '🌟 NEUTRAL WINS! 🌟'}
-        </h1>
-
-        <div className="end-sections">
-          {/* Winners */}
-          <div className="end-section winners">
-            <h2>👑 Winners</h2>
-            <div className="player-grid">
-              {winners.map(p => (
-                <div key={p._id} className="end-player winner">
-                  <div className="player-avatar">{p.name.charAt(0).toUpperCase()}</div>
-                  <div className="player-info">
-                    <div className="player-name">{p.name}</div>
-                    <div className="player-role">{p.role}</div>
-                    <div className={`player-status ${p.alive ? 'alive' : 'dead'}`}>
-                      {p.alive ? '✅ Survived' : '💀 Died'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Losers */}
-          <div className="end-section losers">
-            <h2>😔 Defeated</h2>
-            <div className="player-grid">
-              {losers.map(p => (
-                <div key={p._id} className="end-player loser">
-                  <div className="player-avatar">{p.name.charAt(0).toUpperCase()}</div>
-                  <div className="player-info">
-                    <div className="player-name">{p.name}</div>
-                    <div className="player-role">{p.role}</div>
-                    <div className={`player-status ${p.alive ? 'alive' : 'dead'}`}>
-                      {p.alive ? '❌ Lost' : '💀 Died'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+    <div className="game-end-screen">
+      {showAnimation && (
+        <div className="victory-animation">
+          <div className="victory-banner" style={{ background: winnerInfo.gradient }}>
+            <span className="victory-emoji">{winnerInfo.emoji}</span>
+            <h1>{winnerInfo.label}</h1>
           </div>
         </div>
+      )}
 
-        {/* Actions */}
-        <div className="end-actions">
-          <button className="btn-return-lobby" onClick={onReturnToLobby}>
-            🔙 Return to Lobby
-          </button>
+      <div className={`end-content ${showAnimation ? 'hidden' : ''}`}>
+        <div className="end-header" style={{ background: winnerInfo.gradient }}>
+          <h2>{winnerInfo.emoji} {winnerInfo.label}</h2>
+        </div>
+
+        <div className="teams-container">
+          {/* Town */}
+          {goodPlayers.length > 0 && (
+            <div className="team-section good">
+              <h3 className="team-title">
+                <span className="team-icon">✨</span>
+                Město
+              </h3>
+              <div className="players-grid">
+                {goodPlayers.map(player => {
+                  const roleData = ROLE_INFO[player.role] || ROLE_INFO['Citizen'];
+                  const modifier = player.modifier ? MODIFIER_INFO[player.modifier] : null;
+                  const won = isWinner(player._id);
+                  const isSelf = isCurrentPlayer(player._id);
+
+                  return (
+                    <div 
+                      key={player._id} 
+                      className={`player-card ${won ? 'winner' : ''} ${isSelf ? 'self' : ''} ${player.alive ? 'alive' : 'dead'}`}
+                    >
+                      <div className="player-card-header">
+                        <span className="role-emoji">{roleData.emoji}</span>
+                        <div className="player-info">
+                          <span className="player-name">{player.name}</span>
+                          {isSelf && <span className="self-badge">TY</span>}
+                        </div>
+                        {won && <span className="winner-crown">👑</span>}
+                      </div>
+                      <div className="player-card-body">
+                        <span className="role-name">{player.role}</span>
+                        {modifier && (
+                          <span className="modifier-badge">
+                            {modifier.emoji} {modifier.label}
+                          </span>
+                        )}
+                      </div>
+                      <div className="player-card-footer">
+                        <span className={`status-badge ${player.alive ? 'alive' : 'dead'}`}>
+                          {player.alive ? '✅ Živý' : '💀 Mrtvý'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Mafia */}
+          {evilPlayers.length > 0 && (
+            <div className="team-section evil">
+              <h3 className="team-title">
+                <span className="team-icon">🔥</span>
+                Mafie
+              </h3>
+              <div className="players-grid">
+                {evilPlayers.map(player => {
+                  const roleData = ROLE_INFO[player.role] || ROLE_INFO['Citizen'];
+                  const modifier = player.modifier ? MODIFIER_INFO[player.modifier] : null;
+                  const won = isWinner(player._id);
+                  const isSelf = isCurrentPlayer(player._id);
+
+                  return (
+                    <div 
+                      key={player._id} 
+                      className={`player-card ${won ? 'winner' : ''} ${isSelf ? 'self' : ''} ${player.alive ? 'alive' : 'dead'}`}
+                    >
+                      <div className="player-card-header">
+                        <span className="role-emoji">{roleData.emoji}</span>
+                        <div className="player-info">
+                          <span className="player-name">{player.name}</span>
+                          {isSelf && <span className="self-badge">TY</span>}
+                        </div>
+                        {won && <span className="winner-crown">👑</span>}
+                      </div>
+                      <div className="player-card-body">
+                        <span className="role-name">{player.role}</span>
+                        {modifier && (
+                          <span className="modifier-badge">
+                            {modifier.emoji} {modifier.label}
+                          </span>
+                        )}
+                      </div>
+                      <div className="player-card-footer">
+                        <span className={`status-badge ${player.alive ? 'alive' : 'dead'}`}>
+                          {player.alive ? '✅ Živý' : '💀 Mrtvý'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Neutral */}
+          {neutralPlayers.length > 0 && (
+            <div className="team-section neutral">
+              <h3 className="team-title">
+                <span className="team-icon">🌟</span>
+                Neutrální
+              </h3>
+              <div className="players-grid">
+                {neutralPlayers.map(player => {
+                  const roleData = ROLE_INFO[player.role] || ROLE_INFO['Citizen'];
+                  const modifier = player.modifier ? MODIFIER_INFO[player.modifier] : null;
+                  const won = isWinner(player._id);
+                  const isSelf = isCurrentPlayer(player._id);
+
+                  return (
+                    <div 
+                      key={player._id} 
+                      className={`player-card ${won ? 'winner' : ''} ${isSelf ? 'self' : ''} ${player.alive ? 'alive' : 'dead'}`}
+                    >
+                      <div className="player-card-header">
+                        <span className="role-emoji">{roleData.emoji}</span>
+                        <div className="player-info">
+                          <span className="player-name">{player.name}</span>
+                          {isSelf && <span className="self-badge">TY</span>}
+                        </div>
+                        {won && <span className="winner-crown">👑</span>}
+                      </div>
+                      <div className="player-card-body">
+                        <span className="role-name">{player.role}</span>
+                        {modifier && (
+                          <span className="modifier-badge">
+                            {modifier.emoji} {modifier.label}
+                          </span>
+                        )}
+                      </div>
+                      <div className="player-card-footer">
+                        <span className={`status-badge ${player.alive ? 'alive' : 'dead'}`}>
+                          {player.alive ? '✅ Živý' : '💀 Mrtvý'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
