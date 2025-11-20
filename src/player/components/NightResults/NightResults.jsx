@@ -87,6 +87,30 @@ const RESULT_MAPPING = {
     bgGradient: 'linear-gradient(135deg, #10b981, #059669)',
     severity: 'neutral'
   },
+  'insomniac': { 
+    emoji: '😵', 
+    label: 'Nespavost',
+    bgGradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    severity: 'info'
+  },
+  'consig': { 
+    emoji: '🕵️', 
+    label: 'Vyšetřování',
+    bgGradient: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+    severity: 'info'
+  },
+  'hunter_success': { 
+    emoji: '🏹', 
+    label: 'Úspěch',
+    bgGradient: 'linear-gradient(135deg, #10b981, #059669)',
+    severity: 'success'
+  },
+  'hunter_guilt': { 
+    emoji: '💀', 
+    label: 'Výčitky',
+    bgGradient: 'linear-gradient(135deg, #dc2626, #991b1b)',
+    severity: 'critical'
+  },
 };
 
 function NightResults({ player, results = [] }) {

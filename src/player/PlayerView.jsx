@@ -1,4 +1,4 @@
-// src/player/PlayerView.jsx - oprav načítání role
+// src/player/PlayerView.jsx
 
 import React, { useEffect, useState } from 'react';
 import { gameApi } from '../api/gameApi';
@@ -17,18 +17,15 @@ function PlayerView() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-
   const [sessionId] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlSessionId = urlParams.get('sessionId');
     
-
     if (urlSessionId) {
       console.log('🆔 Using sessionId from URL:', urlSessionId);
       return urlSessionId;
     }
-    
-    // Jinak použij localStorage (normální flow)
+
     const urlRoomCode = urlParams.get('room');
     const forceNew = urlParams.get('newSession');
     const storageKey = `sessionId_${urlRoomCode || 'default'}`;
@@ -39,7 +36,7 @@ function PlayerView() {
       localStorage.setItem(storageKey, newId);
       return newId;
     }
-    
+
     let sid = localStorage.getItem(storageKey);
     if (!sid) {
       sid = uuidv4();
@@ -48,6 +45,7 @@ function PlayerView() {
     } else {
       console.log('🆔 Using EXISTING session:', sid);
     }
+
     return sid;
   });
 
@@ -61,7 +59,7 @@ function PlayerView() {
       setRoomCode(urlRoomCode);
       console.log('🔑 Room code z URL:', urlRoomCode);
     }
-    
+
     if (urlPlayerName) {
       setPlayerName(urlPlayerName);
       console.log('👤 Player name z URL:', urlPlayerName);
@@ -72,17 +70,17 @@ function PlayerView() {
   useEffect(() => {
     if (playerName && roomCode && step === 'login' && !loading) {
       console.log('🤖 Auto-login z URL');
-      console.log('   SessionId:', sessionId);
+      console.log('  SessionId:', sessionId);
       performLogin(playerName, roomCode);
     }
   }, [playerName, roomCode, step, loading]);
 
-  // ✅ Polling game state - KLÍČOVÁ ČÁST
+  // Polling game state
   useEffect(() => {
     if (!gameId || !playerId) return;
-
+    
     console.log('🔄 Starting game state polling with playerId:', playerId);
-
+    
     const interval = setInterval(async () => {
       try {
         const data = await gameApi.getGameState(gameId);
@@ -94,6 +92,7 @@ function PlayerView() {
 
     // Initial fetch
     fetchGameState();
+
     return () => clearInterval(interval);
   }, [gameId, playerId]);
 
@@ -110,7 +109,7 @@ function PlayerView() {
 
     setLoading(true);
     setError('');
-
+    
     try {
       console.log('🚪 Joining:', { room, name, sessionId });
       const result = await gameApi.joinGameByCode(room, name, sessionId);
@@ -123,7 +122,6 @@ function PlayerView() {
 
       console.log('✅ Připojen!', { gameId: result.gameId, playerId: result.playerId });
       
-      // ✅ Ulož playerId - to je důležité!
       setGameId(result.gameId);
       setPlayerId(result.playerId);
       setStep('playing');
@@ -144,6 +142,7 @@ function PlayerView() {
 
   const fetchGameState = async () => {
     if (!gameId) return;
+    
     try {
       const data = await gameApi.getGameState(gameId);
       setGameState(data);
@@ -152,10 +151,12 @@ function PlayerView() {
     }
   };
 
-  const handleNightAction = async (targetId, actionType) => {
+  // ✅ UPDATED: Support actionMode parameter for dual-action roles
+  const handleNightAction = async (targetId, actionMode = null) => {
     try {
-      // ✅ Použij playerId, ne sessionId
-      await gameApi.nightAction(gameId, playerId, targetId, actionType);
+      console.log('🌙 Night action:', { playerId, targetId, actionMode });
+      
+      await gameApi.setNightAction(gameId, playerId, targetId, actionMode);
       await fetchGameState();
     } catch (error) {
       console.error('Chyba při noční akci:', error);
@@ -165,7 +166,6 @@ function PlayerView() {
 
   const handleVote = async (targetId) => {
     try {
-      // ✅ Použij playerId, ne sessionId
       await gameApi.vote(gameId, playerId, targetId);
       await fetchGameState();
     } catch (error) {
@@ -176,13 +176,13 @@ function PlayerView() {
 
   if (step === 'login') {
     return (
-      <LoginScreen
-        roomCode={roomCode}
+      <LoginScreen 
         playerName={playerName}
+        roomCode={roomCode}
         loading={loading}
         error={error}
-        onRoomCodeChange={setRoomCode}
         onPlayerNameChange={setPlayerName}
+        onRoomCodeChange={setRoomCode}
         onLogin={handleLogin}
       />
     );
@@ -190,35 +190,34 @@ function PlayerView() {
 
   if (!gameState) {
     return (
-      <div className="player-loading">
+      <div className="loading-screen">
         <div className="spinner"></div>
         <p>Načítání hry...</p>
       </div>
     );
   }
 
-  // ✅ Najdi aktuálního hráče v gameState
-  const currentPlayer = gameState.players?.find(p => p._id === playerId);
-
+  // ✅ Find current player
+  const currentPlayer = gameState.players.find(p => p._id === playerId);
+  
   if (!currentPlayer) {
     return (
-      <div className="player-loading">
+      <div className="loading-screen">
         <div className="spinner"></div>
         <p>Načítání tvého profilu...</p>
       </div>
     );
   }
 
+  // ✅ Pass currentPlayer to GameScreen
   return (
-    <GameScreen
-      playerName={playerName}
+    <GameScreen 
       gameState={gameState}
-      playerId={playerId}
       currentPlayer={currentPlayer}
+      playerName={currentPlayer.name} // ✅ Explicitly pass player name
       onNightAction={handleNightAction}
       onVote={handleVote}
       error={error}
-      onErrorDismiss={() => setError('')}
     />
   );
 }

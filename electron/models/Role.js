@@ -89,6 +89,7 @@ const ROLES = {
     nightPriority: 7,
     canUseEveryNight: true,
     visitsTarget: true,
+    hasLimitedUses: false, 
     defaultAffiliations: ['evil'],
     defaultVictory: { 
       canWinWithTeams: ['evil'], 
@@ -101,11 +102,14 @@ const ROLES = {
   'Cleaner': {
     team: 'evil',
     emoji: '🧹',
-    description: "Kills and hides the victim's role",
-    actionType: 'clean_kill',
+    description: 'Může zabíjet NEBO vyčistit roli mrtvého (3 cleaningy za hru)',
+    actionType: 'dual', 
+    dualActions: ['kill', 'clean_role'], 
     nightPriority: 7,
     canUseEveryNight: true,
     visitsTarget: true,
+    hasLimitedUses: true, 
+    maxUses: 3, 
     defaultAffiliations: ['evil'],
     defaultVictory: { 
       canWinWithTeams: ['evil'], 
@@ -118,11 +122,14 @@ const ROLES = {
   'Framer': {
     team: 'evil',
     emoji: '🖼️',
-    description: 'Makes a player appear as evil to investigations',
-    actionType: 'frame',
+    description: 'Může zabíjet NEBO zarámovat hráče (3 framy za hru)',
+    actionType: 'dual',
+    dualActions: ['kill', 'frame'],
     nightPriority: 7,
     canUseEveryNight: true,
     visitsTarget: true,
+    hasLimitedUses: true,
+    maxUses: 3,
     defaultAffiliations: ['evil'],
     defaultVictory: { 
       canWinWithTeams: ['evil'], 
@@ -180,21 +187,71 @@ const ROLES = {
         { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
       ]
     }
+  },
+  'Hunter': {
+    team: 'good',
+    emoji: '🏹',
+    description: 'Může zabíjet v noci - pokud zabije nevinného, zemře',
+    actionType: 'hunter_kill',
+    nightPriority: 7,
+    canUseEveryNight: true,
+    visitsTarget: true,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
+  },
+
+  'Consigliere': {
+    team: 'evil',
+    emoji: '🕵️',
+    description: 'Může zabíjet NEBO vyšetřit přesnou roli (3 investigate za hru)',
+    actionType: 'dual',
+    dualActions: ['kill', 'consig_investigate'],
+    nightPriority: 5,
+    canUseEveryNight: true,
+    visitsTarget: true,
+    hasLimitedUses: true,
+    maxUses: 3,
+    defaultAffiliations: ['evil'],
+    defaultVictory: { 
+      canWinWithTeams: ['evil'], 
+      soloWin: false, 
+      customRules: [
+        { type: 'parity', team: 'evil', against: 'good', comparator: '>=' }
+      ] 
+    }
   }
 };
 
 const MODIFIERS = {
   'Drunk': {
     emoji: '🍺',
-    description: '50% chance the ability fails or returns false info',
+    description: 'He stays home and gets fake event results',
     effect: 'random_fail',
-    showToPlayer: false
+    showToPlayer: false,
+    allowedTeams: ['good']
   },
   'Recluse': {
     emoji: '🏚️',
     description: 'Appears as evil to investigations even if good',
     effect: 'appears_evil',
-    showToPlayer: false
+    showToPlayer: false,
+    allowedTeams: ['good'] 
+  },
+  
+  'Paranoid': {
+    emoji: '😱',
+    description: 'Vidí falešné návštěvníky, kteří u něj nebyly',
+    effect: 'paranoid',
+    showToPlayer: false,
+    allowedTeams: ['good'] 
+  },
+  
+  'Insomniac': {
+    emoji: '😵',
+    description: 'Vidí všechny, kdo ho navštíví',
+    effect: 'see_visitors',
+    showToPlayer: true, 
+    allowedTeams: ['good', 'neutral']
   }
 };
 

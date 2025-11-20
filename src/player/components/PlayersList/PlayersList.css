@@ -113,3 +113,34 @@
     font-size: 14px;
   }
 }
+.player-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  
+  /* ✅ Ensure clickability */
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  
+  /* ✅ Ensure list is interactive */
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+}

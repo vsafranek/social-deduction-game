@@ -4,11 +4,18 @@ import './PlayersList.css';
 
 function PlayersList({ 
   players, 
-  onSelectPlayer, 
-  selectedPlayer, 
+  onSelectPlayer,  // ✅ Primary prop name
+  onSelect,        // ✅ Alias for compatibility
+  selectedPlayer,  // ✅ Primary prop name
+  selectedPlayerId, // ✅ Alias for compatibility
   selectionMode = 'single',
+  showRole = false,
   emptyMessage = 'Žádní hráči k dispozici'
 }) {
+  // ✅ Support both prop names
+  const handleSelect = onSelectPlayer || onSelect;
+  const selected = selectedPlayer || selectedPlayerId;
+
   if (players.length === 0) {
     return (
       <div className="players-list-empty">
@@ -18,8 +25,19 @@ function PlayersList({
   }
 
   const handlePlayerClick = (playerId) => {
+    if (!handleSelect) {
+      console.warn('⚠️ No onSelect or onSelectPlayer handler provided');
+      return;
+    }
+
+    console.log('🎯 Player clicked:', playerId);
+    
     if (selectionMode === 'single') {
-      onSelectPlayer(playerId === selectedPlayer ? null : playerId);
+      // Toggle selection
+      handleSelect(playerId === selected ? null : playerId);
+    } else {
+      // Always select (no toggle)
+      handleSelect(playerId);
     }
   };
 
@@ -28,8 +46,9 @@ function PlayersList({
       {players.map(player => (
         <button
           key={player._id}
-          className={`player-list-item ${selectedPlayer === player._id ? 'selected' : ''}`}
+          className={`player-list-item ${selected === player._id ? 'selected' : ''}`}
           onClick={() => handlePlayerClick(player._id)}
+          type="button"
         >
           <div className="player-avatar">
             {player.alive ? '✅' : '💀'}
@@ -38,9 +57,10 @@ function PlayersList({
             <span className="player-name">{player.name}</span>
             <span className="player-status">
               {player.alive ? 'Živý' : 'Mrtvý'}
+              {showRole && player.role && ` - ${player.role}`}
             </span>
           </div>
-          {selectedPlayer === player._id && (
+          {selected === player._id && (
             <div className="player-check">✓</div>
           )}
         </button>

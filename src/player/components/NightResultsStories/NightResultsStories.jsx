@@ -94,7 +94,36 @@ const RESULT_MAPPING = {
     bgGradient: 'linear-gradient(135deg, #10b981, #059669)',
     hideDetails: false
   },
-};
+  'insomniac': { 
+    emoji: '😵', 
+    label: 'Nespavost', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    hideDetails: false
+  },
+  'consig': { 
+    emoji: '🕵️', 
+    label: 'Vyšetřování', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+    hideDetails: false
+  },
+  'hunter_success': { 
+    emoji: '🏹', 
+    label: 'Úspěšný lov', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #10b981, #059669)',
+    hideDetails: false
+  },
+  'hunter_guilt': { 
+    emoji: '💀', 
+    label: 'Zemřel jsi', 
+    subtitle: 'Zabil jsi nevinného',
+    bgGradient: 'linear-gradient(135deg, #dc2626, #991b1b)',
+    hideDetails: true
+  },
+  
+ };
 
 const STORY_DURATION = 6000;
 

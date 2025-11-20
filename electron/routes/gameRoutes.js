@@ -335,12 +335,11 @@ router.put('/:gameId/timers', async (req, res) => {
   }
 });
 
-// V gameRoutes.js - oprav endpoint /start-config
 router.post('/:gameId/start-config', async (req, res) => {
   try {
     const { gameId } = req.params;
     const { assignments, modifiers } = req.body || {};
-
+    
     if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
 
     const game = await Game.findById(gameId);
@@ -350,9 +349,8 @@ router.post('/:gameId/start-config', async (req, res) => {
     const players = await Player.find({ gameId });
     if (players.length < 3) return res.status(400).json({ error: 'At least 3 players required' });
 
-    // ✅ OPRAVA: Mapuj role na hráče podle ID
+    // Assign roles
     console.log('📋 Assigning roles:', assignments);
-    
     for (const [playerId, roleName] of Object.entries(assignments || {})) {
       const player = players.find(p => p._id.toString() === playerId);
       if (player) {
@@ -362,6 +360,7 @@ router.post('/:gameId/start-config', async (req, res) => {
       }
     }
 
+    // Set default Citizen for players without role
     for (const p of players) {
       if (!p.role) {
         p.role = 'Citizen';
@@ -370,24 +369,97 @@ router.post('/:gameId/start-config', async (req, res) => {
       }
     }
 
+    // Set affiliations and victory conditions
     const updatedPlayers = await Player.find({ gameId });
     for (const p of updatedPlayers) {
       const def = ROLES[p.role];
       p.affiliations = def?.defaultAffiliations || ['good'];
-      p.victoryConditions = def?.defaultVictory || { canWinWithTeams: ['good'], soloWin: false, customRules: [] };
+      p.victoryConditions = def?.defaultVictory || { 
+        canWinWithTeams: ['good'], 
+        soloWin: false, 
+        customRules: [] 
+      };
       await p.save();
     }
 
-    // ✅ Modifiers
-    const drunkChance = normalizeChance(modifiers?.opilýChance ?? modifiers?.drunkChance, 0.2);
-    const recluseChance = normalizeChance(modifiers?.poustevníkChance ?? modifiers?.recluseChance, 0.15);
+    // Initialize roleData for limited-use roles
+    for (const p of updatedPlayers) {
+      const roleData = ROLES[p.role];
+      
+      if (roleData?.hasLimitedUses) {
+        if (!p.roleData) p.roleData = {};
+        p.roleData.usesRemaining = roleData.maxUses || 3;
+        await p.save();
+        console.log(`  ✓ ${p.name} (${p.role}) initialized with ${p.roleData.usesRemaining} uses`);
+      }
+    }
 
-    for (const p of players) {
-      const r = Math.random();
-      if (r < drunkChance) p.modifier = 'Drunk';
-      else if (r < drunkChance + recluseChance) p.modifier = 'Recluse';
-      else p.modifier = null;
-      await p.save();
+    // ✅ Modifiers s allowedTeams kontrolou
+    console.log('🎭 Assigning modifiers...');
+    
+    // Normalize chances
+    const drunkChance = normalizeChance(modifiers?.drunkChance ?? modifiers?.opilýChance, 0.2);
+    const recluseChance = normalizeChance(modifiers?.recluseChance ?? modifiers?.poustevníkChance, 0.15);
+    const paranoidChance = normalizeChance(modifiers?.paranoidChance, 0.1);
+    const insomniacChance = normalizeChance(modifiers?.insomniacChance, 0.1);
+
+    // ✅ Check if MODIFIERS exists
+    if (!MODIFIERS) {
+      console.warn('⚠️ MODIFIERS not found, skipping modifier assignment');
+    } else {
+      // Build list of available modifiers per player based on their team
+      for (const p of updatedPlayers) {
+        const roleData = ROLES[p.role];
+        const roleTeam = roleData?.team || 'good';
+        
+        // Get all valid modifiers for this team
+        const validModifiers = [];
+        
+        // ✅ Check each modifier with proper fallback
+        if (MODIFIERS.Drunk && Array.isArray(MODIFIERS.Drunk.allowedTeams)) {
+          if (MODIFIERS.Drunk.allowedTeams.includes(roleTeam)) {
+            validModifiers.push({ name: 'Drunk', chance: drunkChance });
+          }
+        }
+        
+        if (MODIFIERS.Recluse && Array.isArray(MODIFIERS.Recluse.allowedTeams)) {
+          if (MODIFIERS.Recluse.allowedTeams.includes(roleTeam)) {
+            validModifiers.push({ name: 'Recluse', chance: recluseChance });
+          }
+        }
+        
+        if (MODIFIERS.Paranoid && Array.isArray(MODIFIERS.Paranoid.allowedTeams)) {
+          if (MODIFIERS.Paranoid.allowedTeams.includes(roleTeam)) {
+            validModifiers.push({ name: 'Paranoid', chance: paranoidChance });
+          }
+        }
+        
+        if (MODIFIERS.Insomniac && Array.isArray(MODIFIERS.Insomniac.allowedTeams)) {
+          if (MODIFIERS.Insomniac.allowedTeams.includes(roleTeam)) {
+            validModifiers.push({ name: 'Insomniac', chance: insomniacChance });
+          }
+        }
+
+        // Roll for modifier (first match wins)
+        p.modifier = null;
+        const roll = Math.random();
+        let cumulative = 0;
+
+        for (const mod of validModifiers) {
+          cumulative += mod.chance;
+          if (roll < cumulative) {
+            p.modifier = mod.name;
+            console.log(`  🎭 ${p.name} (${p.role}/${roleTeam}) ← ${mod.name}`);
+            break;
+          }
+        }
+
+        if (!p.modifier) {
+          console.log(`  ✓ ${p.name} (${p.role}/${roleTeam}) ← No modifier`);
+        }
+
+        await p.save();
+      }
     }
 
     // Start by DAY with timer
@@ -400,14 +472,15 @@ router.post('/:gameId/start-config', async (req, res) => {
     await GameLog.create({ gameId, message: '--- GAME START ---' });
     await GameLog.create({ gameId, message: `Round ${game.round} - DAY (⏱ ${daySec}s)` });
 
-    console.log('✅ Game started with role assignments');
+    console.log('✅ Game started with role assignments and modifiers');
     res.json({ success: true });
-
   } catch (e) {
     console.error('start-config error:', e);
+    console.error('Stack:', e.stack);
     res.status(500).json({ error: e.message });
   }
 });
+
 
 // Optional endpoints to end phases manually (for admin/debug)
 router.post('/:gameId/end-night', async (req, res) => {
@@ -640,6 +713,61 @@ router.post('/:gameId/end-phase', async (req, res) => {
   }
 });
 
+// Set night action with mode selection
+router.post('/:gameId/set-night-action', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const { playerId, targetId, actionMode } = req.body;
+    
+    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
+    if (!ensureObjectId(playerId)) return res.status(400).json({ error: 'Invalid player id' });
+    if (!ensureObjectId(targetId)) return res.status(400).json({ error: 'Invalid target id' });
 
+    const game = await Game.findById(gameId);
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+    if (game.phase !== 'night') return res.status(400).json({ error: 'Not night phase' });
+
+    const player = await Player.findById(playerId);
+    if (!player || !player.alive) return res.status(400).json({ error: 'Player not found or dead' });
+
+    const roleData = ROLES[player.role];
+    
+    // Check if role has dual actions
+    if (roleData?.actionType === 'dual') {
+      if (!actionMode) return res.status(400).json({ error: 'Action mode required for dual role' });
+      
+      // Check if special ability has uses left
+      if (actionMode !== 'kill') {
+        if (!player.roleData) player.roleData = {};
+        const usesLeft = player.roleData.usesRemaining || 0;
+        
+        if (usesLeft <= 0) {
+          return res.status(400).json({ error: 'No special ability uses remaining' });
+        }
+      }
+      
+      player.nightAction = {
+        targetId,
+        action: actionMode, // 'kill', 'clean_role', 'frame', 'consig_investigate'
+        results: []
+      };
+    } else {
+      // Regular action
+      player.nightAction = {
+        targetId,
+        action: roleData?.actionType || 'none',
+        results: []
+      };
+    }
+
+    await player.save();
+    console.log(`✓ ${player.name} set action: ${player.nightAction.action} → ${targetId}`);
+    
+    res.json({ success: true });
+  } catch (e) {
+    console.error('set-night-action error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 module.exports = router;

@@ -23,6 +23,15 @@ function addEffect(player, type, sourceId = null, expiresAt = null, meta = {}) {
   });
 }
 
+function getRandomPlayerNames(players, excludeId, count = 1) {
+  const candidates = players.filter(p => 
+    p.alive && p._id.toString() !== excludeId
+  );
+  
+  const shuffled = candidates.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count).map(p => p.name);
+}
+
 function removeEffects(player, predicate) {
   if (!player.effects) return;
   player.effects = player.effects.filter(e => !predicate(e));
@@ -66,8 +75,10 @@ async function resolveNightActions(game, players) {
   const trapped = new Set();
   const allVisits = [];
   const drunkPlayers = new Set();
-  const jailTargets = new Map(); // ✅ Track Jailer → Target mapping
-  
+  const jailTargets = new Map(); 
+  const hunterKills = new Map(); 
+  const janitorTargets = new Set(); 
+
   // ✅ Clear ALL temporary effects from previous night
   for (const p of players) {
     removeEffects(p, e => 
@@ -141,7 +152,7 @@ async function resolveNightActions(game, players) {
     if (!actor || !target) continue;
 
     // Check drunk FIRST
-    if (actor.modifier === 'Opilý' || actor.modifier === 'Drunk') {
+    if (actor.modifier === 'Drunk') {
       drunkPlayers.add(actorId);
       const fakeMessage = generateDrunkFakeMessage(action, target.name);
       actor.nightAction.results.push(fakeMessage);
@@ -216,14 +227,27 @@ async function resolveNightActions(game, players) {
         const fakeRole = otherRoles.length > 0 
           ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
           : 'Citizen';
+        
+        // ✅ Check Recluse modifier - appear as evil
+        let investigatedRole = trueRole;
+        if (target.modifier === 'Recluse') {
+          // Pick a random evil role
+          const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
+          investigatedRole = evilRoles[Math.floor(Math.random() * evilRoles.length)] || 'Killer';
+        }
+        
         const possibleRoles = Math.random() < 0.5 
-          ? [trueRole, fakeRole]
-          : [fakeRole, trueRole];
+          ? [investigatedRole, fakeRole]
+          : [fakeRole, investigatedRole];
         
         actor.nightAction.results.push(
           `investigate:${target.name} = ${possibleRoles.join(' / ')}`
         );
-        console.log(`  🔍 [P${actionData.priority}] ${actor.name} investigated ${target.name}: ${possibleRoles.join('/')}`);
+        
+        console.log(
+          `  🔍 [P${actionData.priority}] ${actor.name} investigated ${target.name}: ` +
+          `${possibleRoles.join(' / ')} (true: ${trueRole}${target.modifier === 'Recluse' ? ' [Recluse]' : ''})`
+        );
         break;
       }
 
@@ -237,20 +261,68 @@ async function resolveNightActions(game, players) {
         break;
       }
 
-      case 'frame': {
-        addEffect(target, 'framed', actor._id, null, {});
+      case 'kill': {
+        addEffect(target, 'pendingKill', actor._id, null, {});
         toSave.add(targetId);
-        actor.nightAction.results.push(`success:Zarámoval jsi ${target.name}`);
-        console.log(`  🖼️ [P${actionData.priority}] ${actor.name} framed ${target.name}`);
+        actor.nightAction.results.push(`success:Zaútočil jsi na ${target.name}`);
+        console.log(`  🔪 [P${actionData.priority}] ${actor.name} killed ${target.name}`);
         break;
       }
 
-      case 'kill':
-      case 'clean_kill': {
-        addEffect(target, 'pendingKill', actor._id, null, { clean: action === 'clean_kill' });
-        toSave.add(targetId);
-        actor.nightAction.results.push(`success:Zaútočil jsi na ${target.name}`);
-        console.log(`  🔪 [P${actionData.priority}] ${actor.name} attacked ${target.name}${action === 'clean_kill' ? ' (clean)' : ''}`);
+      case 'clean_role': {
+        // Cleaner cleans a dead player's role
+        // Mark target to be cleaned if they die this night
+        if (!actor.roleData) actor.roleData = {};
+        const usesLeft = actor.roleData.usesRemaining || 0;
+        
+        if (usesLeft > 0) {
+          janitorTargets.add(targetId);
+          actor.roleData.usesRemaining = usesLeft - 1;
+          toSave.add(actorId);
+          actor.nightAction.results.push(
+            `success:Vyčistíš ${target.name} pokud zemře (zbývá ${actor.roleData.usesRemaining})`
+          );
+          console.log(`  🧹 [P${actionData.priority}] ${actor.name} will clean ${target.name} if dead`);
+        } else {
+          actor.nightAction.results.push('failed:Už nemáš žádná použití!');
+        }
+        break;
+      }
+
+      case 'frame': {
+        if (!actor.roleData) actor.roleData = {};
+        const usesLeft = actor.roleData.usesRemaining || 0;
+        
+        if (usesLeft > 0) {
+          addEffect(target, 'framed', actor._id, null, {});
+          toSave.add(targetId);
+          actor.roleData.usesRemaining = usesLeft - 1;
+          toSave.add(actorId);
+          actor.nightAction.results.push(
+            `success:Zarámoval jsi ${target.name} (zbývá ${actor.roleData.usesRemaining})`
+          );
+          console.log(`  🖼️ [P${actionData.priority}] ${actor.name} framed ${target.name}`);
+        } else {
+          actor.nightAction.results.push('failed:Už nemáš žádná použití!');
+        }
+        break;
+      }
+
+      case 'consig_investigate': {
+        if (!actor.roleData) actor.roleData = {};
+        const usesLeft = actor.roleData.usesRemaining || 0;
+        
+        if (usesLeft > 0) {
+          const exactRole = target.role;
+          actor.roleData.usesRemaining = usesLeft - 1;
+          toSave.add(actorId);
+          actor.nightAction.results.push(
+            `consig:${target.name} je ${exactRole} (zbývá ${actor.roleData.usesRemaining})`
+          );
+          console.log(`  🕵️ [P${actionData.priority}] ${actor.name} investigated ${target.name}: ${exactRole}`);
+        } else {
+          actor.nightAction.results.push('failed:Už nemáš žádná použití!');
+        }
         break;
       }
 
@@ -258,6 +330,50 @@ async function resolveNightActions(game, players) {
         addEffect(target, 'protected', actor._id, null, {});
         toSave.add(targetId);
         console.log(`  💉 [P${actionData.priority}] ${actor.name} protecting ${target.name}...`);
+        break;
+      }
+
+      case 'hunter_kill': {
+        // Hunter připraví kill (zkontroluje se po smrti)
+        addEffect(target, 'pendingKill', actor._id, null, { hunter: true });
+        toSave.add(targetId);
+        hunterKills.set(actorId, targetId);
+        actor.nightAction.results.push(`success:Zaútočil jsi na ${target.name}`);
+        console.log(`  🏹 [P${actionData.priority}] ${actor.name} hunted ${target.name}`);
+        break;
+      }
+
+      case 'consig_investigate': {
+        // Consigliere vidí PŘESNOU roli (ne 2 možnosti)
+        const exactRole = target.role;
+        actor.nightAction.results.push(
+          `consig:${target.name} je ${exactRole}`
+        );
+        console.log(`  🕵️ [P${actionData.priority}] ${actor.name} investigated ${target.name}: ${exactRole}`);
+        break;
+      }
+
+      case 'janitor_clean': {
+        // Janitor může cílit na MRTVÉ hráče
+        // Musíme implementovat výběr mrtvého hráče v UI
+        // Pro teď: cílí na živého, ale vyčistí ho pokud zemře
+        
+        // Check if Janitor has uses left
+        if (!actor.roleData) actor.roleData = {};
+        if (!actor.roleData.janitorUses) actor.roleData.janitorUses = 3;
+        
+        if (actor.roleData.janitorUses > 0) {
+          janitorTargets.add(targetId);
+          actor.roleData.janitorUses -= 1;
+          toSave.add(actorId);
+          actor.nightAction.results.push(
+            `success:Vyčistíš ${target.name} pokud zemře (zbývá ${actor.roleData.janitorUses} použití)`
+          );
+          console.log(`  🧼 [P${actionData.priority}] ${actor.name} will clean ${target.name} if dead`);
+        } else {
+          actor.nightAction.results.push('failed:Už nemáš žádná použití!');
+          console.log(`  🧼 [P${actionData.priority}] ${actor.name} has no uses left`);
+        }
         break;
       }
 
@@ -375,7 +491,7 @@ async function resolveNightActions(game, players) {
     }
   }
 
-  // PHASE 4: Inform targets about home invasions
+  // PHASE 4: Inform targets about home invasions + Paranoid + Insomniac
   console.log('📬 [NightResolver] Phase 4: Informing targets about home invasions...');
   for (const [targetId, visitors] of visitsByTarget.entries()) {
     const target = idMap.get(targetId);
@@ -421,6 +537,76 @@ async function resolveNightActions(game, players) {
       console.log(`  👤 ${target.name} was home-invaded by: ${homeInvaders.join(', ')}`);
     }
   }
+
+  // ✅ PARANOID - Add fake visitors
+  console.log('😱 [NightResolver] Phase 4b: Paranoid modifier...');
+  for (const p of players) {
+    if (!p.alive || p.modifier !== 'Paranoid') continue;
+    
+    // 50% chance to see fake visitor
+    if (Math.random() < 0.5) {
+      const fakeVisitors = getRandomPlayerNames(players, p._id.toString(), 1);
+      
+      if (!p.nightAction) {
+        p.nightAction = { targetId: null, action: null, results: [] };
+      }
+      
+      // Check if already has visited result
+      const hasVisited = p.nightAction.results.some(r => r.startsWith('visited:'));
+      
+      if (hasVisited) {
+        // Add to existing visitors
+        const visitedIdx = p.nightAction.results.findIndex(r => r.startsWith('visited:'));
+        const existing = p.nightAction.results[visitedIdx].replace('visited:', '');
+        p.nightAction.results[visitedIdx] = `visited:${existing}, ${fakeVisitors.join(', ')}`;
+      } else {
+        // Add new visited result
+        p.nightAction.results.push(`visited:${fakeVisitors.join(', ')}`);
+      }
+      
+      console.log(`  😱 ${p.name} (Paranoid) sees fake visitor: ${fakeVisitors.join(', ')}`);
+    }
+  }
+
+  // ✅ INSOMNIAC - See all visitors
+  console.log('😵 [NightResolver] Phase 4c: Insomniac modifier...');
+  for (const [targetId, visitors] of visitsByTarget.entries()) {
+    const target = idMap.get(targetId);
+    if (!target || !target.alive || target.modifier !== 'Insomniac') continue;
+    
+    // Get all successful visitors (same logic as Lookout)
+    const successfulVisitors = allVisits
+      .filter(visit => {
+        if (visit.targetId !== targetId) return false;
+        
+        const visitorId = visit.actorId;
+        const visitor = idMap.get(visitorId);
+        if (!visitor) return false;
+        
+        if (visitorId === target._id.toString()) return false;
+        
+        if (drunkPlayers.has(visitorId)) return false;
+        if (blocked.has(visitorId)) return false;
+        if (trapped.has(visitorId)) return false;
+        
+        return true;
+      })
+      .map(visit => {
+        const visitor = idMap.get(visit.actorId);
+        return visitor?.name;
+      })
+      .filter(Boolean);
+    
+    if (successfulVisitors.length > 0) {
+      if (!target.nightAction) {
+        target.nightAction = { targetId: null, action: null, results: [] };
+      }
+      
+      target.nightAction.results.push(`insomniac:Slyšel jsi: ${successfulVisitors.join(', ')}`);
+      console.log(`  😵 ${target.name} (Insomniac) heard: ${successfulVisitors.join(', ')}`);
+    }
+}
+
 
     // PHASE 5: Resolve kills and Doctor feedback
   console.log('💀 [NightResolver] Phase 5: Resolving kills and Doctor feedback...');
@@ -494,6 +680,46 @@ async function resolveNightActions(game, players) {
       doctor.nightAction.results.push(`protect:Chránil jsi ${target.name} - nebyl napaden`);
       console.log(`  💉 ${doctor.name}: Protected ${target.name} (no attack)`);
     }
+  }
+
+  console.log('🏹 [NightResolver] Phase 5b: Hunter penalty check...');
+  for (const [hunterId, targetId] of hunterKills.entries()) {
+    const hunter = idMap.get(hunterId);
+    const target = idMap.get(targetId);
+    
+    if (!hunter || !hunter.alive) continue; // Hunter already dead
+    if (!target) continue;
+    
+    // Check if target died and was innocent (good)
+    if (!target.alive) {
+      const targetTeam = ROLES[target.role]?.team;
+      
+      // If killed good player, Hunter dies
+      if (targetTeam === 'good') {
+        hunter.alive = false;
+        if (!hunter.nightAction) {
+          hunter.nightAction = { targetId: null, action: null, results: [] };
+        }
+        hunter.nightAction.results.push('hunter_guilt:Zabil jsi nevinného - umíráš výčitkami!');
+        toSave.add(hunterId);
+        console.log(`  💀 ${hunter.name} died from guilt (killed innocent ${target.name})`);
+      } else {
+        // Killed evil/neutral - success
+        hunter.nightAction.results.push(`hunter_success:Úspěšně jsi zabil ${target.name}!`);
+        console.log(`  ✅ ${hunter.name} successfully killed ${target.name} (${targetTeam})`);
+      }
+    }
+  }
+
+  console.log('🧼 [NightResolver] Phase 5c: Janitor cleaning...');
+  for (const playerId of janitorTargets) {
+    const player = idMap.get(playerId);
+    if (!player || player.alive) continue; // Only clean if dead
+    
+    // Hide role from everyone
+    player.roleHidden = true;
+    toSave.add(playerId);
+    console.log(`  🧼 ${player.name}'s role has been cleaned (hidden)`);
   }
 
 

@@ -38,7 +38,7 @@ const PlayerSchema = new mongoose.Schema({
   },
   modifier: {
     type: String,
-    enum: ['Opilý', 'Poustevník', 'Drunk', 'Recluse', null],
+    enum: ['Drunk', 'Recluse', 'Paranoid', 'Insomniac', null],
     default: null
   },
   effects: { type: [EffectSchema], default: [] },
@@ -81,6 +81,14 @@ const PlayerSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  roleData: {
+    type: Object,
+    default: {}
+  },
+  roleHidden: {
+    type: Boolean,
+    default: false
   }
 });
 

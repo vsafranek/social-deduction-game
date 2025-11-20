@@ -10,25 +10,54 @@ const NIGHT_ACTIONS = {
   'Lookout': { verb: 'Pozoruj', icon: '👁️', color: 'blue', description: 'Pozoruj jednoho hráče' },
   'Trapper': { verb: 'Nastav Past', icon: '🪤', color: 'green', description: 'Nastav past na svém domě' },
   'Tracker': { verb: 'Sleduj', icon: '👣', color: 'blue', description: 'Sleduj jednoho hráče' },
+  'Hunter': { verb: 'Zastřel', icon: '🏹', color: 'red', description: 'Zastřel jednoho hráče' },
+  
+  // Evil roles - základní akce
   'Killer': { verb: 'Zabiš', icon: '🔪', color: 'red', description: 'Zabiš jednoho hráče' },
-  'Cleaner': { verb: 'Vyčisti', icon: '🧹', color: 'red', description: 'Zabij a skryj roli' },
-  'Framer': { verb: 'Zarámuj', icon: '🖼️', color: 'red', description: 'Zarámuj jednoho hráče' },
+  
+  // Dual actions
+  'Cleaner': {
+    dual: true,
+    actions: {
+      'kill': { verb: 'Zabiš', icon: '🔪', color: 'red', description: 'Zabiš jednoho hráče' },
+      'clean_role': { verb: 'Vyčisti', icon: '🧹', color: 'purple', description: 'Vyčisti roli mrtvého' }
+    }
+  },
+  'Framer': {
+    dual: true,
+    actions: {
+      'kill': { verb: 'Zabiš', icon: '🔪', color: 'red', description: 'Zabiš jednoho hráče' },
+      'frame': { verb: 'Zarámuj', icon: '🖼️', color: 'purple', description: 'Zarámuj hráče jako zlého' }
+    }
+  },
+  'Consigliere': {
+    dual: true,
+    actions: {
+      'kill': { verb: 'Zabiš', icon: '🔪', color: 'red', description: 'Zabiš jednoho hráče' },
+      'consig_investigate': { verb: 'Vyšetři', icon: '🕵️', color: 'blue', description: 'Zjisti přesnou roli' }
+    }
+  },
+  
   'Infected': { verb: 'Nakazi', icon: '🦠', color: 'purple', description: 'Nakazi jednoho hráče' }
 };
 
 function NightPhase({ player, players, onAction }) {
   const [selectedTarget, setSelectedTarget] = useState(null);
+  const [selectedMode, setSelectedMode] = useState('kill');
   const [actionDone, setActionDone] = useState(false);
 
-  // ✅ Reset stavu při změně hráče nebo fáze
+  // Reset stavu při změně hráče nebo fáze
   useEffect(() => {
+    console.log('🔄 NightPhase reset for player:', player.name);
     setSelectedTarget(null);
     setActionDone(false);
+    setSelectedMode('kill');
   }, [player._id]);
 
-  // ✅ Zkontroluj, jestli už hráč má akci nastavenou
+  // Zkontroluj, jestli už hráč má akci nastavenou
   useEffect(() => {
     if (player.nightAction?.targetId && player.nightAction?.action) {
+      console.log('✅ Night action already done:', player.nightAction);
       setActionDone(true);
     } else {
       setActionDone(false);
@@ -36,10 +65,27 @@ function NightPhase({ player, players, onAction }) {
   }, [player.nightAction]);
 
   const actionInfo = NIGHT_ACTIONS[player.role];
-  
+  const isDualRole = actionInfo?.dual;
+  const usesRemaining = player.roleData?.usesRemaining || 0;
+
+  // Pro dual role - get current action info
+  const currentActionInfo = isDualRole 
+    ? actionInfo.actions[selectedMode]
+    : actionInfo;
+
+  // ✅ Handler pro výběr cíle s debugging
+  const handleSelectTarget = (targetId) => {
+    console.log('🎯 Target selected:', targetId);
+    setSelectedTarget(targetId);
+  };
+
   if (!actionInfo) {
     return (
       <div className="night-phase inactive">
+        <div className="night-header">
+          <h3>🌙 Noc</h3>
+          <p>Nemáš noční akci</p>
+        </div>
         <div className="night-info">
           <p>🌙 V noci nemáš speciální schopnost. Čekej na den.</p>
         </div>
@@ -47,56 +93,53 @@ function NightPhase({ player, players, onAction }) {
     );
   }
 
-  const handleAction = async () => {
-    if (!selectedTarget && player.role !== 'Trapper') return;
-
-    const actionTypeMap = {
-      'Doctor': 'protect',
-      'Jailer': 'block',
-      'Investigator': 'investigate',
-      'Lookout': 'watch',
-      'Trapper': 'trap',
-      'Tracker': 'track',
-      'Killer': 'kill',
-      'Cleaner': 'clean_kill',
-      'Framer': 'frame',
-      'Infected': 'infect'
-    };
-
-    const actionType = actionTypeMap[player.role];
-    await onAction(selectedTarget, actionType);
-    setActionDone(true);
-  };
-
+  // Pokud už hráč potvrdil akci
   if (actionDone) {
     return (
-      <div className="night-phase">
-        <div className={`action-confirmed ${actionInfo.color}`}>
-          <span>{actionInfo.icon}</span>
-          <p>Tvá akce byla provedena</p>
-          <small>{actionInfo.verb} - potvrzeno</small>
-        </div>
+      <div className={`action-confirmed ${currentActionInfo.color}`}>
+        <span>{currentActionInfo.icon}</span>
+        <p>Tvá akce byla provedena</p>
+        <small>{currentActionInfo.verb} - potvrzeno</small>
       </div>
     );
   }
 
-  // Pro Trapper - nemusí vybírat cíl
+  const handleSubmit = () => {
+    if (!selectedTarget) {
+      console.warn('⚠️ No target selected');
+      return;
+    }
+
+    console.log('✅ Submitting action:', { 
+      selectedTarget, 
+      selectedMode, 
+      role: player.role 
+    });
+
+    // Pro Trapper - cíl je vlastní ID
+    const targetId = player.role === 'Trapper' ? player._id : selectedTarget;
+    
+    onAction(targetId, selectedMode);
+    setActionDone(true);
+  };
+
+  // Trapper má speciální UI
   if (player.role === 'Trapper') {
     return (
       <div className="night-phase">
         <div className="night-header">
-          <h3>{actionInfo.icon} {actionInfo.verb}</h3>
+          <h3>🌙 Noc - {actionInfo.icon} {actionInfo.verb}</h3>
           <p>{actionInfo.description}</p>
         </div>
-
+        
         <div className="trap-info">
           <p>🪤 Nastav past na svůj dům</p>
           <p className="small">Návštěvníci budou odhaleni a jejich akce selže</p>
         </div>
 
-        <button
+        <button 
           className={`action-button ${actionInfo.color}`}
-          onClick={handleAction}
+          onClick={handleSubmit}
         >
           {actionInfo.icon} {actionInfo.verb}
         </button>
@@ -104,33 +147,63 @@ function NightPhase({ player, players, onAction }) {
     );
   }
 
-  const selectablePlayers = players.filter(p => {
-    if (!p.alive) return false;
-    if (p._id === player._id) return false;
-    return true;
-  });
-
   return (
     <div className="night-phase">
       <div className="night-header">
-        <h3>{actionInfo.icon} {actionInfo.verb}</h3>
-        <p>{actionInfo.description}</p>
+        <h3>🌙 Noc - {currentActionInfo.icon} {currentActionInfo.verb}</h3>
+        <p>{currentActionInfo.description}</p>
+        
+        {/* Uses counter for dual roles */}
+        {isDualRole && selectedMode !== 'kill' && (
+          <div className="uses-remaining">
+            ⚡ Speciální akce: {usesRemaining}x
+          </div>
+        )}
       </div>
 
-      <PlayersList
-        players={selectablePlayers}
-        onSelectPlayer={setSelectedTarget}
-        selectedPlayer={selectedTarget}
-        selectionMode="single"
-        emptyMessage="Nejsou k dispozici žádní hráči"
-      />
+      {/* Dual Action Selector */}
+      {isDualRole && (
+        <div className="action-mode-selector">
+          {Object.entries(actionInfo.actions).map(([mode, info]) => {
+            const isDisabled = mode !== 'kill' && usesRemaining <= 0;
+            
+            return (
+              <button
+                key={mode}
+                className={`mode-btn ${selectedMode === mode ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+                onClick={() => {
+                  if (!isDisabled) {
+                    console.log('🔀 Mode changed to:', mode);
+                    setSelectedMode(mode);
+                  }
+                }}
+                disabled={isDisabled}
+              >
+                {info.icon} {info.verb}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-      <button
-        className={`action-button ${actionInfo.color}`}
-        onClick={handleAction}
+      {/* Target Selection */}
+      <div className="target-selection-wrapper">
+        <PlayersList
+          players={players.filter(p => p._id !== player._id && p.alive)}
+          selectedPlayerId={selectedTarget}
+          onSelect={handleSelectTarget}
+          showRole={false}
+        />
+      </div>
+
+      {/* Submit Button */}
+      <button 
+        className={`action-button ${currentActionInfo.color} ${!selectedTarget ? 'disabled' : ''}`}
+        onClick={handleSubmit}
         disabled={!selectedTarget}
       >
-        {actionInfo.icon} {actionInfo.verb}
+        {currentActionInfo.icon} {currentActionInfo.verb} 
+        {selectedTarget && ` (${players.find(p => p._id === selectedTarget)?.name})`}
       </button>
     </div>
   );
