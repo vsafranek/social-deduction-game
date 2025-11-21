@@ -533,7 +533,6 @@ async function resolveNightActions(game, players) {
         continue;
       }
       
-      target.nightAction.results.push(`visited:${homeInvaders.join(', ')}`);
       console.log(`  👤 ${target.name} was home-invaded by: ${homeInvaders.join(', ')}`);
     }
   }
@@ -551,7 +550,7 @@ async function resolveNightActions(game, players) {
         p.nightAction = { targetId: null, action: null, results: [] };
       }
       
-      // Check if already has visited result
+
       const hasVisited = p.nightAction.results.some(r => r.startsWith('visited:'));
       
       if (hasVisited) {
@@ -568,7 +567,6 @@ async function resolveNightActions(game, players) {
     }
   }
 
-  // ✅ INSOMNIAC - See all visitors
   console.log('😵 [NightResolver] Phase 4c: Insomniac modifier...');
   for (const [targetId, visitors] of visitsByTarget.entries()) {
     const target = idMap.get(targetId);
@@ -602,10 +600,10 @@ async function resolveNightActions(game, players) {
         target.nightAction = { targetId: null, action: null, results: [] };
       }
       
-      target.nightAction.results.push(`insomniac:Slyšel jsi: ${successfulVisitors.join(', ')}`);
+      target.nightAction.results.push(`visited:${successfulVisitors.join(', ')}`);
       console.log(`  😵 ${target.name} (Insomniac) heard: ${successfulVisitors.join(', ')}`);
     }
-}
+  }
 
 
     // PHASE 5: Resolve kills and Doctor feedback

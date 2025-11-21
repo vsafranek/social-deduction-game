@@ -3,6 +3,7 @@
 /**
  * Victory evaluation module
  * Handles all win condition logic based on role definitions
+ * Evil wins only at parity when they have control (not 2v2, but 1v1 or majority)
  */
 
 function hasEffect(player, effectType) {
@@ -87,13 +88,29 @@ function evaluateCustomRule(rule, ctx) {
 /**
  * Main victory evaluation function
  * Returns: { winner: string, players: [ObjectId], teams: [string] } or null
+ * 
+ * Evil wins when:
+ * - Evil > Good (majority)
+ * - Evil === Good === 1 (1v1 - cannot lynch)
+ * 
+ * Good wins when:
+ * - Evil === 0 (all evil eliminated)
+ * 
+ * Game continues when:
+ * - Evil < Good (good has majority)
+ * - Evil === Good > 1 (e.g., 2v2 - good can still lynch)
  */
 function evaluateVictory(players) {
   const alive = players.filter(p => p.alive);
   
-  // Nobody alive = draw/no winner
+  // Nobody alive = Evil wins by default
   if (alive.length === 0) {
-    return { winner: 'draw', players: [], teams: [] };
+    console.log('⚠️ No players alive - Evil wins by default');
+    return { 
+      winner: 'evil', 
+      players: [], 
+      teams: ['evil'] 
+    };
   }
 
   const counts = liveTeamCounts(players);
@@ -104,6 +121,7 @@ function evaluateVictory(players) {
     if (p.victoryConditions?.soloWin) {
       const others = alive.filter(x => x._id.toString() !== p._id.toString());
       if (others.length === 0) {
+        console.log(`✅ Solo win: ${p.name}`);
         return { 
           winner: 'solo', 
           players: [p._id], 
@@ -113,7 +131,7 @@ function evaluateVictory(players) {
     }
   }
 
-  // 2) Custom rules per player (e.g., Infected)
+  // 2) Custom rules per player (e.g., Infected, Jester, Executioner)
   for (const p of alive) {
     const rules = p.victoryConditions?.customRules || [];
     if (rules.length) {
@@ -127,6 +145,7 @@ function evaluateVictory(players) {
           return plRules.every(r => evaluateCustomRule(r, { counts, byTeam, players, self: pl }));
         });
         
+        console.log(`✅ Custom rule win: ${winners.map(w => w.name).join(', ')}`);
         return { 
           winner: 'custom', 
           players: winners.map(w => w._id), 
@@ -141,26 +160,49 @@ function evaluateVictory(players) {
   const goodAlive = (byTeam.get('good') || []).length;
   const neutralAlive = (byTeam.get('neutral') || []).length;
 
-  // Good win: no evil alive and at least one good/neutral alive
-  if (evilAlive === 0 && (goodAlive > 0 || neutralAlive > 0)) {
+  console.log(`📊 Alive counts: Good=${goodAlive}, Evil=${evilAlive}, Neutral=${neutralAlive}, Total=${alive.length}`);
+
+  // ✅ Good win: no evil alive
+  if (evilAlive === 0) {
     const winners = alive.filter(p => 
       p.victoryConditions?.canWinWithTeams?.includes('good')
     );
-    if (winners.length) {
+    
+    if (winners.length > 0) {
+      console.log(`✅ Good wins: No evil remaining`);
       return { 
         winner: 'good', 
         players: winners.map(w => w._id), 
         teams: ['good'] 
       };
     }
+    
+    // Edge case: Only neutrals left - good wins by default
+    if (neutralAlive > 0) {
+      console.log(`✅ Good wins: Only neutrals remaining (no evil)`);
+      const neutralWinners = alive.filter(p => 
+        p.victoryConditions?.canWinWithTeams?.includes('good') ||
+        p.affiliations?.includes('neutral')
+      );
+      return { 
+        winner: 'good', 
+        players: neutralWinners.map(w => w._id), 
+        teams: ['good', 'neutral'] 
+      };
+    }
   }
 
-  // Evil win: no good alive OR parity/majority
-  if (goodAlive === 0 || (evilAlive >= goodAlive)) {
+  // ✅ Evil win conditions (revised)
+  // Evil wins when they have MAJORITY or when it's 1v1 (cannot be lynched)
+  
+  // Case 1: Evil has majority (more evil than good)
+  if (evilAlive > goodAlive && evilAlive > 0) {
     const winners = alive.filter(p => 
       p.victoryConditions?.canWinWithTeams?.includes('evil')
     );
-    if (winners.length) {
+    
+    if (winners.length > 0) {
+      console.log(`✅ Evil wins (majority): ${evilAlive} evil > ${goodAlive} good`);
       return { 
         winner: 'evil', 
         players: winners.map(w => w._id), 
@@ -169,6 +211,54 @@ function evaluateVictory(players) {
     }
   }
 
+  // Case 2: 1v1 scenario (cannot lynch - evil wins)
+  if (evilAlive === 1 && goodAlive === 1 && alive.length === 2) {
+    const winners = alive.filter(p => 
+      p.victoryConditions?.canWinWithTeams?.includes('evil')
+    );
+    
+    if (winners.length > 0) {
+      console.log(`✅ Evil wins (1v1): Cannot be lynched`);
+      return { 
+        winner: 'evil', 
+        players: winners.map(w => w._id), 
+        teams: ['evil'] 
+      };
+    }
+  }
+
+  // Case 3: Parity with total = 2 (1v1 with neutrals counted)
+  // If total is 2 and there's 1 evil, evil wins
+  if (alive.length === 2 && evilAlive >= 1) {
+    const winners = alive.filter(p => 
+      p.victoryConditions?.canWinWithTeams?.includes('evil')
+    );
+    
+    if (winners.length > 0) {
+      console.log(`✅ Evil wins (2 players, 1 evil): Cannot be lynched`);
+      return { 
+        winner: 'evil', 
+        players: winners.map(w => w._id), 
+        teams: ['evil'] 
+      };
+    }
+  }
+
+  // ✅ Edge case: Only one player left (not solo win)
+  if (alive.length === 1) {
+    const lastPlayer = alive[0];
+    const team = lastPlayer.affiliations?.includes('evil') ? 'evil' : 'good';
+    
+    console.log(`✅ Last player standing: ${lastPlayer.name} (${team})`);
+    return {
+      winner: team,
+      players: [lastPlayer._id],
+      teams: [team]
+    };
+  }
+
+  // ✅ Game continues (e.g., 2v2, 3v2, etc.)
+  console.log(`⏭️ Game continues: Good can still lynch evil`);
   return null;
 }
 
