@@ -8,5 +8,51 @@
   box-sizing: border-box;
   margin: 0;
   overflow: hidden;
-  background: #0a1628;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(255, 215, 0, 0.05) 0%, transparent 50%),
+    linear-gradient(180deg, #0a0f1a 0%, #0a1628 100%);
+  position: relative;
+}
+
+.lobby-layout::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.lobby-layout::after {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  top: -100px;
+  left: -100px;
+  animation: floatLight 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes floatLight {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0.5;
+  }
+  33% {
+    transform: translate(100px, 150px);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translate(-50px, 200px);
+    opacity: 0.6;
+  }
 }

@@ -1,38 +1,193 @@
 .lobby-column {
-  background: linear-gradient(135deg, #16213e, #0f3460);
+  background: 
+    linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 28, 0.95) 100%);
   border-radius: 15px;
-  border: 2px solid #00d4ff;
+  border: 2px solid rgba(0, 212, 255, 0.5);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(0, 212, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 1;
+}
+
+.lobby-column::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(0, 212, 255, 0.5) 50%, 
+    transparent 100%);
+  z-index: 2;
 }
 
 .column-header {
   padding: 20px;
-  background: rgba(0,212,255,0.1);
-  border-bottom: 2px solid #00d4ff;
+  background: 
+    linear-gradient(180deg, 
+      rgba(0, 212, 255, 0.12) 0%, 
+      rgba(0, 212, 255, 0.05) 100%);
+  border-bottom: 1px solid rgba(0, 212, 255, 0.3);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 2;
 }
-.column-header h2 { margin: 0; color: #00d4ff; font-size: 1.5rem; }
+
+.column-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(0, 212, 255, 0.4) 50%, 
+    transparent 100%);
+}
+
+.column-header h2 { 
+  margin: 0; 
+  color: #00d4ff; 
+  font-size: 1.5rem;
+  text-shadow: 0 0 15px rgba(0, 212, 255, 0.5), 0 0 30px rgba(0, 212, 255, 0.2);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
 
 .column-footer {
   padding: 20px;
-  background: rgba(0,0,0,0.2);
-  border-top: 2px solid #00d4ff;
+  background: 
+    linear-gradient(180deg, 
+      rgba(0, 212, 255, 0.05) 0%, 
+      rgba(0, 0, 0, 0.3) 100%);
+  border-top: 1px solid rgba(0, 212, 255, 0.3);
+  position: relative;
+  z-index: 2;
+}
+
+.column-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(0, 212, 255, 0.4) 50%, 
+    transparent 100%);
 }
 
 .empty-state {
-  flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.6; padding: 40px; text-align: center;
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; 
+  align-items: center; 
+  opacity: 0.7; 
+  padding: 40px; 
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
 }
-.empty-state p { font-size: 1.2rem; margin-bottom: 10px; }
-.empty-state small { font-size: 0.9rem; }
+
+.empty-state p { 
+  font-size: 1.2rem; 
+  margin-bottom: 10px;
+  text-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.empty-state small { 
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
 
 .btn-start-game {
-  width: 100%; padding: 18px; font-size: 1.3rem; background: linear-gradient(135deg, #4caf50, #45a049);
-  border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; transition: all 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  width: 100%; 
+  padding: 18px; 
+  font-size: 1.3rem; 
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px; 
+  color: white; 
+  font-weight: bold; 
+  cursor: pointer; 
+  transition: all 0.3s ease; 
+  box-shadow: 
+    0 8px 24px rgba(0, 212, 255, 0.4),
+    0 0 30px rgba(0, 212, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
 }
-.btn-start-game:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(76,175,80,0.4); }
-.btn-start-game:disabled { background: #555; cursor: not-allowed; opacity: 0.6; }
+
+.btn-start-game::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.2) 50%, 
+    transparent 100%);
+  transition: left 0.5s ease;
+}
+
+.btn-start-game:hover::before {
+  left: 100%;
+}
+
+.btn-start-game:not(:disabled) {
+  animation: pulseStartButton 3s ease-in-out infinite;
+}
+
+@keyframes pulseStartButton {
+  0%, 100% {
+    box-shadow: 
+      0 8px 24px rgba(0, 212, 255, 0.4),
+      0 0 30px rgba(0, 212, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 8px 24px rgba(0, 212, 255, 0.6),
+      0 0 40px rgba(0, 212, 255, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+.btn-start-game:hover:not(:disabled) { 
+  transform: translateY(-3px);
+  animation: none; /* Zastav animaci při hoveru */
+  box-shadow: 
+    0 12px 32px rgba(0, 212, 255, 0.6),
+    0 0 40px rgba(0, 212, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.btn-start-game:disabled {
+  animation: none; /* Žádná animace když je disabled */
+} 
+
+.btn-start-game:disabled { 
+  background: linear-gradient(135deg, #2a3a4a, #1a2530);
+  border-color: rgba(255, 255, 255, 0.1);
+  cursor: not-allowed; 
+  opacity: 0.5;
+  box-shadow: none;
+}

@@ -12,11 +12,55 @@
 .modifier-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
 .modifier-list::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 10px; }
 .modifier-card {
-  background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; border: 2px solid rgba(0,212,255,0.3); margin-bottom: 20px;
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 0, 0, 0.4) 0%, 
+      rgba(15, 23, 42, 0.3) 100%);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  margin-bottom: 20px;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(0, 212, 255, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.modifier-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(0, 212, 255, 0.1) 50%, 
+    transparent 100%);
+  transition: left 0.6s ease;
+}
+
+.modifier-card:hover::before {
+  left: 100%;
+}
+
+.modifier-card:hover {
+  border-color: rgba(0, 255, 255, 0.6);
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(0, 212, 255, 0.15);
+  transform: translateY(-2px);
 }
 .modifier-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .modifier-icon { font-size: 2rem; }
-.modifier-name { font-size: 1.3rem; font-weight: bold; color: #00d4ff; }
+.modifier-name { 
+  font-size: 1.3rem; 
+  font-weight: bold; 
+  color: #00d4ff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
 .modifier-desc { font-size: 0.95rem; opacity: 0.9; margin-bottom: 15px; line-height: 1.5; }
 .modifier-control { display: flex; flex-direction: column; gap: 12px; }
 .modifier-control label { 
