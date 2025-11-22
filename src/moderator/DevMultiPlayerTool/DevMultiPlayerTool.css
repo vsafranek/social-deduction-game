@@ -1,30 +1,37 @@
 /* DevMultiPlayerTool.css */
 .dev-multiplayer-tool {
   position: fixed;
-  top: 10px;
-  right: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: 3px dashed rgba(255, 255, 255, 0.5);
+  top: 75px;
+  right: 24px;
+  background: linear-gradient(135deg, #16213e, #0f3460);
+  border: 2px solid #ffd700;
   border-radius: 12px;
   padding: 16px;
-  z-index: 10000;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-  min-width: 300px;
-  max-width: 350px;
+  z-index: 102;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 215, 0, 0.2);
+  min-width: 320px;
+  max-width: 380px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin-top: 8px;
+}
+
+/* Pokud je ConnectionDropdown otevřený, posuneme Dev panel dolů */
+.moderator-view:has(.connection-dropdown) .dev-multiplayer-tool {
+  top: 330px;
 }
 
 .dev-tool-header {
   font-weight: bold;
   margin-bottom: 14px;
   font-size: 15px;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.3);
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
   padding: 10px;
   border-radius: 6px;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 1px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 .dev-tool-content {

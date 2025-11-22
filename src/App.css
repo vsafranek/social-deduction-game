@@ -21,6 +21,13 @@ body {
   padding: 20px;
 }
 
+/* Remove padding for moderator view - full screen */
+.App:has(.moderator-view) {
+  padding: 0;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
 /* Loading Screen */
 .loading-screen, .loading {
   display: flex;

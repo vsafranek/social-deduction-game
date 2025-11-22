@@ -6,8 +6,7 @@ function PlayersList({
   availableRoles,
   assignedRoles,
   onAssignRole,
-  onUnassignRole,
-  onStartGame
+  onUnassignRole
 }) {
   const getRoleTeam = (role) => availableRoles[role]?.team || 'good';
   const getEmoji = (role) => availableRoles[role]?.emoji || '❓';
@@ -58,19 +57,6 @@ function PlayersList({
           ))}
         </div>
       )}
-
-      <div className="column-footer">
-        <button 
-          className="btn-start-game"
-          onClick={onStartGame}
-          disabled={players.length < 3}
-        >
-          {players.length < 3 
-            ? `⏳ Minimálně 3 hráči (${players.length}/3)`
-            : '▶️ Spustit Hru'
-          }
-        </button>
-      </div>
     </div>
   );
 }

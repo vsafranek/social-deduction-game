@@ -3,5 +3,10 @@
   grid-template-columns: 1fr 2fr 1fr;
   gap: 20px;
   padding: 20px;
-  height: calc(100vh - 100px);
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  overflow: hidden;
+  background: #0a1628;
 }

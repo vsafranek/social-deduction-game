@@ -14,11 +14,13 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Lookout': { team: 'good', emoji: '👁️' },
     'Trapper': { team: 'good', emoji: '🪤' },
     'Tracker': { team: 'good', emoji: '👣' },
+    'Hunter': { team: 'good', emoji: '🏹' },
     'Citizen': { team: 'good', emoji: '👤' },
     // Evil roles
     'Killer': { team: 'evil', emoji: '🔪' },
     'Cleaner': { team: 'evil', emoji: '🧹' },
     'Framer': { team: 'evil', emoji: '🖼️' },
+    'Consigliere': { team: 'evil', emoji: '🕵️' },
     // Neutral roles
     'Diplomat': { team: 'neutral', emoji: '🕊️' },
     'Survivor': { team: 'neutral', emoji: '🛡️' },
@@ -33,10 +35,12 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Lookout': 1,
     'Trapper': 0,
     'Tracker': 1,
+    'Hunter': 0,
     'Citizen': 0, // auto-fill fallback
     'Killer': 2,
     'Cleaner': 0,
     'Framer': 0,
+    'Consigliere': 0,
     'Diplomat': 0,
     'Survivor': 0,
     'Infected': 0
@@ -60,7 +64,9 @@ function LobbyLayout({ gameState, onStartGame }) {
   // Pasivní modifikátory (anglické klíče pro backend)
   const [modifierConfig, setModifierConfig] = useState({
     drunkChance: 20,      // backend bere drunkChance i opilýChance
-    recluseChance: 15
+    recluseChance: 15,
+    paranoidChance: 10,
+    insomniacChance: 10
   });
 
   // Handlery
@@ -166,15 +172,12 @@ function LobbyLayout({ gameState, onStartGame }) {
       />
 
       <ModifierSettings
+        playersCount={gameState.players.length}
         modifierConfig={modifierConfig}
         setModifierConfig={setModifierConfig}
+        onStartGame={onClickStartGame}
+        canStart={gameState.players.length >= 3}
       />
-
-      <div className="lobby-footer">
-        <button className="btn-start-game" onClick={onClickStartGame}>
-          🚀 Start Game
-        </button>
-      </div>
     </div>
   );
 }

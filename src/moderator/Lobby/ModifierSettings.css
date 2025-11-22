@@ -8,6 +8,9 @@
 .warning-text { margin: 0; color: #ffd700; font-size: 0.95rem; text-align: center; }
 
 .modifier-list { flex: 1; overflow-y: auto; padding: 20px; }
+.modifier-list::-webkit-scrollbar { width: 8px; }
+.modifier-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+.modifier-list::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 10px; }
 .modifier-card {
   background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; border: 2px solid rgba(0,212,255,0.3); margin-bottom: 20px;
 }
@@ -15,6 +18,183 @@
 .modifier-icon { font-size: 2rem; }
 .modifier-name { font-size: 1.3rem; font-weight: bold; color: #00d4ff; }
 .modifier-desc { font-size: 0.95rem; opacity: 0.9; margin-bottom: 15px; line-height: 1.5; }
-.modifier-control { display: flex; flex-direction: column; gap: 10px; }
-.modifier-control input[type="range"] { width: 100%; height: 8px; border-radius: 5px; background: rgba(0,0,0,0.4); outline: none; cursor: pointer; accent-color: #00d4ff; }
-.modifier-estimate { text-align: center; font-size: 0.9rem; color: #ffd700; font-weight: 600; }
+.modifier-control { display: flex; flex-direction: column; gap: 12px; }
+.modifier-control label { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  color: #00d4ff; 
+  font-size: 1rem; 
+  font-weight: 500;
+}
+.modifier-control label strong { 
+  font-size: 1.2rem; 
+  color: #00ffff; 
+  min-width: 50px;
+  text-align: right;
+}
+
+.modifier-control {
+  position: relative;
+}
+
+.modifier-control input[type="range"] { 
+  width: 100%; 
+  height: 12px; 
+  border-radius: 12px; 
+  background: rgba(0,0,0,0.6);
+  outline: none; 
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  margin: 8px 0;
+}
+
+/* Track styling for WebKit browsers (Chrome, Safari, Edge) */
+.modifier-control input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 12px;
+  background: linear-gradient(90deg, 
+    rgba(30,30,30,0.8) 0%, 
+    rgba(0,212,255,0.4) 50%, 
+    rgba(0,255,255,0.8) 100%
+  );
+  border-radius: 12px;
+  border: 2px solid rgba(0,212,255,0.4);
+  box-shadow: 
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 1px 2px rgba(0,212,255,0.2);
+}
+
+/* Thumb styling for WebKit browsers */
+.modifier-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00ffff, #00d4ff);
+  border: 3px solid #ffffff;
+  cursor: grab;
+  box-shadow: 
+    0 3px 10px rgba(0,212,255,0.7), 
+    0 0 15px rgba(0,255,255,0.5),
+    inset 0 2px 4px rgba(255,255,255,0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: -10px;
+}
+
+.modifier-control input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 
+    0 4px 15px rgba(0,212,255,0.9), 
+    0 0 20px rgba(0,255,255,0.7),
+    inset 0 2px 4px rgba(255,255,255,0.4);
+  background: linear-gradient(135deg, #00ffff, #0099ff);
+}
+
+.modifier-control input[type="range"]::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+  box-shadow: 
+    0 3px 12px rgba(0,212,255,0.8), 
+    0 0 18px rgba(0,255,255,0.6),
+    inset 0 2px 4px rgba(255,255,255,0.3);
+}
+
+/* Track styling for Firefox */
+.modifier-control input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 12px;
+  background: linear-gradient(90deg, 
+    rgba(30,30,30,0.8) 0%, 
+    rgba(0,212,255,0.4) 50%, 
+    rgba(0,255,255,0.8) 100%
+  );
+  border-radius: 12px;
+  border: 2px solid rgba(0,212,255,0.4);
+  box-shadow: 
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 1px 2px rgba(0,212,255,0.2);
+}
+
+/* Thumb styling for Firefox */
+.modifier-control input[type="range"]::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00ffff, #00d4ff);
+  border: 3px solid #ffffff;
+  cursor: grab;
+  box-shadow: 
+    0 3px 10px rgba(0,212,255,0.7), 
+    0 0 15px rgba(0,255,255,0.5),
+    inset 0 2px 4px rgba(255,255,255,0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modifier-control input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 
+    0 4px 15px rgba(0,212,255,0.9), 
+    0 0 20px rgba(0,255,255,0.7),
+    inset 0 2px 4px rgba(255,255,255,0.4);
+  background: linear-gradient(135deg, #00ffff, #0099ff);
+}
+
+.modifier-control input[type="range"]::-moz-range-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+  box-shadow: 
+    0 3px 12px rgba(0,212,255,0.8), 
+    0 0 18px rgba(0,255,255,0.6),
+    inset 0 2px 4px rgba(255,255,255,0.3);
+}
+
+.modifier-control input[type="range"]:focus {
+  outline: none;
+}
+
+.modifier-control input[type="range"]:focus::-webkit-slider-runnable-track {
+  border-color: rgba(0,255,255,0.8);
+  box-shadow: 
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 1px 2px rgba(0,212,255,0.2),
+    0 0 0 3px rgba(0,212,255,0.2);
+}
+
+.modifier-control input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 
+    0 0 0 5px rgba(0,212,255,0.3), 
+    0 4px 15px rgba(0,212,255,0.9), 
+    0 0 20px rgba(0,255,255,0.7),
+    inset 0 2px 4px rgba(255,255,255,0.4);
+}
+
+.modifier-control input[type="range"]:focus::-moz-range-track {
+  border-color: rgba(0,255,255,0.8);
+  box-shadow: 
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 1px 2px rgba(0,212,255,0.2),
+    0 0 0 3px rgba(0,212,255,0.2);
+}
+
+.modifier-control input[type="range"]:focus::-moz-range-thumb {
+  box-shadow: 
+    0 0 0 5px rgba(0,212,255,0.3), 
+    0 4px 15px rgba(0,212,255,0.9), 
+    0 0 20px rgba(0,255,255,0.7),
+    inset 0 2px 4px rgba(255,255,255,0.4);
+}
+
+.modifier-estimate { 
+  text-align: center; 
+  font-size: 0.95rem; 
+  color: #ffd700; 
+  font-weight: 600;
+  padding: 8px;
+  background: rgba(255,215,0,0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255,215,0,0.3);
+}

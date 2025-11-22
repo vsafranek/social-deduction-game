@@ -1,0 +1,23 @@
+.moderator-view {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0a1628;
+}
+
+/* Ensure lobby layout fills available space after TopBar */
+.moderator-view > .lobby-layout {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
