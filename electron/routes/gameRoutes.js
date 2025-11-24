@@ -510,6 +510,16 @@ router.post('/:gameId/end-night', async (req, res) => {
     game.phase = 'day';
     game.timerState.phaseEndsAt = endInMs(daySec);
     await game.save();
+    
+    // ✅ RESET hlasování pro nový den
+    console.log('🧹 Resetting votes for new day...');
+    for (const p of players) {
+      p.hasVoted = false;
+      p.voteFor = null;
+      await p.save();
+    }
+    console.log('✅ Votes reset complete');
+    
     await GameLog.create({ gameId, message: `Round ${game.round} - DAY (⏱ ${daySec}s)` });
 
     res.json({ success: true });
@@ -691,6 +701,16 @@ router.post('/:gameId/end-phase', async (req, res) => {
         phaseEndsAt: new Date(Date.now() + daySec * 1000)
       };
       await game.save();
+      
+      // ✅ RESET hlasování pro nový den
+      console.log('🧹 Resetting votes for new day...');
+      for (const p of players) {
+        p.hasVoted = false;
+        p.voteFor = null;
+        await p.save();
+      }
+      console.log('✅ Votes reset complete');
+      
       await GameLog.create({ gameId, message: `Round ${game.round} - DAY (⏱ ${daySec}s)` });
       console.log(`✅ [END-PHASE] Night → Day (Round ${game.round})`);
     }

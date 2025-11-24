@@ -67,11 +67,12 @@
   color: #ffb3b3;
 }
 
-/* hlasovací badge */
+/* hlasovací badge - nad avatarem, centrovaně */
 .vote-badge {
   position: absolute;
-  top: -8px;
-  right: -10px;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
   background: linear-gradient(135deg, #ffd700, #ffb300);
   color: #111;
   font-weight: 900;
@@ -80,4 +81,21 @@
   border: 2px solid rgba(0,0,0,0.2);
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   font-size: 0.9rem;
+  z-index: 15;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: vote-pulse 2s ease-in-out infinite;
+}
+
+@keyframes vote-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.6);
+    transform: translateX(-50%) scale(1.05);
+  }
 }
