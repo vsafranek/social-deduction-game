@@ -150,7 +150,11 @@ router.get('/:gameId/state', async (req, res) => {
         timerState: game.timerState
       },
       players: publicPlayers,
-      logs: logs.map(l => l.message)
+      logs: logs.map(l => ({
+        _id: l._id,
+        message: l.message,
+        createdAt: l.createdAt
+      }))
     });
   } catch (e) {
     console.error('state error:', e);
