@@ -40,11 +40,14 @@ function GameArena({ gameState, onRefresh }) {
   const countdownZeroTriggeredRef = useRef(false);
   const previousPhaseRef = useRef(null);
   const transitionTriggeredRef = useRef(false);
+  const transitionTimeoutRef = useRef(null);
+  const transitionEndTimeoutRef = useRef(null);
 
   // Reset trigger when server phase changes
   useEffect(() => {
     countdownZeroTriggeredRef.current = false;
-    transitionTriggeredRef.current = false;
+    // transitionTriggeredRef se NERESETUJE zde - resetuje se až po dokončení animace
+    // Tím zajistíme, že animace se spustí i když se fáze změní přes onRefresh()
   }, [phase]);
 
   // Hlavní useEffect pro spuštění přechodové animace při změně fáze
@@ -55,20 +58,48 @@ function GameArena({ gameState, onRefresh }) {
     if (prevPhase !== null && 
         prevPhase !== phase && 
         (prevPhase === 'day' || prevPhase === 'night') && 
-        (phase === 'day' || phase === 'night') &&
-        !transitionTriggeredRef.current) {
+        (phase === 'day' || phase === 'night')) {
+      
       console.log(`🎬 [TRANSITION] Phase changed: ${prevPhase} → ${phase}`);
-      transitionTriggeredRef.current = true;
-      setTransition({ from: prevPhase, to: phase });
       
-      const timeoutId = setTimeout(() => {
-        setTransition(null);
-        transitionTriggeredRef.current = false;
-      }, 2500);
+      // Zruš předchozí timeouty, pokud existují
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
+      if (transitionEndTimeoutRef.current) {
+        clearTimeout(transitionEndTimeoutRef.current);
+        transitionEndTimeoutRef.current = null;
+      }
       
-      // Cleanup funkce pro zrušení timeoutu při změně fáze nebo unmountu
+      // Zruš předchozí animaci, pokud existuje
+      setTransition(null);
+      
+      // Krátká pauza před spuštěním nové animace (aby se stihla zrušit předchozí)
+      transitionTimeoutRef.current = setTimeout(() => {
+        transitionTriggeredRef.current = true;
+        setTransition({ from: prevPhase, to: phase });
+        
+        // Trackovaný timeout pro ukončení animace
+        transitionEndTimeoutRef.current = setTimeout(() => {
+          setTransition(null);
+          transitionTriggeredRef.current = false;
+          transitionEndTimeoutRef.current = null;
+        }, 2500);
+        
+        transitionTimeoutRef.current = null;
+      }, 50);
+      
+      // Cleanup funkce pro zrušení všech timeoutů při změně fáze nebo unmountu
       return () => {
-        clearTimeout(timeoutId);
+        if (transitionTimeoutRef.current) {
+          clearTimeout(transitionTimeoutRef.current);
+          transitionTimeoutRef.current = null;
+        }
+        if (transitionEndTimeoutRef.current) {
+          clearTimeout(transitionEndTimeoutRef.current);
+          transitionEndTimeoutRef.current = null;
+        }
       };
     }
     
