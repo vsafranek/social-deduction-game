@@ -1,28 +1,60 @@
 .player-token {
   position: absolute; transform: translate(-50%, -50%); transition: all .5s ease; cursor: pointer;
 }
-.player-avatar { position: relative; width: 80px; height: 80px; }
+.player-token .player-avatar { 
+  position: relative !important; 
+  width: 96px !important; 
+  height: 96px !important; 
+  min-width: 96px !important;
+  min-height: 96px !important;
+  max-width: 96px !important;
+  max-height: 96px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
 .avatar-ring {
-  position: absolute; inset: 0; border-radius: 50%; border: 4px solid #00d4ff;
-  box-shadow: 0 0 20px rgba(0,212,255,0.5), inset 0 0 20px rgba(0,212,255,0.2);
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  width: 96px; 
+  height: 96px; 
+  border-radius: 50%; 
+  border: 4px solid rgba(255, 215, 0, 0.8);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.4);
   animation: ring-pulse 2s ease-in-out infinite;
+  z-index: 1;
+  box-sizing: border-box;
 }
 @keyframes ring-pulse {
-  0%,100% { box-shadow: 0 0 20px rgba(0,212,255,0.5), inset 0 0 20px rgba(0,212,255,0.2); }
-  50% { box-shadow: 0 0 30px rgba(0,212,255,0.8), inset 0 0 30px rgba(0,212,255,0.4); }
+  0%,100% { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.4); }
+  50% { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.6); }
 }
 .avatar-content {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  width: 68px; height: 68px; border-radius: 50%;
+  width: 88px; height: 88px; border-radius: 50%;
   background: linear-gradient(135deg, #667eea, #764ba2);
   display:flex; align-items:center; justify-content:center;
-  font-size: 2rem; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  font-size: 2.75rem; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  object-fit: cover;
+  z-index: 2;
+}
+
+.avatar-image {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: none;
+  box-shadow: none;
+}
+
+.avatar-fallback {
+  background: linear-gradient(135deg, #667eea, #764ba2);
 }
 
 .player-token.dead .avatar-ring { border-color: #e74c3c; box-shadow: 0 0 20px rgba(231,76,60,0.5), inset 0 0 20px rgba(231,76,60,0.2); animation: none; }
 .player-token.dead .avatar-content { background: linear-gradient(135deg, #555, #333); opacity: .5; filter: grayscale(100%); }
-.death-shroud { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 3rem; z-index: 10; animation: death-float 3s ease-in-out infinite; }
-@keyframes death-float { 0%,100%{transform:translate(-50%,-50%) translateY(0)} 50%{transform:translate(-50%,-50%) translateY(-5px)} }
+.death-shroud { position: absolute; top: 45%; left: 50%; transform: translate(-50%,-50%); font-size: 4.5rem; z-index: 10; }
 
 .player-token-info {
   position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 10px;

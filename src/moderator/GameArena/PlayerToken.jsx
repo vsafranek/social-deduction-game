@@ -13,7 +13,27 @@ function PlayerToken({ player, phase, votes, style }) {
 
       <div className="player-avatar">
         <div className="avatar-ring"></div>
-        <div className="avatar-content">{player.name.charAt(0).toUpperCase()}</div>
+        {player.avatar ? (
+          <img 
+            src={player.avatar} 
+            alt={player.name}
+            className="avatar-content avatar-image"
+            onError={(e) => {
+              // Fallback na písmenko, pokud se obrázek nenačte
+              e.target.style.display = 'none';
+              const fallback = e.target.nextElementSibling;
+              if (fallback) {
+                fallback.style.display = 'flex';
+              }
+            }}
+          />
+        ) : null}
+        <div 
+          className="avatar-content avatar-fallback"
+          style={{ display: player.avatar ? 'none' : 'flex' }}
+        >
+          {player.name.charAt(0).toUpperCase()}
+        </div>
       </div>
 
       {/* badge s počtem hlasů během dne - vpravo nahoře nad avatarem */}

@@ -26,6 +26,35 @@ function PlayersList({
         <div className="players-list">
           {players.map(p => (
             <div key={p._id} className="player-item">
+              {p.avatar ? (
+                <img 
+                  src={p.avatar} 
+                  alt={p.name}
+                  className="player-avatar-img"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    if (e.target.nextSibling) {
+                      e.target.nextSibling.style.display = 'flex';
+                    }
+                  }}
+                />
+              ) : null}
+              <div 
+                className="player-avatar-fallback"
+                style={{ 
+                  display: p.avatar ? 'none' : 'flex',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  fontSize: '20px',
+                  flexShrink: 0
+                }}
+              >
+                {p.name.charAt(0).toUpperCase()}
+              </div>
               <div className="player-info">
                 <span className="player-name">{p.name}</span>
                 {assignedRoles[p._id] && (

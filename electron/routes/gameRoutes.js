@@ -95,6 +95,45 @@ router.post('/create', async (req, res) => {
   }
 });
 
+// Helper function to assign unique avatar with retry logic to prevent race conditions
+async function assignUniqueAvatar(gameId, maxRetries = 5) {
+  const MAX_AVATARS = 50; // Máme avatary 1.png až 50.png
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    // Vždy znovu načti aktuální stav hráčů, aby se zabránilo race condition
+    const existingPlayers = await Player.find({ gameId });
+    const usedAvatars = new Set(existingPlayers.map(p => p.avatar).filter(Boolean));
+    
+    // Najdi první dostupný avatar
+    for (let i = 1; i <= MAX_AVATARS; i++) {
+      const avatarPath = `/avatars/${i}.png`;
+      if (!usedAvatars.has(avatarPath)) {
+        // Ověř, že avatar stále není používán (double-check)
+        const stillAvailable = await Player.findOne({ 
+          gameId, 
+          avatar: avatarPath 
+        });
+        
+        if (!stillAvailable) {
+          return avatarPath;
+        }
+        // Pokud je už používán, pokračuj v hledání
+      }
+    }
+    
+    // Pokud jsou všechny použité a není to poslední pokus, počkej chvíli a zkus znovu
+    if (attempt < maxRetries - 1) {
+      // Krátká pauza před dalším pokusem (umožní dokončit souběžné save operace)
+      await new Promise(resolve => setTimeout(resolve, 50));
+      continue;
+    }
+  }
+  
+  // Fallback: pokud všechny pokusy selhaly, vrať náhodný
+  const randomAvatar = Math.floor(Math.random() * MAX_AVATARS) + 1;
+  return `/avatars/${randomAvatar}.png`;
+}
+
 // Join by room code
 router.post('/join', async (req, res) => {
   try {
@@ -104,7 +143,9 @@ router.post('/join', async (req, res) => {
 
     let player = await Player.findOne({ gameId: game._id, sessionId });
     if (!player) {
-      player = new Player({ gameId: game._id, sessionId, name, role: null });
+      // Přiřaď unikátní avatar
+      const avatar = await assignUniqueAvatar(game._id);
+      player = new Player({ gameId: game._id, sessionId, name, role: null, avatar });
       await player.save();
       await GameLog.create({ gameId: game._id, message: `${name} joined.` });
     }
@@ -136,6 +177,7 @@ router.get('/:gameId/state', async (req, res) => {
       hasVoted: p.hasVoted,
       voteFor: p.voteFor,
       voteWeight: p.voteWeight || 1,
+      avatar: p.avatar,
       nightResults: p.nightAction?.results || []
     }));
 

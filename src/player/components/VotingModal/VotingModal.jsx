@@ -35,7 +35,26 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
                 onClick={() => setSelectedPlayer(player._id)}
               >
                 <div className="player-vote-avatar">
-                  {player.alive ? '✅' : '💀'}
+                  {player.avatar ? (
+                    <img 
+                      src={player.avatar} 
+                      alt={player.name}
+                      className="vote-avatar-img"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const fallback = e.target.nextElementSibling;
+                        if (fallback) {
+                          fallback.style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="vote-avatar-fallback"
+                    style={{ display: player.avatar ? 'none' : 'flex' }}
+                  >
+                    {player.alive ? '✅' : '💀'}
+                  </div>
                 </div>
                 <div className="player-vote-info">
                   <span className="player-vote-name">{player.name}</span>

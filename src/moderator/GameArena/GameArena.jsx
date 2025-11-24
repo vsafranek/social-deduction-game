@@ -58,7 +58,8 @@ function GameArena({ gameState, onRefresh }) {
     if (prevPhase !== null && 
         prevPhase !== phase && 
         (prevPhase === 'day' || prevPhase === 'night') && 
-        (phase === 'day' || phase === 'night')) {
+        (phase === 'day' || phase === 'night') &&
+        !transitionTriggeredRef.current) {
       
       console.log(`🎬 [TRANSITION] Phase changed: ${prevPhase} → ${phase}`);
       

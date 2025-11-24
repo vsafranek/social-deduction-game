@@ -286,6 +286,16 @@
   border-radius: 10px;
 }
 
+.player-avatar-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(0, 212, 255, 0.4);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 .player-item {
   background: rgba(0,0,0,0.3);
   padding: 15px;

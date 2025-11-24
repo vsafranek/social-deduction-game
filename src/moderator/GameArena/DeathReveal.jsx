@@ -21,7 +21,26 @@ function DeathReveal({ deadPlayers }) {
               style={{ animationDelay: `${idx * 0.3}s` }}
             >
               <div className="death-avatar">
-                {player.name.charAt(0).toUpperCase()}
+                {player.avatar ? (
+                  <img 
+                    src={player.avatar} 
+                    alt={player.name}
+                    className="death-avatar-img"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const fallback = e.target.nextElementSibling;
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <div 
+                  className="death-avatar-fallback"
+                  style={{ display: player.avatar ? 'none' : 'flex' }}
+                >
+                  {player.name.charAt(0).toUpperCase()}
+                </div>
               </div>
               <div className="death-name">{player.name}</div>
               <div className="death-role">{player.role || 'Unknown'}</div>

@@ -111,6 +111,37 @@ function GameEndScreen({ gameState, currentPlayer }) {
         className={`player-card ${isPlayerWinner ? 'winner' : 'loser'} ${isCurrent ? 'self' : ''} ${isDead ? 'dead' : ''}`}
       >
         <div className="player-card-header">
+          {player.avatar ? (
+            <img 
+              src={player.avatar} 
+              alt={player.name}
+              className="player-card-avatar"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                if (e.target.nextSibling) {
+                  e.target.nextSibling.style.display = 'flex';
+                }
+              }}
+            />
+          ) : null}
+          <div 
+            className="player-card-avatar-fallback"
+            style={{ 
+              display: player.avatar ? 'none' : 'flex',
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              fontSize: '20px',
+              color: '#fff',
+              fontWeight: 'bold',
+              flexShrink: 0
+            }}
+          >
+            {player.name.charAt(0).toUpperCase()}
+          </div>
           <span className="role-emoji">{roleInfo.emoji}</span>
           
           <div className="player-info">

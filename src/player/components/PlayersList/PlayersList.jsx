@@ -51,7 +51,23 @@ function PlayersList({
           type="button"
         >
           <div className="player-avatar">
-            {player.alive ? '✅' : '💀'}
+            {player.avatar ? (
+              <img 
+                src={player.avatar} 
+                alt={player.name}
+                className="avatar-img"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div 
+              className="avatar-fallback"
+              style={{ display: player.avatar ? 'none' : 'flex' }}
+            >
+              {player.alive ? '✅' : '💀'}
+            </div>
           </div>
           <div className="player-info">
             <span className="player-name">{player.name}</span>

@@ -93,6 +93,10 @@ const PlayerSchema = new mongoose.Schema({
   voteWeight: {
     type: Number,
     default: 1
+  },
+  avatar: {
+    type: String,
+    default: null
   }
 });
 
