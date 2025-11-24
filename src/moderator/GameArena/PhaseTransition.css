@@ -2,17 +2,17 @@
 .phase-transition {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  animation: fadeInOut 2s ease-in-out forwards;
+  animation: fadeInOut 2.5s ease-in-out forwards;
 }
 
 @keyframes fadeInOut {
   0% { opacity: 0; }
-  20%, 80% { opacity: 1; }
+  15%, 85% { opacity: 1; }
   100% { opacity: 0; }
 }
 
@@ -20,31 +20,6 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at center, rgba(0,0,0,0.8), rgba(0,0,0,0.95));
-}
-
-/* Sunrise particles (night → day) */
-.sunrise-particles {
-  position: absolute;
-  inset: 0;
-  background: 
-    radial-gradient(2px 2px at 20% 80%, #ffd700, transparent),
-    radial-gradient(3px 3px at 60% 70%, #ffeb3b, transparent),
-    radial-gradient(2px 2px at 40% 90%, #ffa726, transparent),
-    radial-gradient(4px 4px at 80% 85%, #ff9800, transparent);
-  background-size: 100px 100px, 150px 150px, 120px 120px, 80px 80px;
-  animation: riseUp 2s ease-out;
-  opacity: 0.7;
-}
-
-@keyframes riseUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 0.7;
-  }
 }
 
 .light-burst {

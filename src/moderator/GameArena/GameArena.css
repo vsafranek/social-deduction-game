@@ -9,19 +9,17 @@
   background-repeat: no-repeat;
   transition: background-image 1.5s ease-in-out;
   overflow: hidden;
+  /* Zvýšení kontrastu a sytosti pozadí */
+  filter: contrast(1.15) saturate(1.2);
 }
 
-/* Day background */
+/* Day background - pozadí se nastavuje dynamicky v JSX */
 .game-arena.day {
-  /* Používej vygenerovaný obrázek nebo fallback gradient */
-  background-image: url('/backgrounds/day.png');
   background-color: #87CEEB; /* Fallback: sky blue */
 }
 
-/* Night background */
+/* Night background - pozadí se nastavuje dynamicky v JSX */
 .game-arena.night {
-  /* Používej vygenerovaný obrázek nebo fallback gradient */
-  background-image: url('/backgrounds/night.png');
   background-color: #0a0a1a; /* Fallback: dark blue */
 }
 
@@ -37,16 +35,16 @@
   50% { background-position: 100% 50%; }
 }
 
-/* Fallback gradients pokud obrázky neexistují */
+/* Fallback gradients pokud obrázky neexistují - snížená opacity pro výraznější pozadí */
 .game-arena.day::before {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(255, 245, 220, 0.3) 0%,
-    rgba(255, 235, 200, 0.2) 50%,
-    rgba(200, 220, 255, 0.1) 100%
+    rgba(255, 245, 220, 0.15) 0%,
+    rgba(255, 235, 200, 0.1) 50%,
+    rgba(200, 220, 255, 0.05) 100%
   );
   z-index: 0;
   pointer-events: none;
@@ -58,9 +56,9 @@
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(10, 10, 30, 0.7) 0%,
-    rgba(20, 20, 50, 0.5) 50%,
-    rgba(30, 30, 60, 0.3) 100%
+    rgba(10, 10, 30, 0.4) 0%,
+    rgba(20, 20, 50, 0.25) 50%,
+    rgba(30, 30, 60, 0.15) 100%
   );
   z-index: 0;
   pointer-events: none;
@@ -181,14 +179,14 @@
 }
 
 
-/* Ambient glow */
+/* Ambient glow - snížená opacity pro výraznější pozadí */
 .atmosphere-overlay.day::before {
   content: '';
   position: absolute;
   inset: 0;
   background: radial-gradient(
     ellipse at 50% 20%,
-    rgba(255, 250, 235, 0.2),
+    rgba(255, 250, 235, 0.1),
     transparent 60%
   );
   animation: ambientPulse 12s ease-in-out infinite;

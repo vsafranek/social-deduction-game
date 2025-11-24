@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { gameApi } from '../../api/gameApi';
 import CenterCircle from './CenterCircle';
 import PlayersCircle from './PlayersCircle';
@@ -16,12 +16,63 @@ function GameArena({ gameState, onRefresh }) {
   
   const phase = gameState.game.phase;
   const phaseEndsAt = gameState.game?.timerState?.phaseEndsAt;
+  const round = gameState.game?.round || 0;
+  
+  // Vyber náhodné pozadí na základě fáze a kola (pro variabilitu)
+  const backgroundImage = useMemo(() => {
+    if (phase === 'day') {
+      const dayVariants = [1, 2, 3, 4, 5];
+      // Použij round pro deterministický výběr (stejné kolo = stejné pozadí)
+      // Oprava: přidáme dayVariants.length, aby se negativní hodnoty správně zpracovaly
+      const index = (round - 1 + dayVariants.length) % dayVariants.length;
+      const variant = dayVariants[index];
+      return `/backgrounds/day_${variant}.png`;
+    } else if (phase === 'night') {
+      const nightVariants = [1, 2, 3, 4, 5];
+      // Oprava: přidáme nightVariants.length, aby se negativní hodnoty správně zpracovaly
+      const index = (round - 1 + nightVariants.length) % nightVariants.length;
+      const variant = nightVariants[index];
+      return `/backgrounds/night_${variant}.png`;
+    }
+    return null;
+  }, [phase, round]);
   
   const countdownZeroTriggeredRef = useRef(false);
+  const previousPhaseRef = useRef(null);
+  const transitionTriggeredRef = useRef(false);
 
   // Reset trigger when server phase changes
   useEffect(() => {
     countdownZeroTriggeredRef.current = false;
+    transitionTriggeredRef.current = false;
+  }, [phase]);
+
+  // Hlavní useEffect pro spuštění přechodové animace při změně fáze
+  useEffect(() => {
+    const prevPhase = previousPhaseRef.current;
+    
+    // Pokud se fáze změnila z day/night na day/night, spusť animaci
+    if (prevPhase !== null && 
+        prevPhase !== phase && 
+        (prevPhase === 'day' || prevPhase === 'night') && 
+        (phase === 'day' || phase === 'night') &&
+        !transitionTriggeredRef.current) {
+      console.log(`🎬 [TRANSITION] Phase changed: ${prevPhase} → ${phase}`);
+      transitionTriggeredRef.current = true;
+      setTransition({ from: prevPhase, to: phase });
+      
+      const timeoutId = setTimeout(() => {
+        setTransition(null);
+        transitionTriggeredRef.current = false;
+      }, 2500);
+      
+      // Cleanup funkce pro zrušení timeoutu při změně fáze nebo unmountu
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+    
+    previousPhaseRef.current = phase;
   }, [phase]);
 
   // Frontend countdown (pouze pokud není end)
@@ -49,15 +100,33 @@ function GameArena({ gameState, onRefresh }) {
         
         console.log(`⏰ [COUNTDOWN] Hit 0: ${phase} → ${nextPhase}`);
         
-        if (mounted) setTransition({ from: phase, to: nextPhase });
+        // Okamžitě spusť přechodovou animaci na základě očekávané změny fáze
+        if ((phase === 'day' || phase === 'night') && (nextPhase === 'day' || nextPhase === 'night')) {
+          transitionTriggeredRef.current = true;
+          setTransition({ from: phase, to: nextPhase });
+          
+          const timeoutId = setTimeout(() => {
+            if (mounted) {
+              setTransition(null);
+              transitionTriggeredRef.current = false;
+            }
+          }, 2500);
+          
+          // Cleanup timeout při unmountu
+          // Poznámka: timeout se vyčistí automaticky při změně fáze přes hlavní useEffect
+        }
         
-        gameApi.endPhase(gameState.game._id).catch(e => {
-          console.error('❌ End-phase error:', e);
-        });
-        
-        setTimeout(() => {
-          if (mounted) setTransition(null);
-        }, 2000);
+        // Zavolej endPhase a aktualizuj stav
+        gameApi.endPhase(gameState.game._id)
+          .then((response) => {
+            if (mounted && response.success && onRefresh) {
+              // Okamžitě aktualizuj stav, aby se fáze změnila bez čekání na sync
+              onRefresh();
+            }
+          })
+          .catch(e => {
+            console.error('❌ End-phase error:', e);
+          });
       }
     };
 
@@ -81,6 +150,8 @@ function GameArena({ gameState, onRefresh }) {
         
         if (freshState.game.phase !== phase) {
           console.log(`🔄 [SYNC] Phase changed: ${phase} → ${freshState.game.phase}`);
+          
+          // Animace se spustí automaticky přes hlavní useEffect při změně fáze
           
           if (freshState.game.phase === 'day' && phase === 'night') {
             const newDead = freshState.players.filter(p => 
@@ -128,7 +199,10 @@ function GameArena({ gameState, onRefresh }) {
   }
 
   return (
-    <div className={`game-arena ${phase}`}>
+    <div 
+      className={`game-arena ${phase}`}
+      style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}
+    >
       <InGameModMenu 
         gameId={gameState.game._id}
         onReturnToLobby={handleReturnToLobby}
@@ -145,17 +219,11 @@ function GameArena({ gameState, onRefresh }) {
       <FloatingLogDock logs={gameState.logs || []} players={gameState.players} />
       
       <div className={`atmosphere-overlay ${phase}`}>
-        {phase === 'night' && <div className="stars"></div>}
-        {phase === 'day' && (
-          <>
-            <div className="fog fog-1"></div>
-            <div className="fog fog-2"></div>
-            <div className="fog fog-3"></div>
-          </>
-        )}
       </div>
       
-      {transition && <PhaseTransition from={transition.from} to={transition.to} />}
+      {transition && (
+        <PhaseTransition from={transition.from} to={transition.to} />
+      )}
       {deadReveal.length > 0 && <DeathReveal deadPlayers={deadReveal} />}
     </div>
   );

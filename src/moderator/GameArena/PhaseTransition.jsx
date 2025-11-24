@@ -11,10 +11,7 @@ function PhaseTransition({ from, to, hiding }) {
       <div className="transition-bg"></div>
       
       {isNightToDay && (
-        <>
-          <div className="sunrise-particles"></div>
-          <div className="light-burst"></div>
-        </>
+        <div className="light-burst"></div>
       )}
       
       {isDayToNight && (
