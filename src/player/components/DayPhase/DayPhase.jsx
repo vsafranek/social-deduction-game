@@ -2,13 +2,18 @@
 import React from 'react';
 import './DayPhase.css';
 
-function DayPhase({ onOpenVoting, hasVoted, votedPlayerName }) {
+function DayPhase({ onOpenVoting, hasVoted, votedPlayerName, isMayorElection = false }) {
   if (hasVoted && votedPlayerName) {
     return (
       <div className="day-phase">
         <div className="vote-confirmed">
           <span>✅</span>
-          <p>Hlasoval jsi pro <strong>{votedPlayerName}</strong></p>
+          <p>
+            {isMayorElection 
+              ? `Hlasoval jsi pro starostu: ${votedPlayerName}`
+              : `Hlasoval jsi pro ${votedPlayerName}`
+            }
+          </p>
         </div>
       </div>
     );
@@ -17,7 +22,7 @@ function DayPhase({ onOpenVoting, hasVoted, votedPlayerName }) {
   return (
     <div className="day-phase">
       <button className="vote-button" onClick={onOpenVoting}>
-        🗳️ Hlasovat pro vyloučení
+        {isMayorElection ? '🏛️ Hlasovat pro starostu' : '🗳️ Hlasovat pro vyloučení'}
       </button>
     </div>
   );

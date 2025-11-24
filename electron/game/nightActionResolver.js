@@ -645,6 +645,15 @@ async function resolveNightActions(game, players) {
       p.nightAction.results.push('killed:Byl jsi zavražděn');
       toSave.add(p._id.toString());
       console.log(`  ☠️ ${p.name} was killed`);
+      
+      // Check if mayor died - remove mayor status
+      if (game.mayor && game.mayor.toString() === p._id.toString()) {
+        p.voteWeight = 1; // Remove mayor vote weight
+        game.mayor = null; // No new mayor can be elected
+        toSave.add(p._id.toString());
+        console.log(`  🏛️ Mayor ${p.name} was killed - mayor status removed`);
+        // Note: game.save() will be called by the route handler after night resolution
+      }
     } else {
       // Player was saved
       p.nightAction.results.push('attacked:Na tebe byl proveden útok');

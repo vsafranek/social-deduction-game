@@ -89,6 +89,10 @@ const PlayerSchema = new mongoose.Schema({
   roleHidden: {
     type: Boolean,
     default: false
+  },
+  voteWeight: {
+    type: Number,
+    default: 1
   }
 });
 

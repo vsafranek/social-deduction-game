@@ -3,17 +3,19 @@ import React, { useMemo } from 'react';
 import PlayerToken from './PlayerToken';
 import './PlayersCircle.css';
 
-function PlayersCircle({ players, phase }) {
+function PlayersCircle({ players, phase, game }) {
   const total = players.length;
 
   // spočítej počet hlasů pro každého cíle (jen pro denní fázi)
+  // Respektuje voteWeight (starosta má 2 hlasy)
   const voteMap = useMemo(() => {
     if (phase !== 'day') return {};
     const map = {};
     for (const p of players) {
       if (p.alive && p.voteFor) {
         const key = String(p.voteFor);
-        map[key] = (map[key] || 0) + 1;
+        const weight = p.voteWeight || 1;
+        map[key] = (map[key] || 0) + weight;
       }
     }
     return map;

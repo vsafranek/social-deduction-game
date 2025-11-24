@@ -159,6 +159,21 @@
 .status.alive { color: #10b981; }
 .status.dead { color: #ef4444; }
 
+.mayor-indicator {
+  font-size: 11px;
+  margin: 2px 0 0 0;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.phase-day .mayor-indicator {
+  color: rgba(139, 69, 19, 0.9);
+}
+
+.phase-night .mayor-indicator {
+  color: rgba(255, 215, 0, 0.9);
+}
+
 .expand-icon {
   font-size: 12px;
   flex-shrink: 0;
@@ -192,6 +207,30 @@
   border-top-color: rgba(102, 126, 234, 0.2);
 }
 
+/* Unified section styling */
+.role-description,
+.role-modifier,
+.role-mayor {
+  padding: 10px 12px;
+  border-radius: 4px;
+  border-left: 3px solid;
+}
+
+.role-description {
+  background: rgba(102, 126, 234, 0.1);
+  border-left-color: rgba(102, 126, 234, 0.4);
+}
+
+.phase-day .role-description {
+  background: rgba(102, 126, 234, 0.08);
+  border-left-color: rgba(102, 126, 234, 0.3);
+}
+
+.phase-night .role-description {
+  background: rgba(102, 126, 234, 0.12);
+  border-left-color: rgba(102, 126, 234, 0.5);
+}
+
 .role-description p {
   margin: 0;
   font-size: 13px;
@@ -208,24 +247,65 @@
 }
 
 .role-modifier {
-  margin: 12px 0;
-  padding: 10px 12px;
   background: rgba(251, 191, 36, 0.2);
-  border-left: 3px solid rgba(251, 191, 36, 0.6);
-  border-radius: 4px;
+  border-left-color: rgba(251, 191, 36, 0.6);
 }
 
-.role-modifier h4 {
+.phase-night .role-modifier {
+  background: rgba(251, 191, 36, 0.15);
+  border-left-color: rgba(251, 191, 36, 0.5);
+}
+
+.role-mayor {
+  background: rgba(139, 69, 19, 0.15);
+  border-left-color: rgba(139, 69, 19, 0.6);
+}
+
+.phase-night .role-mayor {
+  background: rgba(255, 215, 0, 0.15);
+  border-left-color: rgba(255, 215, 0, 0.6);
+}
+
+/* Unified heading styling */
+.role-modifier h4,
+.role-mayor h4 {
   font-size: 12px;
   font-weight: 600;
   margin: 0 0 4px 0;
+  transition: color 0.3s ease;
+}
+
+.role-modifier h4 {
   color: #fbbf24;
 }
 
-.modifier-warning {
+.phase-day .role-mayor h4 {
+  color: rgba(139, 69, 19, 0.9);
+}
+
+.phase-night .role-mayor h4 {
+  color: rgba(255, 215, 0, 0.9);
+}
+
+/* Unified text styling */
+.modifier-warning,
+.mayor-info {
   font-size: 11px;
   margin: 0;
+  line-height: 1.5;
+  transition: color 0.3s ease;
+}
+
+.modifier-warning {
   color: rgba(251, 191, 36, 0.9);
+}
+
+.phase-day .mayor-info {
+  color: rgba(139, 69, 19, 0.8);
+}
+
+.phase-night .mayor-info {
+  color: rgba(255, 215, 0, 0.8);
 }
 
 .role-footer {

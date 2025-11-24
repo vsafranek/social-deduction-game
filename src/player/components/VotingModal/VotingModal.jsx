@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import './VotingModal.css';
 
-function VotingModal({ players, onVote, onClose }) {
+function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   const handleVote = () => {
@@ -21,7 +21,10 @@ function VotingModal({ players, onVote, onClose }) {
 
         <div className="voting-modal-content">
           <p className="voting-instruction">
-            Vyber hráče, kterého chceš vyloučit ze hry
+            {isMayorElection 
+              ? 'Vyber hráče, který bude zvolen Starostou'
+              : 'Vyber hráče, kterého chceš vyloučit ze hry'
+            }
           </p>
 
           <div className="players-voting-list">

@@ -135,6 +135,7 @@ router.get('/:gameId/state', async (req, res) => {
       alive: p.alive,
       hasVoted: p.hasVoted,
       voteFor: p.voteFor,
+      voteWeight: p.voteWeight || 1,
       nightResults: p.nightAction?.results || []
     }));
 
@@ -144,6 +145,7 @@ router.get('/:gameId/state', async (req, res) => {
         roomCode: game.roomCode,
         phase: game.phase,
         round: game.round,
+        mayor: game.mayor,
         timers: game.timers,
         timerState: game.timerState
       },
@@ -563,6 +565,7 @@ router.post('/:gameId/reset-to-lobby', async (req, res) => {
 
     game.phase = 'lobby';
     game.round = 0;
+    game.mayor = null; // Reset mayor
     game.timerState = { phaseEndsAt: null };
     await game.save();
 
@@ -576,6 +579,7 @@ router.post('/:gameId/reset-to-lobby', async (req, res) => {
       p.effects = [];
       p.hasVoted = false;
       p.voteFor = null;
+      p.voteWeight = 1; // Reset vote weight
       p.nightAction = { targetId: null, action: null, results: [] };
       await p.save();
     }

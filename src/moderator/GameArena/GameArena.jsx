@@ -141,7 +141,7 @@ function GameArena({ gameState, onRefresh }) {
         countdownSec={remaining}
       />
       
-      <PlayersCircle players={gameState.players} phase={phase} />
+      <PlayersCircle players={gameState.players} phase={phase} game={gameState.game} />
       <FloatingLogDock logs={gameState.logs || []} players={gameState.players} />
       
       <div className={`atmosphere-overlay ${phase}`}>

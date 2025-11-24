@@ -25,6 +25,11 @@ const GameSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  mayor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Player',
+    default: null
+  },
   ip: String,
   port: Number,
   

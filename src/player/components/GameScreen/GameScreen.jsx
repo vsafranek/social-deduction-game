@@ -132,7 +132,7 @@ function GameScreen({
       </header>
 
       <main className="game-main">
-        <RoleCard player={currentPlayer} />
+        <RoleCard player={currentPlayer} gameState={gameState} />
 
         {/* Výsledky po stories */}
         {phase === 'day' && hasNightResults && !showStories && (
@@ -157,6 +157,7 @@ function GameScreen({
             onOpenVoting={() => setShowVotingModal(true)}
             hasVoted={hasVoted}
             votedPlayerName={votedPlayer?.name}
+            isMayorElection={gameState?.game?.round === 1 && !gameState?.game?.mayor}
           />
         )}
       </main>
@@ -167,6 +168,7 @@ function GameScreen({
           players={alivePlayers}
           onVote={handleVoteSubmit}
           onClose={() => setShowVotingModal(false)}
+          isMayorElection={gameState?.game?.round === 1 && !gameState?.game?.mayor}
         />
       )}
 

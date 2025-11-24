@@ -18,10 +18,11 @@ const ROLE_INFO = {
   'Infected': { emoji: '🦠', team: 'neutral', teamLabel: 'Nakažlivý', description: 'Nakaz všechny hráče a vyhraj', actionVerb: 'Nakazit' }
 };
 
-function RoleCard({ player }) {
+function RoleCard({ player, gameState }) {
   const [expanded, setExpanded] = useState(false);
   const role = player.role || 'Citizen';
   const roleData = ROLE_INFO[role] || ROLE_INFO['Citizen'];
+  const isMayor = gameState?.game?.mayor && gameState.game.mayor.toString() === player._id.toString();
 
   return (
     <div className={`role-card ${expanded ? 'expanded' : ''} ${roleData.team} ${!player.alive ? 'dead' : ''}`}>
@@ -34,6 +35,9 @@ function RoleCard({ player }) {
           <span className="role-emoji">{roleData.emoji}</span>
           <div className="role-name-status">
             <h2>{role}</h2>
+            {isMayor && (
+              <p className="mayor-indicator">🏛️ Starosta</p>
+            )}
             <p className={`team-label ${roleData.team}`}>
               {roleData.teamLabel}
             </p>
@@ -49,6 +53,13 @@ function RoleCard({ player }) {
             <div className="role-description">
               <p>{roleData.description}</p>
             </div>
+
+            {isMayor && (
+              <div className="role-mayor">
+                <h4>🏛️ Starosta</h4>
+                <p className="mayor-info">Jsi zvolený starosta - moderuješ hru a máš 2 hlasy</p>
+              </div>
+            )}
 
             {player.modifier && (
               <div className="role-modifier">
