@@ -74,10 +74,6 @@ describe('victoryEvaluator', () => {
       expect(isHostileNeutral(infected)).toBe(true);
     });
 
-    test('isHostileNeutral - Diplomat is not hostile', () => {
-      const diplomat = createPlayer('1', 'Diplomat', true, ['neutral']);
-      expect(isHostileNeutral(diplomat)).toBe(false);
-    });
 
     test('evaluateCustomRule - eliminate rule', () => {
       const counts = new Map([['evil', 0], ['good', 3]]);
@@ -130,24 +126,6 @@ describe('victoryEvaluator', () => {
       expect(result.players).toHaveLength(2);
     });
 
-    test('Good wins with Diplomat (non-hostile neutral) when evil dead', () => {
-      const players = [
-        createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Doctor', true, ['good']),
-        createPlayer('3', 'Diplomat', true, ['neutral'], { 
-          canWinWithTeams: ['good', 'evil'], 
-          soloWin: false, 
-          customRules: [] 
-        }),
-        createPlayer('4', 'Killer', false, ['evil']),
-      ];
-
-      const result = evaluateVictory(players);
-      
-      expect(result).not.toBeNull();
-      expect(result.winner).toBe('good');
-      expect(result.players).toHaveLength(3); // Good + Diplomat
-    });
 
     test('Good does NOT win when evil dead but Survivor alive', () => {
       const players = [
@@ -275,7 +253,7 @@ describe('victoryEvaluator', () => {
 
     test('Evil wins when only 2 players left with 1 evil', () => {
       const players = [
-        createPlayer('1', 'Diplomat', true, ['neutral']),
+        createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Killer', true, ['evil']),
       ];
 
@@ -569,22 +547,5 @@ describe('victoryEvaluator', () => {
       expect(result.players[0].toString()).toBe('2');
     });
 
-    test('Diplomat wins with good team', () => {
-      const players = [
-        createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Diplomat', true, ['neutral'], {
-          canWinWithTeams: ['good', 'evil'],
-          soloWin: false,
-          customRules: []
-        }),
-        createPlayer('3', 'Killer', false, ['evil']),
-      ];
-
-      const result = evaluateVictory(players);
-      
-      expect(result).not.toBeNull();
-      expect(result.winner).toBe('good');
-      expect(result.players).toHaveLength(2); // Good + Diplomat
-    });
   });
 });

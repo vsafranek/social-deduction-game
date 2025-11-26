@@ -23,7 +23,6 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Accuser': { team: 'evil', emoji: '👉' },
     'Consigliere': { team: 'evil', emoji: '🕵️' },
     // Neutral roles
-    'Diplomat': { team: 'neutral', emoji: '🕊️' },
     'Survivor': { team: 'neutral', emoji: '🛡️' },
     'Infected': { team: 'neutral', emoji: '🦠' }
   }), []);
@@ -43,7 +42,6 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Cleaner': 0,
     'Accuser': 0,
     'Consigliere': 0,
-    'Diplomat': 0,
     'Survivor': 0,
     'Infected': 0
   });

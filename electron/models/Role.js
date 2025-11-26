@@ -195,22 +195,6 @@ const ROLES = {
   // NEUTRAL
   // ==================
   
-  'Diplomat': {
-    team: 'neutral',
-    emoji: '🕊️',
-    description: 'May win with either side',
-    actionType: 'none',
-    nightPriority: 0,
-    canUseEveryNight: false,
-    visitsTarget: false,
-    defaultAffiliations: ['neutral'],
-    defaultVictory: { 
-      canWinWithTeams: ['good', 'evil'], 
-      soloWin: false, 
-      customRules: [] // ✅ No special rules - wins with whoever wins
-    }
-  },
-  
   'Survivor': {
     team: 'neutral',
     emoji: '🛡️',

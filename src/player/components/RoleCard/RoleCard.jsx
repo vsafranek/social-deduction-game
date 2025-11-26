@@ -16,7 +16,6 @@ const ROLE_INFO = {
   'Cleaner': { emoji: '🧹', team: 'evil', teamLabel: 'Mafie', description: 'Můžeš zabíjet NEBO označit hráče - označený živý hráč ukáže Investigator falešný výsledek, mrtvý hráč bude mít skrytou roli', actionVerb: 'Zabít nebo označit' },
   'Accuser': { emoji: '👉', team: 'evil', teamLabel: 'Mafie', description: 'Obviň hráče - bude vypadat jako zločinec při vyšetřování', actionVerb: 'Obviňovat' },
   'Consigliere': { emoji: '🕵️', team: 'evil', teamLabel: 'Mafie', description: 'Můžeš zabíjet NEBO vyšetřit živého hráče a zjistit jeho přesnou roli', actionVerb: 'Zabít nebo vyšetřit' },
-  'Diplomat': { emoji: '🕊️', team: 'neutral', teamLabel: 'Neutrální', description: 'Můžeš vyhrát s oběma stranami', actionVerb: 'Žádná' },
   'Survivor': { emoji: '🛡️', team: 'neutral', teamLabel: 'Sériový vrah', description: 'Zabíjej všechny - vyhraj sám', actionVerb: 'Zabít' },
   'Infected': { emoji: '🦠', team: 'neutral', teamLabel: 'Nakažlivý', description: 'Nakaz všechny hráče a vyhraj', actionVerb: 'Nakazit' }
 };

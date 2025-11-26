@@ -21,7 +21,6 @@ const ROLE_INFO = {
   'Consigliere': { emoji: '🕵️', team: 'evil', teamLabel: 'Mafie' },
   
   // NEUTRAL (each is individual)
-  'Diplomat': { emoji: '🕊️', team: 'neutral', teamLabel: 'Diplomat' },
   'Survivor': { emoji: '🛡️', team: 'neutral', teamLabel: 'Survivor' },
   'Infected': { emoji: '🦠', team: 'neutral', teamLabel: 'Infected' }
 };
