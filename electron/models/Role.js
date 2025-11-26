@@ -32,11 +32,23 @@ const ROLES = {
   'Investigator': {
     team: 'good',
     emoji: '🔍',
-    description: 'Learns two possible roles of the target each night (one is correct)',
+    description: 'Learns two possible roles of the target each night (one is correct). Can only investigate alive players.',
     actionType: 'investigate',
     nightPriority: 5,
     canUseEveryNight: true,
     visitsTarget: true,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
+  },
+  
+  'Coroner': {
+    team: 'good',
+    emoji: '🔬',
+    description: 'Can examine a dead player to learn their exact role. Cannot examine cleaned roles.',
+    actionType: 'autopsy',
+    nightPriority: 6,
+    canUseEveryNight: true,
+    visitsTarget: false, // Targets dead players, doesn't visit them
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
@@ -125,7 +137,7 @@ const ROLES = {
   'Cleaner': {
     team: 'evil',
     emoji: '🧹',
-    description: 'Může zabíjet NEBO vyčistit roli mrtvého (3 cleaningy za hru)',
+    description: 'Can kill OR mark players for cleaning. Marked alive players show fake investigation results. Dead marked players have hidden roles (3 uses per game)',
     actionType: 'dual',
     dualActions: ['kill', 'clean_role'],
     nightPriority: 7,
@@ -141,10 +153,10 @@ const ROLES = {
     }
   },
   
-  'Framer': {
+  'Accuser': {
     team: 'evil',
-    emoji: '🖼️',
-    description: 'Může zabíjet NEBO zarámovat hráče (3 framy za hru)',
+    emoji: '👉',
+    description: 'Can kill OR frame a player to appear as evil during investigation (3 uses per game)',
     actionType: 'dual',
     dualActions: ['kill', 'frame'],
     nightPriority: 7,
@@ -163,7 +175,7 @@ const ROLES = {
   'Consigliere': {
     team: 'evil',
     emoji: '🕵️',
-    description: 'Může zabíjet NEBO vyšetřit přesnou roli (3 investigate za hru)',
+    description: 'Can kill OR investigate a player to learn their exact role. Can only investigate alive players (3 uses per game)',
     actionType: 'dual',
     dualActions: ['kill', 'consig_investigate'],
     nightPriority: 5,

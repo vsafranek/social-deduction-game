@@ -80,6 +80,13 @@ const RESULT_MAPPING = {
     bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     hideDetails: false
   },
+  'autopsy': { 
+    emoji: '🔬', 
+    label: 'Pitva', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    hideDetails: false
+  },
   'safe': { 
     emoji: '😴', 
     label: 'Klidná noc', 

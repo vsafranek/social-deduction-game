@@ -250,7 +250,7 @@ describe('victoryEvaluator', () => {
         createPlayer('2', 'Doctor', true, ['good']),
         createPlayer('3', 'Killer', true, ['evil']),
         createPlayer('4', 'Cleaner', true, ['evil']),
-        createPlayer('5', 'Framer', true, ['evil']),
+        createPlayer('5', 'Accuser', true, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -334,7 +334,7 @@ describe('victoryEvaluator', () => {
         createPlayer('3', 'Investigator', true, ['good']),
         createPlayer('4', 'Killer', true, ['evil']),
         createPlayer('5', 'Cleaner', true, ['evil']),
-        createPlayer('6', 'Framer', true, ['evil']),
+        createPlayer('6', 'Accuser', true, ['evil']),
       ];
 
       const result = evaluateVictory(players);

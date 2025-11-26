@@ -53,11 +53,12 @@ function generateDrunkFakeMessage(action, targetName) {
     'protect': `success:Chráníš ${targetName}`,
     'block': `success:Uzamkl jsi ${targetName}`,
     'investigate': `investigate:${targetName} = Doctor / Killer`,
+    'autopsy': `autopsy:${targetName} = Citizen`,
     'watch': `watch:U ${targetName} nikdo nebyl`,
     'track': `track:${targetName} nikam nešel`,
     'kill': `success:Zaútočil jsi na ${targetName}`,
     'clean_kill': `success:Zaútočil jsi na ${targetName}`,
-    'frame': `success:Zarámoval jsi ${targetName}`,
+    'frame': `success:Obvinil jsi ${targetName}`,
     'infect': `success:Nakazil jsi ${targetName}`,
     'trap': `success:Nastavil jsi past`
   };
@@ -80,12 +81,14 @@ async function resolveNightActions(game, players) {
   const janitorTargets = new Set(); 
 
   // ✅ Clear ALL temporary effects from previous night
+  // NOTE: marked_for_cleaning should persist across nights until player dies
   for (const p of players) {
     removeEffects(p, e => 
       e.type === 'blocked' || 
       e.type === 'trapped' || 
       e.type === 'protected' ||
       e.type === 'trap'
+      // marked_for_cleaning is NOT removed here - it persists until player dies
     );
   }
   
@@ -112,14 +115,28 @@ async function resolveNightActions(game, players) {
     if (!action || !targetId) continue;
 
     const target = idMap.get(targetId);
-    if (!target || !target.alive) {
+    if (!target) {
       console.log(`  ⚠️ ${actor.name}: Invalid target`);
+      continue;
+    }
+    
+    // Most actions require alive target, but some actions need to validate dead targets themselves
+    // autopsy and clean_role can target dead players
+    // investigate and consig_investigate need to validate dead targets and provide user feedback
+    if (action !== 'autopsy' && action !== 'clean_role' && action !== 'investigate' && action !== 'consig_investigate' && !target.alive) {
+      console.log(`  ⚠️ ${actor.name}: Target must be alive for action ${action}`);
       continue;
     }
 
     // Get priority from role
     const roleData = ROLES[actor.role];
-    const priority = roleData?.nightPriority || 5;
+    let priority = roleData?.nightPriority || 5;
+    
+    // Adjust priority for specific actions that need to happen before investigation
+    // Accuser's frame action must happen before Investigator (priority 5)
+    if (actor.role === 'Accuser' && action === 'frame') {
+      priority = 4; // Higher priority than Investigator (5)
+    }
 
     actionsToResolve.push({
       actorId: actor._id.toString(),
@@ -221,19 +238,82 @@ async function resolveNightActions(game, players) {
       }
 
       case 'investigate': {
+        // Investigator can only investigate alive players
+        // If target is dead and role is hidden (cleaned), investigation fails
+        if (!target.alive && target.roleHidden) {
+          actor.nightAction.results.push(
+            `failed:Nemůžeš vyšetřit ${target.name} - role byla vyčištěna`
+          );
+          console.log(`  🔍 [P${actionData.priority}] ${actor.name} cannot investigate ${target.name} - role hidden`);
+          break;
+        }
+        
+        // Investigator only works on alive players
+        if (!target.alive) {
+          actor.nightAction.results.push(
+            `failed:Nemůžeš vyšetřit mrtvého hráče - použij Coroner`
+          );
+          console.log(`  🔍 [P${actionData.priority}] ${actor.name} cannot investigate dead player ${target.name}`);
+          break;
+        }
+        
         const trueRole = target.role;
         const allRoles = Object.keys(ROLES);
+        
+        // ✅ Check if target is marked for cleaning - show completely fake results
+        if (hasEffect(target, 'marked_for_cleaning')) {
+          // Both roles are fake (random) - MUST exclude true role
+          const fakeRoles = allRoles.filter(r => r !== trueRole);
+          
+          if (fakeRoles.length === 0) {
+            // Edge case: only one role exists (shouldn't happen in normal game)
+            actor.nightAction.results.push(
+              `investigate:${target.name} = Unknown / Unknown`
+            );
+            console.log(`  🔍 [P${actionData.priority}] ${actor.name} investigated ${target.name}: Unknown / Unknown (FAKE - marked for cleaning, true: ${trueRole}, no fake roles available)`);
+            break;
+          }
+          
+          const fakeRole1 = fakeRoles[Math.floor(Math.random() * fakeRoles.length)];
+          const otherFakeRoles = fakeRoles.filter(r => r !== fakeRole1);
+          
+          // If only one fake role available, use it twice to avoid revealing true role
+          const fakeRole2 = otherFakeRoles.length > 0 
+            ? otherFakeRoles[Math.floor(Math.random() * otherFakeRoles.length)]
+            : fakeRole1; // Reuse fakeRole1 instead of falling back to 'Citizen'
+          
+          const possibleRoles = Math.random() < 0.5 
+            ? [fakeRole1, fakeRole2]
+            : [fakeRole2, fakeRole1];
+          
+          actor.nightAction.results.push(
+            `investigate:${target.name} = ${possibleRoles.join(' / ')}`
+          );
+          
+          console.log(
+            `  🔍 [P${actionData.priority}] ${actor.name} investigated ${target.name}: ` +
+            `${possibleRoles.join(' / ')} (FAKE - marked for cleaning, true: ${trueRole})`
+          );
+          break;
+        }
+        
+        // Normal investigation logic
         const otherRoles = allRoles.filter(r => r !== trueRole);
         const fakeRole = otherRoles.length > 0 
           ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
           : 'Citizen';
         
         // ✅ Check Recluse modifier - appear as evil
+        // ✅ Check framed effect - show evil role instead of true role
         let investigatedRole = trueRole;
         if (target.modifier === 'Recluse') {
           // Pick a random evil role
           const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
           investigatedRole = evilRoles[Math.floor(Math.random() * evilRoles.length)] || 'Killer';
+        } else if (hasEffect(target, 'framed')) {
+          // Get the fake evil role from framed effect meta
+          const framedEffect = target.effects.find(e => e.type === 'framed');
+          investigatedRole = framedEffect?.meta?.fakeEvilRole || 'Killer';
         }
         
         const possibleRoles = Math.random() < 0.5 
@@ -244,9 +324,48 @@ async function resolveNightActions(game, players) {
           `investigate:${target.name} = ${possibleRoles.join(' / ')}`
         );
         
+        const modifiers = [];
+        if (target.modifier === 'Recluse') modifiers.push('Recluse');
+        if (hasEffect(target, 'framed')) modifiers.push('framed');
+        
         console.log(
           `  🔍 [P${actionData.priority}] ${actor.name} investigated ${target.name}: ` +
-          `${possibleRoles.join(' / ')} (true: ${trueRole}${target.modifier === 'Recluse' ? ' [Recluse]' : ''})`
+          `${possibleRoles.join(' / ')} (true: ${trueRole}${modifiers.length > 0 ? ' [' + modifiers.join(', ') + ']' : ''})`
+        );
+        break;
+      }
+      
+      case 'autopsy': {
+        // Coroner can only investigate dead players
+        if (target.alive) {
+          actor.nightAction.results.push(
+            `failed:Nemůžeš provést pitvu na živém hráči - ${target.name} je stále naživu`
+          );
+          console.log(`  🔬 [P${actionData.priority}] ${actor.name} cannot autopsy alive player ${target.name}`);
+          break;
+        }
+        
+        // If role is hidden (cleaned), Coroner gets "Unknown" result
+        if (target.roleHidden) {
+          actor.nightAction.results.push(
+            `autopsy:${target.name} = Unknown (role byla vyčištěna)`
+          );
+          console.log(`  🔬 [P${actionData.priority}] ${actor.name} autopsied ${target.name}: Unknown (role hidden)`);
+          break;
+        }
+        
+        // Check if player was framed - show the fake evil role that Investigator saw
+        let exactRole = target.role || 'Unknown';
+        if (hasEffect(target, 'framed')) {
+          const framedEffect = target.effects.find(e => e.type === 'framed');
+          exactRole = framedEffect?.meta?.fakeEvilRole || 'Killer';
+          console.log(`  🔬 [P${actionData.priority}] ${actor.name} autopsied ${target.name}: ${exactRole} (framed evil role, true: ${target.role})`);
+        } else {
+          console.log(`  🔬 [P${actionData.priority}] ${actor.name} autopsied ${target.name}: ${exactRole}`);
+        }
+        
+        actor.nightAction.results.push(
+          `autopsy:${target.name} = ${exactRole}`
         );
         break;
       }
@@ -270,19 +389,33 @@ async function resolveNightActions(game, players) {
       }
 
       case 'clean_role': {
-        // Cleaner cleans a dead player's role
-        // Mark target to be cleaned if they die this night
+        // Cleaner can mark players for cleaning
+        // If target is alive: Investigator will see fake results
+        // If target is dead: role will be hidden
         if (!actor.roleData) actor.roleData = {};
         const usesLeft = actor.roleData.usesRemaining || 0;
         
         if (usesLeft > 0) {
-          janitorTargets.add(targetId);
+          // Decrement uses first, then show message with correct remaining count
           actor.roleData.usesRemaining = usesLeft - 1;
           toSave.add(actorId);
-          actor.nightAction.results.push(
-            `success:Vyčistíš ${target.name} pokud zemře (zbývá ${actor.roleData.usesRemaining})`
-          );
-          console.log(`  🧹 [P${actionData.priority}] ${actor.name} will clean ${target.name} if dead`);
+          
+          if (target.alive) {
+            // Mark alive player - Investigator will see fake investigation results
+            addEffect(target, 'marked_for_cleaning', actor._id, null, {});
+            toSave.add(targetId);
+            actor.nightAction.results.push(
+              `success:Označil jsi ${target.name} - Investigator uvidí falešný výsledek (zbývá ${actor.roleData.usesRemaining})`
+            );
+            console.log(`  🧹 [P${actionData.priority}] ${actor.name} marked ${target.name} for cleaning (alive)`);
+          } else {
+            // Mark dead player - role will be hidden
+            janitorTargets.add(targetId);
+            actor.nightAction.results.push(
+              `success:Vyčistíš ${target.name} - role bude skryta (zbývá ${actor.roleData.usesRemaining})`
+            );
+            console.log(`  🧹 [P${actionData.priority}] ${actor.name} will clean ${target.name} (dead)`);
+          }
         } else {
           actor.nightAction.results.push('failed:Už nemáš žádná použití!');
         }
@@ -294,14 +427,21 @@ async function resolveNightActions(game, players) {
         const usesLeft = actor.roleData.usesRemaining || 0;
         
         if (usesLeft > 0) {
-          addEffect(target, 'framed', actor._id, null, {});
+          // Pick a random evil role to show instead of true role
+          const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
+          const fakeEvilRole = evilRoles.length > 0 
+            ? evilRoles[Math.floor(Math.random() * evilRoles.length)]
+            : 'Killer';
+          
+          // Store the fake evil role in the effect meta
+          addEffect(target, 'framed', actor._id, null, { fakeEvilRole });
           toSave.add(targetId);
           actor.roleData.usesRemaining = usesLeft - 1;
           toSave.add(actorId);
           actor.nightAction.results.push(
-            `success:Zarámoval jsi ${target.name} (zbývá ${actor.roleData.usesRemaining})`
+            `success:Obvinil jsi ${target.name} - bude vypadat jako zločinec při vyšetřování (zbývá ${actor.roleData.usesRemaining})`
           );
-          console.log(`  🖼️ [P${actionData.priority}] ${actor.name} framed ${target.name}`);
+          console.log(`  👉 [P${actionData.priority}] ${actor.name} accused ${target.name} (framed, will show as: ${fakeEvilRole})`);
         } else {
           actor.nightAction.results.push('failed:Už nemáš žádná použití!');
         }
@@ -309,17 +449,28 @@ async function resolveNightActions(game, players) {
       }
 
       case 'consig_investigate': {
+        // Consigliere can only investigate alive players
+        if (!target.alive) {
+          actor.nightAction.results.push(
+            `failed:Nemůžeš vyšetřit mrtvého hráče - ${target.name} je mrtvý`
+          );
+          console.log(`  🕵️ [P${actionData.priority}] ${actor.name} cannot investigate dead player ${target.name}`);
+          break;
+        }
+        
         if (!actor.roleData) actor.roleData = {};
         const usesLeft = actor.roleData.usesRemaining || 0;
         
         if (usesLeft > 0) {
+          // Consigliere always sees the true role (not affected by cleaning or framing)
           const exactRole = target.role;
+          
           actor.roleData.usesRemaining = usesLeft - 1;
           toSave.add(actorId);
           actor.nightAction.results.push(
             `consig:${target.name} je ${exactRole} (zbývá ${actor.roleData.usesRemaining})`
           );
-          console.log(`  🕵️ [P${actionData.priority}] ${actor.name} investigated ${target.name}: ${exactRole}`);
+          console.log(`  🕵️ [P${actionData.priority}] ${actor.name} investigated ${target.name}: ${exactRole} (true role)`);
         } else {
           actor.nightAction.results.push('failed:Už nemáš žádná použití!');
         }
@@ -343,15 +494,6 @@ async function resolveNightActions(game, players) {
         break;
       }
 
-      case 'consig_investigate': {
-        // Consigliere vidí PŘESNOU roli (ne 2 možnosti)
-        const exactRole = target.role;
-        actor.nightAction.results.push(
-          `consig:${target.name} je ${exactRole}`
-        );
-        console.log(`  🕵️ [P${actionData.priority}] ${actor.name} investigated ${target.name}: ${exactRole}`);
-        break;
-      }
 
       case 'janitor_clean': {
         // Janitor může cílit na MRTVÉ hráče
@@ -719,6 +861,7 @@ async function resolveNightActions(game, players) {
   }
 
   console.log('🧼 [NightResolver] Phase 5c: Janitor cleaning...');
+  // Clean roles for players directly targeted by clean_role (dead players)
   for (const playerId of janitorTargets) {
     const player = idMap.get(playerId);
     if (!player || player.alive) continue; // Only clean if dead
@@ -727,6 +870,20 @@ async function resolveNightActions(game, players) {
     player.roleHidden = true;
     toSave.add(playerId);
     console.log(`  🧼 ${player.name}'s role has been cleaned (hidden)`);
+  }
+  
+  // Also clean roles for players who were marked_for_cleaning while alive and died this night
+  for (const player of players) {
+    if (!player || player.alive) continue; // Only process dead players
+    
+    if (hasEffect(player, 'marked_for_cleaning')) {
+      // Hide role from everyone
+      player.roleHidden = true;
+      // Remove the effect since the role is now hidden (effect no longer needed)
+      removeEffects(player, e => e.type === 'marked_for_cleaning');
+      toSave.add(player._id.toString());
+      console.log(`  🧼 ${player.name}'s role has been cleaned (was marked for cleaning, now dead)`);
+    }
   }
 
 

@@ -11,6 +11,7 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Doctor': { team: 'good', emoji: '💉' },
     'Jailer': { team: 'good', emoji: '👮' },
     'Investigator': { team: 'good', emoji: '🔍' },
+    'Coroner': { team: 'good', emoji: '🔬' },
     'Lookout': { team: 'good', emoji: '👁️' },
     'Trapper': { team: 'good', emoji: '🪤' },
     'Tracker': { team: 'good', emoji: '👣' },
@@ -19,7 +20,7 @@ function LobbyLayout({ gameState, onStartGame }) {
     // Evil roles
     'Killer': { team: 'evil', emoji: '🔪' },
     'Cleaner': { team: 'evil', emoji: '🧹' },
-    'Framer': { team: 'evil', emoji: '🖼️' },
+    'Accuser': { team: 'evil', emoji: '👉' },
     'Consigliere': { team: 'evil', emoji: '🕵️' },
     // Neutral roles
     'Diplomat': { team: 'neutral', emoji: '🕊️' },
@@ -32,6 +33,7 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Doctor': 1,
     'Jailer': 1,
     'Investigator': 1,
+    'Coroner': 0,
     'Lookout': 1,
     'Trapper': 0,
     'Tracker': 1,
@@ -39,7 +41,7 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Citizen': 0, // auto-fill fallback
     'Killer': 2,
     'Cleaner': 0,
-    'Framer': 0,
+    'Accuser': 0,
     'Consigliere': 0,
     'Diplomat': 0,
     'Survivor': 0,

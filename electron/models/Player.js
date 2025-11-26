@@ -32,8 +32,9 @@ const PlayerSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['Doctor', 'Jailer', 'Investigator', 'Lookout', 'Trapper', 'Tracker',
-           'Citizen', 'Killer', 'Cleaner', 'Framer', 'Diplomat', 'Survivor', 'Infected', null],
+    enum: ['Doctor', 'Jailer', 'Investigator', 'Coroner', 'Lookout', 'Trapper', 'Tracker',
+           'Hunter', 'Citizen', 'Killer', 'Cleaner', 'Accuser', 'Consigliere',
+           'Diplomat', 'Survivor', 'Infected', null],
     default: null
   },
   modifier: {
@@ -70,8 +71,9 @@ const PlayerSchema = new mongoose.Schema({
     },
     action: {
       type: String,
-      enum: ['protect', 'block', 'investigate', 'watch', 'trap', 'track',
-             'kill', 'clean_kill', 'frame', 'infect', null]
+      enum: ['protect', 'block', 'investigate', 'autopsy', 'watch', 'trap', 'track',
+             'kill', 'clean_kill', 'clean_role', 'janitor_clean', 'frame',
+             'hunter_kill', 'consig_investigate', 'infect', null]
     },
     results: {
       type: [String],

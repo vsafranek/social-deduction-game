@@ -7,6 +7,7 @@ const ROLE_INFO = {
   'Doctor': { emoji: '💉', team: 'good', teamLabel: 'Město' },
   'Jailer': { emoji: '👮', team: 'good', teamLabel: 'Město' },
   'Investigator': { emoji: '🔍', team: 'good', teamLabel: 'Město' },
+  'Coroner': { emoji: '🔬', team: 'good', teamLabel: 'Město' },
   'Lookout': { emoji: '👁️', team: 'good', teamLabel: 'Město' },
   'Trapper': { emoji: '🪤', team: 'good', teamLabel: 'Město' },
   'Tracker': { emoji: '👣', team: 'good', teamLabel: 'Město' },
@@ -16,7 +17,7 @@ const ROLE_INFO = {
   // EVIL
   'Killer': { emoji: '🔪', team: 'evil', teamLabel: 'Mafie' },
   'Cleaner': { emoji: '🧹', team: 'evil', teamLabel: 'Mafie' },
-  'Framer': { emoji: '🖼️', team: 'evil', teamLabel: 'Mafie' },
+  'Accuser': { emoji: '👉', team: 'evil', teamLabel: 'Mafie' },
   'Consigliere': { emoji: '🕵️', team: 'evil', teamLabel: 'Mafie' },
   
   // NEUTRAL (each is individual)

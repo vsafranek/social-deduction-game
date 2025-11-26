@@ -430,11 +430,17 @@ router.post('/:gameId/start-config', async (req, res) => {
       await p.save();
     }
 
-    // Initialize roleData for limited-use roles
+    // Initialize roleData for limited-use roles and dual roles
     for (const p of updatedPlayers) {
       const roleData = ROLES[p.role];
       
-      if (roleData?.hasLimitedUses) {
+      // Pro dual role s hasLimitedUses - inicializuj usesRemaining pro sekundární akce
+      if (roleData?.actionType === 'dual' && roleData?.hasLimitedUses) {
+        if (!p.roleData) p.roleData = {};
+        p.roleData.usesRemaining = roleData.maxUses || 3;
+        await p.save();
+        console.log(`  ✓ ${p.name} (${p.role}) initialized with ${p.roleData.usesRemaining} uses for secondary actions`);
+      } else if (roleData?.hasLimitedUses) {
         if (!p.roleData) p.roleData = {};
         p.roleData.usesRemaining = roleData.maxUses || 3;
         await p.save();
@@ -809,7 +815,11 @@ router.post('/:gameId/set-night-action', async (req, res) => {
       // Check if special ability has uses left
       if (actionMode !== 'kill') {
         if (!player.roleData) player.roleData = {};
-        const usesLeft = player.roleData.usesRemaining || 0;
+        // Pokud není usesRemaining nastaveno, inicializuj ho z role definice
+        if (player.roleData.usesRemaining === undefined || player.roleData.usesRemaining === null) {
+          player.roleData.usesRemaining = roleData.maxUses || 3;
+        }
+        const usesLeft = player.roleData.usesRemaining;
         
         if (usesLeft <= 0) {
           return res.status(400).json({ error: 'No special ability uses remaining' });

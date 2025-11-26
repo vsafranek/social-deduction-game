@@ -2,12 +2,14 @@
 .night-phase {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
   background: rgba(59, 130, 246, 0.05);
   border: 2px solid rgba(59, 130, 246, 0.2);
   border-radius: 12px;
   animation: fadeIn 0.3s ease;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
 }
 
 .night-phase.inactive {
@@ -20,14 +22,14 @@
 }
 
 .night-header h3 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
   color: #fff;
 }
 
 .night-header p {
-  font-size: 12px;
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.6);
   margin: 0;
 }
@@ -66,13 +68,13 @@
 }
 
 .action-button {
-  padding: 14px 20px;
+  padding: 10px 16px;
   border: none;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   cursor: pointer;
   transition: all 0.3s ease;
   color: white;
@@ -193,37 +195,37 @@
 }
 
 .uses-remaining {
-  margin-top: 8px;
-  padding: 8px 16px;
+  margin-top: 4px;
+  padding: 6px 12px;
   background: rgba(251, 191, 36, 0.2);
   border: 1px solid rgba(251, 191, 36, 0.4);
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
   color: #fbbf24;
   display: inline-block;
 }
 
 .action-mode-selector {
   display: flex;
-  gap: 12px;
-  margin: 16px 0;
+  gap: 8px;
+  margin: 8px 0;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .mode-btn {
-  padding: 12px 24px;
+  padding: 8px 16px;
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  border-radius: 8px;
   color: white;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .mode-btn:hover:not(.disabled) {
@@ -246,9 +248,35 @@
 /* Přidej do NightPhase.css */
 
 .target-selection-wrapper {
-  margin: 16px 0;
+  margin: 8px 0;
   position: relative;
   z-index: 1;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+/* Kompaktnější seznam hráčů v noční fázi */
+.target-selection-wrapper .players-list {
+  gap: 6px;
+}
+
+.target-selection-wrapper .player-list-item {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.target-selection-wrapper .player-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.target-selection-wrapper .player-name {
+  font-size: 13px;
+}
+
+.target-selection-wrapper .player-status {
+  font-size: 11px;
 }
 
 /* Ensure PlayersList items are clickable */
