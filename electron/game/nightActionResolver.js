@@ -303,10 +303,10 @@ async function resolveNightActions(game, players) {
           ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
           : 'Citizen';
         
-        // ✅ Check Recluse modifier - appear as evil
+        // ✅ Check Shady modifier - appear as evil
         // ✅ Check framed effect - show evil role instead of true role
         let investigatedRole = trueRole;
-        if (target.modifier === 'Recluse') {
+        if (target.modifier === 'Shady') {
           // Pick a random evil role
           const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
           investigatedRole = evilRoles[Math.floor(Math.random() * evilRoles.length)] || 'Killer';
@@ -325,7 +325,7 @@ async function resolveNightActions(game, players) {
         );
         
         const modifiers = [];
-        if (target.modifier === 'Recluse') modifiers.push('Recluse');
+        if (target.modifier === 'Shady') modifiers.push('Shady');
         if (hasEffect(target, 'framed')) modifiers.push('framed');
         
         console.log(

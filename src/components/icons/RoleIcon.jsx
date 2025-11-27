@@ -1,21 +1,93 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-const map = {
-  Doktor: 'public/icons/roles/doctor.svg',
-  Policie: 'public/icons/roles/police.svg',
-  Vyšetřovatel: 'public/icons/roles/investigator.svg',
-  Pozorovatel: 'public/icons/roles/lookout.svg',
-  Pastičkář: 'public/icons/roles/trapper.svg',
-  Stopař: 'public/icons/roles/tracker.svg',
-  Občan: 'public/icons/roles/citizen.svg',
-  Vrah: 'public/icons/roles/killer.svg',
-  Uklízeč: 'public/icons/roles/cleaner.svg',
-  Falšovač: 'public/icons/roles/falsovac.svg',
-  Opilý: 'public/icons/roles/drunk.svg',
-  Poustevník: 'public/icons/roles/recluse.svg'
+/**
+ * Automaticky generuje cestu k SVG ikoně na základě názvu role/modifikátoru
+ * @param {string} name - Název role nebo modifikátoru
+ * @returns {string} Cesta k SVG ikoně
+ */
+function generateIconPath(name) {
+  if (!name) return null;
+  // Převede název na lowercase a vytvoří cestu
+  // Např. "Doctor" -> "/icons/doctor.svg", "SerialKiller" -> "/icons/serialkiller.svg"
+  const iconName = name.toLowerCase().replace(/\s+/g, '');
+  return `/icons/${iconName}.svg`;
+}
+
+// Fallback emoji pro role bez SVG ikon
+const EMOJI_FALLBACK = {
+  'Doctor': '💉',
+  'Jailer': '👮',
+  'Investigator': '🔍',
+  'Coroner': '🔬',
+  'Lookout': '👁️',
+  'Trapper': '🪤',
+  'Tracker': '👣',
+  'Hunter': '🏹',
+  'Citizen': '👤',
+  'Killer': '🔪',
+  'Cleaner': '🧹',
+  'Accuser': '👉',
+  'Consigliere': '🕵️',
+  'SerialKiller': '🛡️',
+  'Infected': '🦠',
 };
 
-export default function RoleIcon({ role, size=24, alt }) {
-  const src = map[role] || map['Občan'];
-  return <img src={src} alt={alt || role} width={size} height={size} style={{display:'inline-block'}} />;
+// Fallback emoji pro modifikátory bez SVG ikon
+const MODIFIER_EMOJI_FALLBACK = {
+  'Drunk': '🍺',
+  'Shady': '🏚️',
+  'Paranoid': '😱',
+  'Insomniac': '😵',
+};
+
+/**
+ * Komponenta pro zobrazení ikony role nebo modifikátoru
+ * Automaticky načítá SVG ikonu na základě názvu, pokud neexistuje, použije emoji fallback
+ * @param {string} role - Název role nebo modifikátoru
+ * @param {number} size - Velikost ikony v px (default: 24)
+ * @param {string} className - CSS třída
+ * @param {string} alt - Alt text pro obrázek
+ * @param {boolean} isModifier - Zda se jedná o modifikátor (default: false)
+ */
+export default function RoleIcon({ role, size = 24, className = '', alt, isModifier = false }) {
+  const [imageError, setImageError] = useState(false);
+  
+  // Automaticky generuj cestu k SVG ikoně na základě názvu
+  const svgPath = role ? generateIconPath(role) : null;
+  
+  // Získej emoji fallback
+  const emoji = isModifier
+    ? (MODIFIER_EMOJI_FALLBACK[role] || '❓')
+    : (EMOJI_FALLBACK[role] || '❓');
+
+  // Resetuj chybu při změně role
+  useEffect(() => {
+    setImageError(false);
+  }, [role]);
+
+  // Pokud nemáme SVG nebo došlo k chybě načítání, použij emoji
+  if (!svgPath || imageError) {
+    return (
+      <span 
+        className={`role-icon-emoji ${className}`}
+        style={{ fontSize: `${size}px`, display: 'inline-block', lineHeight: 1 }}
+        aria-label={alt || role}
+      >
+        {emoji}
+      </span>
+    );
+  }
+
+  // Použij SVG ikonu - pokud neexistuje, onError handler automaticky přepne na emoji
+  return (
+    <img
+      src={svgPath}
+      alt={alt || role}
+      width={size}
+      height={size}
+      className={`role-icon-svg ${className}`}
+      style={{ display: 'inline-block', objectFit: 'contain' }}
+      onError={() => setImageError(true)}
+    />
+  );
 }

@@ -307,18 +307,18 @@ describe('nightActionResolver', () => {
     });
   });
 
-  describe('Recluse Modifier', () => {
+  describe('Shady Modifier', () => {
     
-    test('should show Recluse as evil to Investigator', async () => {
+    test('should show Shady as evil to Investigator', async () => {
       const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
         nightAction: { targetId: '2', action: 'investigate', results: [] }
       });
-      const recluse = createMockPlayer('2', 'Recluse', 'Citizen', {
-        modifier: 'Recluse',
+      const shady = createMockPlayer('2', 'Shady', 'Citizen', {
+        modifier: 'Shady',
         alive: true
       });
 
-      await resolveNightActions({}, [investigator, recluse]);
+      await resolveNightActions({}, [investigator, shady]);
 
       const investigateResult = investigator.nightAction.results.find(r => r.startsWith('investigate:'));
       expect(investigateResult).toBeDefined();

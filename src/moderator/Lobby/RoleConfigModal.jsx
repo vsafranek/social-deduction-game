@@ -1,4 +1,5 @@
 import React from 'react';
+import RoleIcon from '../../components/icons/RoleIcon';
 import './RoleConfigModal.css';
 
 function RoleConfigModal({
@@ -33,7 +34,9 @@ function RoleConfigModal({
               {roleKeys.filter(r => teamOf(r) === 'good').map(role => (
                 <div key={role} className={`role-config-card ${randomPoolRoles[role] ? 'active' : 'inactive'}`}>
                   <div className="role-config-header" onClick={() => toggleRoleInPool(role)}>
-                    <span className="role-emoji">{emojiOf(role)}</span>
+                    <span className="role-emoji">
+                      <RoleIcon role={role} size={40} className="role-icon" />
+                    </span>
                     <span className="role-name">{role}</span>
                     <span className="role-toggle">{randomPoolRoles[role] ? '✓' : '✕'}</span>
                   </div>
@@ -66,7 +69,9 @@ function RoleConfigModal({
               {roleKeys.filter(r => teamOf(r) === 'evil').map(role => (
                 <div key={role} className={`role-config-card ${randomPoolRoles[role] ? 'active' : 'inactive'}`}>
                   <div className="role-config-header" onClick={() => toggleRoleInPool(role)}>
-                    <span className="role-emoji">{emojiOf(role)}</span>
+                    <span className="role-emoji">
+                      <RoleIcon role={role} size={40} className="role-icon" />
+                    </span>
                     <span className="role-name">{role}</span>
                     <span className="role-toggle">{randomPoolRoles[role] ? '✓' : '✕'}</span>
                   </div>
@@ -100,7 +105,9 @@ function RoleConfigModal({
                 {roleKeys.filter(r => teamOf(r) === 'neutral').map(role => (
                   <div key={role} className={`role-config-card ${randomPoolRoles[role] ? 'active' : 'inactive'}`}>
                     <div className="role-config-header" onClick={() => toggleRoleInPool(role)}>
-                      <span className="role-emoji">{emojiOf(role)}</span>
+                      <span className="role-emoji">
+                        <RoleIcon role={role} size={40} className="role-icon" />
+                      </span>
                       <span className="role-name">{role}</span>
                       <span className="role-toggle">{randomPoolRoles[role] ? '✓' : '✕'}</span>
                     </div>

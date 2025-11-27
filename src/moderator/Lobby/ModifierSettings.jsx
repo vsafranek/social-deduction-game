@@ -1,4 +1,5 @@
 import React from 'react';
+import RoleIcon from '../../components/icons/RoleIcon';
 import './ModifierSettings.css';
 
 function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onStartGame, canStart }) {
@@ -15,8 +16,10 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
       <div className="modifier-list">
         <div className="modifier-card">
           <div className="modifier-header">
-            <span className="modifier-icon">🍺</span>
-            <span className="modifier-name">Drunk (Opilý)</span>
+            <span className="modifier-icon">
+              <RoleIcon role="Drunk" size={48} className="modifier-icon-svg" isModifier={true} />
+            </span>
+            <span className="modifier-name">Drunk</span>
           </div>
           <p className="modifier-desc">Zůstane doma a dostane falešné výsledky akcí</p>
           <div className="modifier-control">
@@ -38,30 +41,35 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
 
         <div className="modifier-card">
           <div className="modifier-header">
-            <span className="modifier-icon">🏚️</span>
-            <span className="modifier-name">Recluse (Poustevník)</span>
+            <span className="modifier-icon">
+              <RoleIcon role="Shady" size={48} className="modifier-icon-svg" isModifier={true} />
+            </span>
+            <span className="modifier-name">Shady</span>
           </div>
           <p className="modifier-desc">Při vyšetřování vypadá jako zlý, i když je dobrý</p>
           <div className="modifier-control">
-            <label>Šance: <strong>{modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}%</strong></label>
+            <label>Šance: <strong>{modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}%</strong></label>
             <input
               type="range" min="0" max="100" step="5"
-              value={modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}
+              value={modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}
               onChange={(e) => setModifierConfig(prev => ({ 
                 ...prev, 
-                recluseChance: parseInt(e.target.value),
+                shadyChance: parseInt(e.target.value),
+                recluseChance: parseInt(e.target.value), // Pro kompatibilitu
                 poustevníkChance: parseInt(e.target.value) // Pro kompatibilitu
               }))}
             />
             <div className="modifier-estimate">
-              ≈ {Math.round((playersCount || 0) * ((modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0) / 100))} hráčů
+              ≈ {Math.round((playersCount || 0) * ((modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0) / 100))} hráčů
             </div>
           </div>
         </div>
 
         <div className="modifier-card">
           <div className="modifier-header">
-            <span className="modifier-icon">😱</span>
+            <span className="modifier-icon">
+              <RoleIcon role="Paranoid" size={48} className="modifier-icon-svg" isModifier={true} />
+            </span>
             <span className="modifier-name">Paranoid</span>
           </div>
           <p className="modifier-desc">Vidí falešné návštěvníky, kteří u něj nebyly</p>
@@ -80,7 +88,9 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
 
         <div className="modifier-card">
           <div className="modifier-header">
-            <span className="modifier-icon">😵</span>
+            <span className="modifier-icon">
+              <RoleIcon role="Insomniac" size={48} className="modifier-icon-svg" isModifier={true} />
+            </span>
             <span className="modifier-name">Insomniac</span>
           </div>
           <p className="modifier-desc">Vidí všechny, kdo ho navštíví</p>

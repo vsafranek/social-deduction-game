@@ -1,5 +1,6 @@
-// src/player/components/GameEndScreen/GameEndScreen.jsx
+// src/moderator/GameArena/GameEndScreen.jsx
 import React, { useEffect, useState } from 'react';
+import RoleIcon from '../../components/icons/RoleIcon';
 import './GameEndScreen.css';
 
 const ROLE_INFO = {
@@ -21,13 +22,13 @@ const ROLE_INFO = {
   'Consigliere': { emoji: '🕵️', team: 'evil', teamLabel: 'Mafie' },
   
   // NEUTRAL (each is individual)
-  'Survivor': { emoji: '🛡️', team: 'neutral', teamLabel: 'Survivor' },
+  'SerialKiller': { emoji: '🛡️', team: 'neutral', teamLabel: 'Serial Killer' },
   'Infected': { emoji: '🦠', team: 'neutral', teamLabel: 'Infected' }
 };
 
 const MODIFIER_INFO = {
   'Drunk': { emoji: '🍺', label: 'Opilý' },
-  'Recluse': { emoji: '🏚️', label: 'Poustevník' },
+  'Shady': { emoji: '🏚️', label: 'Podezřelý' },
   'Paranoid': { emoji: '😱', label: 'Paranoidní' },
   'Insomniac': { emoji: '😵', label: 'Nespavec' }
 };
@@ -142,7 +143,9 @@ function GameEndScreen({ gameState, currentPlayer }) {
           >
             {player.name.charAt(0).toUpperCase()}
           </div>
-          <span className="role-emoji">{roleInfo.emoji}</span>
+          <span className="role-emoji">
+            <RoleIcon role={player.role} size={48} className="role-icon" />
+          </span>
           
           <div className="player-info">
             <div className="player-name">
@@ -161,7 +164,7 @@ function GameEndScreen({ gameState, currentPlayer }) {
           
           {modifierInfo && (
             <span className="modifier-badge" title={modifierInfo.label}>
-              {modifierInfo.emoji} {modifierInfo.label}
+              <RoleIcon role={player.modifier} size={28} className="modifier-icon-inline" isModifier={true} /> {modifierInfo.label}
             </span>
           )}
         </div>

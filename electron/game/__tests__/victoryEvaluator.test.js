@@ -64,9 +64,9 @@ describe('victoryEvaluator', () => {
       expect(grouped.get('good')[0].name).toBe('Player1');
     });
 
-    test('isHostileNeutral - Survivor is hostile', () => {
-      const survivor = createPlayer('1', 'Survivor', true, ['neutral']);
-      expect(isHostileNeutral(survivor)).toBe(true);
+    test('isHostileNeutral - SerialKiller is hostile', () => {
+      const serialKiller = createPlayer('1', 'SerialKiller', true, ['neutral']);
+      expect(isHostileNeutral(serialKiller)).toBe(true);
     });
 
     test('isHostileNeutral - Infected is hostile', () => {
@@ -127,11 +127,11 @@ describe('victoryEvaluator', () => {
     });
 
 
-    test('Good does NOT win when evil dead but Survivor alive', () => {
+    test('Good does NOT win when evil dead but SerialKiller alive', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Doctor', true, ['good']),
-        createPlayer('3', 'Survivor', true, ['neutral', 'solo'], {
+        createPlayer('3', 'SerialKiller', true, ['neutral', 'solo'], {
           canWinWithTeams: [],
           soloWin: true,
           customRules: [
@@ -145,7 +145,7 @@ describe('victoryEvaluator', () => {
 
       const result = evaluateVictory(players);
       
-      // Game continues - Survivor can kill
+      // Game continues - SerialKiller can kill
       expect(result).toBeNull();
     });
 
@@ -169,10 +169,10 @@ describe('victoryEvaluator', () => {
       expect(result).toBeNull();
     });
 
-    test('1 good vs 1 Survivor - game continues', () => {
+    test('1 good vs 1 SerialKiller - game continues', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Survivor', true, ['neutral', 'solo'], {
+        createPlayer('2', 'SerialKiller', true, ['neutral', 'solo'], {
           canWinWithTeams: [],
           soloWin: true,
           customRules: []
@@ -182,7 +182,7 @@ describe('victoryEvaluator', () => {
 
       const result = evaluateVictory(players);
       
-      // Game continues - Survivor can kill good
+      // Game continues - SerialKiller can kill good
       expect(result).toBeNull();
     });
 
@@ -323,7 +323,7 @@ describe('victoryEvaluator', () => {
     test('Game continues with hostile neutral when evil dead', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Survivor', true, ['neutral', 'solo'], {
+        createPlayer('2', 'SerialKiller', true, ['neutral', 'solo'], {
           canWinWithTeams: [],
           soloWin: true,
           customRules: []
@@ -339,8 +339,8 @@ describe('victoryEvaluator', () => {
 
   describe('Solo Wins', () => {
     
-    test('Survivor solo win when last one standing', () => {
-      const survivor = createPlayer('1', 'Survivor', true, ['neutral', 'solo'], {
+    test('SerialKiller solo win when last one standing', () => {
+      const serialKiller = createPlayer('1', 'SerialKiller', true, ['neutral', 'solo'], {
         canWinWithTeams: [],
         soloWin: true,
         customRules: [
@@ -351,7 +351,7 @@ describe('victoryEvaluator', () => {
       });
 
       const players = [
-        survivor,
+        serialKiller,
         createPlayer('2', 'Citizen', false, ['good']),
         createPlayer('3', 'Killer', false, ['evil']),
       ];
@@ -366,7 +366,7 @@ describe('victoryEvaluator', () => {
 
     test('Solo win does not trigger if other players alive', () => {
       const players = [
-        createPlayer('1', 'Survivor', true, ['neutral', 'solo'], {
+        createPlayer('1', 'SerialKiller', true, ['neutral', 'solo'], {
           canWinWithTeams: [],
           soloWin: true,
           customRules: []
@@ -495,7 +495,7 @@ describe('victoryEvaluator', () => {
     test('Multiple hostile neutrals - game continues', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Survivor', true, ['neutral', 'solo'], {
+        createPlayer('2', 'SerialKiller', true, ['neutral', 'solo'], {
           canWinWithTeams: [],
           soloWin: true,
           customRules: []

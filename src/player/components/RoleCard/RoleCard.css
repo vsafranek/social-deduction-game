@@ -101,9 +101,9 @@
 }
 
 .role-emoji {
-  font-size: 32px;
+  font-size: 48px;
   flex-shrink: 0;
-  animation: bounce 0.6s infinite;
+  /* animation: bounce 0.6s infinite; - vypnuto */
 }
 
 .role-card.dead .role-emoji {
@@ -111,10 +111,12 @@
   filter: grayscale(1);
 }
 
+/* @keyframes bounce - vypnuto
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
+*/
 
 .role-name-status {
   flex: 1;

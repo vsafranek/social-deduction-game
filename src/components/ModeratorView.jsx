@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { gameApi } from '../api/gameApi';
+import RoleIcon from './icons/RoleIcon';
 import './ModeratorView.css';
 
 function ModeratorView() {
@@ -69,7 +70,7 @@ function ModeratorView() {
   // Modifier configuration
   const [modifierConfig, setModifierConfig] = useState({
     opilýChance: 20,
-    poustevníkChance: 15
+    shadyChance: 15
   });
 
   useEffect(() => {
@@ -198,6 +199,7 @@ function ModeratorView() {
     return gameState.players.length - getManuallyAssignedCount();
   };
 
+  // getRoleEmoji je zachován pro kompatibilitu v select option (emoji se tam zobrazí lépe)
   const getRoleEmoji = (role) => {
     return availableRoles[role]?.emoji || '❓';
   };
@@ -468,7 +470,7 @@ function ModeratorView() {
                           <span className="player-name">{player.name}</span>
                           {assignedRoles[player._id] && (
                             <span className={`assigned-role ${getRoleTeam(assignedRoles[player._id])}`}>
-                              {getRoleEmoji(assignedRoles[player._id])} {assignedRoles[player._id]}
+                              <RoleIcon role={assignedRoles[player._id]} size={28} className="role-icon-inline" /> {assignedRoles[player._id]}
                             </span>
                           )}
                         </div>
@@ -598,7 +600,9 @@ function ModeratorView() {
                             className="role-config-header"
                             onClick={() => toggleRoleInPool(role)}
                           >
-                            <span className="role-emoji">{getRoleEmoji(role)}</span>
+                            <span className="role-emoji">
+                              <RoleIcon role={role} size={40} className="role-icon" />
+                            </span>
                             <span className="role-name">{role}</span>
                             <span className="role-toggle">
                               {randomPoolRoles[role] ? '✓' : '✕'}
@@ -644,7 +648,9 @@ function ModeratorView() {
                             className="role-config-header"
                             onClick={() => toggleRoleInPool(role)}
                           >
-                            <span className="role-emoji">{getRoleEmoji(role)}</span>
+                            <span className="role-emoji">
+                              <RoleIcon role={role} size={40} className="role-icon" />
+                            </span>
                             <span className="role-name">{role}</span>
                             <span className="role-toggle">
                               {randomPoolRoles[role] ? '✓' : '✕'}
@@ -700,7 +706,9 @@ function ModeratorView() {
                 <div className="modifier-list">
                   <div className="modifier-card">
                     <div className="modifier-header">
-                      <span className="modifier-icon">🍺</span>
+                      <span className="modifier-icon">
+                        <RoleIcon role="Drunk" size={48} className="modifier-icon-svg" isModifier={true} />
+                      </span>
                       <span className="modifier-name">Opilý</span>
                     </div>
                     <p className="modifier-desc">
@@ -727,27 +735,31 @@ function ModeratorView() {
 
                   <div className="modifier-card">
                     <div className="modifier-header">
-                      <span className="modifier-icon">🏚️</span>
-                      <span className="modifier-name">Poustevník</span>
+                      <span className="modifier-icon">
+                        <RoleIcon role="Shady" size={48} className="modifier-icon-svg" isModifier={true} />
+                      </span>
+                      <span className="modifier-name">Shady</span>
                     </div>
                     <p className="modifier-desc">
                       Vypadá jako zlý při vyšetřování, i když je dobrý
                     </p>
                     <div className="modifier-control">
-                      <label>Šance: <strong>{modifierConfig.poustevníkChance}%</strong></label>
+                      <label>Šance: <strong>{modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}%</strong></label>
                       <input 
                         type="range"
                         min="0"
                         max="100"
                         step="5"
-                        value={modifierConfig.poustevníkChance}
+                        value={modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}
                         onChange={(e) => setModifierConfig(prev => ({
                           ...prev,
-                          poustevníkChance: parseInt(e.target.value)
+                          shadyChance: parseInt(e.target.value),
+                          recluseChance: parseInt(e.target.value), // Pro kompatibilitu
+                          poustevníkChance: parseInt(e.target.value) // Pro kompatibilitu
                         }))}
                       />
                       <div className="modifier-estimate">
-                        ≈ {Math.round(gameState.players.length * (modifierConfig.poustevníkChance / 100))} hráčů
+                        ≈ {Math.round(gameState.players.length * ((modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0) / 100))} hráčů
                       </div>
                     </div>
                   </div>

@@ -23,7 +23,7 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Accuser': { team: 'evil', emoji: '👉' },
     'Consigliere': { team: 'evil', emoji: '🕵️' },
     // Neutral roles
-    'Survivor': { team: 'neutral', emoji: '🛡️' },
+    'SerialKiller': { team: 'neutral', emoji: '🛡️' },
     'Infected': { team: 'neutral', emoji: '🦠' }
   }), []);
 
@@ -42,7 +42,7 @@ function LobbyLayout({ gameState, onStartGame }) {
     'Cleaner': 0,
     'Accuser': 0,
     'Consigliere': 0,
-    'Survivor': 0,
+    'SerialKiller': 0,
     'Infected': 0
   });
 
@@ -64,7 +64,7 @@ function LobbyLayout({ gameState, onStartGame }) {
   // Pasivní modifikátory (anglické klíče pro backend)
   const [modifierConfig, setModifierConfig] = useState({
     drunkChance: 20,      // backend bere drunkChance i opilýChance
-    recluseChance: 15,
+    shadyChance: 15,
     paranoidChance: 10,
     insomniacChance: 10
   });

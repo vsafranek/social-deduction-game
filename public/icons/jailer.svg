@@ -1,0 +1,33 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle id="bg" data-part="bg" cx="256" cy="256" r="240" fill="#111822" />
+  <circle id="bgInner" data-part="bgInner" cx="256" cy="256" r="208" fill="#182334" />
+
+  <!-- Cell frame -->
+  <rect id="cellFrame" data-part="cellFrame" x="168" y="148" width="176" height="220" rx="32" fill="#111822" stroke="#E0E6F5" stroke-width="10" />
+
+  <!-- Vertical bars -->
+  <line id="barLeft" data-part="bars" x1="204" y1="164" x2="204" y2="352" stroke="#E0E6F5" stroke-width="12" stroke-linecap="round" />
+  <line id="barMid" data-part="bars" x1="256" y1="164" x2="256" y2="352" stroke="#E0E6F5" stroke-width="12" stroke-linecap="round" />
+  <line id="barRight" data-part="bars" x1="308" y1="164" x2="308" y2="352" stroke="#E0E6F5" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Glow behind key -->
+  <circle id="keyGlow" data-part="keyGlow" cx="312" cy="328" r="76" fill="#24344D" />
+
+  <!-- Key group -->
+  <g id="key" data-part="key" transform="translate(128 160) rotate(-28 160 160)" fill="#F4C76C" stroke="#1B1308" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Shaft -->
+    <rect x="150" y="190" width="140" height="22" rx="10" />
+    <!-- Teeth -->
+    <rect x="280" y="190" width="26" height="22" rx="4" />
+    <rect x="280" y="214" width="20" height="20" rx="4" />
+    <!-- Bow -->
+    <circle cx="148" cy="201" r="30" fill="#2A1C0F" />
+    <circle cx="148" cy="201" r="18" fill="#F4C76C" />
+  </g>
+
+  <!-- Small decorative sparks -->
+  <circle id="spark1" data-part="sparks" cx="360" cy="150" r="4" fill="#F4C76C" />
+  <circle id="spark2" data-part="sparks" cx="336" cy="188" r="3" fill="#F4C76C" />
+  <circle id="spark3" data-part="sparks" cx="384" cy="176" r="5" fill="#F4C76C" />
+</svg>

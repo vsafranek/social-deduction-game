@@ -54,7 +54,19 @@
   transform: translateY(-2px);
 }
 .modifier-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.modifier-icon { font-size: 2rem; }
+.modifier-icon { 
+  font-size: 3rem; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+.modifier-icon-svg {
+  display: inline-block;
+  object-fit: contain;
+}
 .modifier-name { 
   font-size: 1.3rem; 
   font-weight: bold; 

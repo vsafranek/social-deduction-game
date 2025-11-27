@@ -37,7 +37,7 @@ function groupByAffiliation(players) {
 
 // ✅ NEW: Check if neutral is hostile (can kill/win solo)
 function isHostileNeutral(player) {
-  const hostileRoles = ['Survivor', 'Infected'];
+  const hostileRoles = ['SerialKiller', 'Infected'];
   return hostileRoles.includes(player.role);
 }
 
@@ -94,7 +94,7 @@ function evaluateCustomRule(rule, ctx) {
  * Main victory evaluation function
  * 
  * Victory Priority:
- * 1. Solo wins (Survivor alone)
+ * 1. Solo wins (SerialKiller alone)
  * 2. Custom rules (Infected, etc.)
  * 3. Evil wins (majority or 1v1)
  * 4. Good wins (no evil AND no hostile neutrals)

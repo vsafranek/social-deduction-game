@@ -7,7 +7,6 @@ const ROLES = {
   
   'Doctor': {
     team: 'good',
-    emoji: '💉',
     description: 'Protects one player each night from death',
     actionType: 'protect',
     nightPriority: 9,
@@ -19,7 +18,6 @@ const ROLES = {
   
   'Jailer': {
     team: 'good',
-    emoji: '👮',
     description: 'Locks a player each night; the target cannot act',
     actionType: 'block',
     nightPriority: 2,
@@ -31,7 +29,6 @@ const ROLES = {
   
   'Investigator': {
     team: 'good',
-    emoji: '🔍',
     description: 'Learns two possible roles of the target each night (one is correct). Can only investigate alive players.',
     actionType: 'investigate',
     nightPriority: 5,
@@ -43,7 +40,6 @@ const ROLES = {
   
   'Coroner': {
     team: 'good',
-    emoji: '🔬',
     description: 'Can examine a dead player to learn their exact role. Cannot examine cleaned roles.',
     actionType: 'autopsy',
     nightPriority: 6,
@@ -55,7 +51,6 @@ const ROLES = {
   
   'Lookout': {
     team: 'good',
-    emoji: '👁️',
     description: 'Watches a house and sees who visited the target',
     actionType: 'watch',
     nightPriority: 4,
@@ -67,7 +62,6 @@ const ROLES = {
   
   'Trapper': {
     team: 'good',
-    emoji: '🪤',
     description: 'Sets a trap; visitors are revealed and their action fails',
     actionType: 'trap',
     nightPriority: 3,
@@ -79,7 +73,6 @@ const ROLES = {
   
   'Tracker': {
     team: 'good',
-    emoji: '👣',
     description: 'Follows the target and learns whom they visited',
     actionType: 'track',
     nightPriority: 4,
@@ -91,7 +84,6 @@ const ROLES = {
   
   'Hunter': {
     team: 'good',
-    emoji: '🏹',
     description: 'Může zabíjet v noci - pokud zabije nevinného, zemře',
     actionType: 'hunter_kill',
     nightPriority: 7,
@@ -103,7 +95,6 @@ const ROLES = {
   
   'Citizen': {
     team: 'good',
-    emoji: '👤',
     description: 'No special ability',
     actionType: 'none',
     nightPriority: 0,
@@ -119,7 +110,6 @@ const ROLES = {
   
   'Killer': {
     team: 'evil',
-    emoji: '🔪',
     description: 'Kills one player each night',
     actionType: 'kill',
     nightPriority: 7,
@@ -136,7 +126,6 @@ const ROLES = {
   
   'Cleaner': {
     team: 'evil',
-    emoji: '🧹',
     description: 'Can kill OR mark players for cleaning. Marked alive players show fake investigation results. Dead marked players have hidden roles (3 uses per game)',
     actionType: 'dual',
     dualActions: ['kill', 'clean_role'],
@@ -155,7 +144,6 @@ const ROLES = {
   
   'Accuser': {
     team: 'evil',
-    emoji: '👉',
     description: 'Can kill OR frame a player to appear as evil during investigation (3 uses per game)',
     actionType: 'dual',
     dualActions: ['kill', 'frame'],
@@ -174,7 +162,6 @@ const ROLES = {
 
   'Consigliere': {
     team: 'evil',
-    emoji: '🕵️',
     description: 'Can kill OR investigate a player to learn their exact role. Can only investigate alive players (3 uses per game)',
     actionType: 'dual',
     dualActions: ['kill', 'consig_investigate'],
@@ -195,12 +182,11 @@ const ROLES = {
   // NEUTRAL
   // ==================
   
-  'Survivor': {
+  'SerialKiller': {
     team: 'neutral',
-    emoji: '🛡️',
     description: 'Serial killer - aims to survive alone',
     actionType: 'kill',
-    nightPriority: 1,
+    nightPriority: 0,
     canUseEveryNight: true,
     visitsTarget: true,
     defaultAffiliations: ['neutral', 'solo'],
@@ -217,7 +203,6 @@ const ROLES = {
   
   'Infected': {
     team: 'neutral',
-    emoji: '🦠',
     description: 'Visits players at night to infect them; wins when all others are infected',
     actionType: 'infect',
     nightPriority: 6,
@@ -243,7 +228,7 @@ const MODIFIERS = {
     allowedTeams: ['good', 'neutral'] 
   },
   
-  'Recluse': {
+  'Shady': {
     emoji: '🏚️',
     description: 'Appears as evil to investigations even if good',
     effect: 'appears_evil',

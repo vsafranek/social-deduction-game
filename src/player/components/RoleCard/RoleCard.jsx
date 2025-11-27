@@ -1,5 +1,6 @@
 // src/player/components/RoleCard/RoleCard.jsx
 import React, { useState } from 'react';
+import RoleIcon from '../../../components/icons/RoleIcon';
 import './RoleCard.css';
 
 const ROLE_INFO = {
@@ -16,7 +17,7 @@ const ROLE_INFO = {
   'Cleaner': { emoji: '🧹', team: 'evil', teamLabel: 'Mafie', description: 'Můžeš zabíjet NEBO označit hráče - označený živý hráč ukáže Investigator falešný výsledek, mrtvý hráč bude mít skrytou roli', actionVerb: 'Zabít nebo označit' },
   'Accuser': { emoji: '👉', team: 'evil', teamLabel: 'Mafie', description: 'Obviň hráče - bude vypadat jako zločinec při vyšetřování', actionVerb: 'Obviňovat' },
   'Consigliere': { emoji: '🕵️', team: 'evil', teamLabel: 'Mafie', description: 'Můžeš zabíjet NEBO vyšetřit živého hráče a zjistit jeho přesnou roli', actionVerb: 'Zabít nebo vyšetřit' },
-  'Survivor': { emoji: '🛡️', team: 'neutral', teamLabel: 'Sériový vrah', description: 'Zabíjej všechny - vyhraj sám', actionVerb: 'Zabít' },
+  'SerialKiller': { emoji: '🛡️', team: 'neutral', teamLabel: 'Sériový vrah', description: 'Zabíjej všechny - vyhraj sám', actionVerb: 'Zabít' },
   'Infected': { emoji: '🦠', team: 'neutral', teamLabel: 'Nakažlivý', description: 'Nakaz všechny hráče a vyhraj', actionVerb: 'Nakazit' }
 };
 
@@ -34,7 +35,9 @@ function RoleCard({ player, gameState }) {
         aria-expanded={expanded}
       >
         <div className="role-header">
-          <span className="role-emoji">{roleData.emoji}</span>
+          <span className="role-emoji">
+            <RoleIcon role={role} size={48} className="role-icon" />
+          </span>
           <div className="role-name-status">
             <h2>{role}</h2>
             {isMayor && (

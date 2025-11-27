@@ -1,0 +1,66 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle id="bg" data-part="bg" cx="256" cy="256" r="240" fill="#111822" />
+  <circle id="bgInner" data-part="bgInner" cx="256" cy="256" r="208" fill="#182334" />
+
+  <!-- Main Face Group (Centered and Scaled Up) -->
+  <g id="face" transform="translate(256, 256)">
+
+      <!-- Left Eye Group -->
+      <g transform="translate(-90, 0)">
+          <!-- Dark Circles / Bags (Deep and wide) -->
+          <ellipse data-part="bags" cx="0" cy="15" rx="85" ry="75" fill="#0D1219" opacity="0.8" />
+          <ellipse data-part="bagsInner" cx="0" cy="25" rx="70" ry="50" fill="#231212" opacity="0.4" />
+
+          <!-- Sclera (Reddish white) -->
+          <path data-part="eyeWhite" d="M-80 0 C-80 -50 -40 -80 0 -80 C40 -80 80 -50 80 0 C80 50 40 80 0 80 C-40 80 -80 50 -80 0 Z" fill="#FFEBEE" />
+
+          <!-- Heavy Bloodshot Veins -->
+          <g data-part="veins" stroke="#D32F2F" stroke-width="2" fill="none" opacity="0.7">
+              <path d="M-70 0 Q-40 10 -20 0" />
+              <path d="M70 0 Q40 -10 20 0" />
+              <path d="M0 -70 Q10 -40 0 -25" />
+              <path d="M-50 -40 L-30 -20" />
+              <path d="M50 40 L30 20" />
+          </g>
+
+          <!-- Iris (Dilated but tired) -->
+          <circle data-part="iris" cx="0" cy="0" r="28" fill="#455A64" />
+          <!-- Pupil (Small pinprick) -->
+          <circle data-part="pupil" cx="0" cy="0" r="8" fill="#000000" />
+
+          <!-- Eyelids (Drooping but forced open) -->
+          <path data-part="eyelidTop" d="M-80 0 Q0 -90 80 0" stroke="#37474F" stroke-width="4" fill="none" opacity="0.5" />
+          <path data-part="eyelidBottom" d="M-80 0 Q0 90 80 0" stroke="#37474F" stroke-width="4" fill="none" opacity="0.5" />
+      </g>
+
+      <!-- Right Eye Group -->
+      <g transform="translate(90, 0)">
+          <!-- Dark Circles / Bags -->
+          <ellipse data-part="bags" cx="0" cy="15" rx="85" ry="75" fill="#0D1219" opacity="0.8" />
+          <ellipse data-part="bagsInner" cx="0" cy="25" rx="70" ry="50" fill="#231212" opacity="0.4" />
+
+          <!-- Sclera -->
+          <path data-part="eyeWhite" d="M-80 0 C-80 -50 -40 -80 0 -80 C40 -80 80 -50 80 0 C80 50 40 80 0 80 C-40 80 -80 50 -80 0 Z" fill="#FFEBEE" />
+
+          <!-- Veins -->
+          <g data-part="veins" stroke="#D32F2F" stroke-width="2" fill="none" opacity="0.7">
+              <path d="M-70 0 Q-40 -10 -20 0" />
+              <path d="M70 0 Q40 10 20 0" />
+              <path d="M0 70 Q-10 40 0 25" />
+              <path d="M-50 40 L-30 20" />
+              <path d="M50 -40 L30 -20" />
+          </g>
+
+          <!-- Iris -->
+          <circle data-part="iris" cx="0" cy="0" r="28" fill="#455A64" />
+          <!-- Pupil -->
+          <circle data-part="pupil" cx="0" cy="0" r="8" fill="#000000" />
+
+          <!-- Eyelids -->
+          <path data-part="eyelidTop" d="M-80 0 Q0 -90 80 0" stroke="#37474F" stroke-width="4" fill="none" opacity="0.5" />
+          <path data-part="eyelidBottom" d="M-80 0 Q0 90 80 0" stroke="#37474F" stroke-width="4" fill="none" opacity="0.5" />
+      </g>
+  </g>
+
+</svg>

@@ -1,4 +1,5 @@
 import React from 'react';
+import RoleIcon from '../../components/icons/RoleIcon';
 import './PlayersList.css';
 
 function PlayersList({
@@ -9,7 +10,6 @@ function PlayersList({
   onUnassignRole
 }) {
   const getRoleTeam = (role) => availableRoles[role]?.team || 'good';
-  const getEmoji = (role) => availableRoles[role]?.emoji || '❓';
 
   return (
     <div className="lobby-column players-column">
@@ -59,7 +59,7 @@ function PlayersList({
                 <span className="player-name">{p.name}</span>
                 {assignedRoles[p._id] && (
                   <span className={`assigned-role ${getRoleTeam(assignedRoles[p._id])}`}>
-                    {getEmoji(assignedRoles[p._id])} {assignedRoles[p._id]}
+                    <RoleIcon role={assignedRoles[p._id]} size={28} className="role-icon-inline" /> {assignedRoles[p._id]}
                   </span>
                 )}
               </div>
@@ -77,7 +77,7 @@ function PlayersList({
                   <option value="">Automaticky</option>
                   {Object.keys(availableRoles).map(role => (
                     <option key={role} value={role}>
-                      {getEmoji(role)} {role}
+                      {availableRoles[role]?.emoji || '❓'} {role}
                     </option>
                   ))}
                 </select>

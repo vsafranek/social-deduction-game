@@ -1,0 +1,49 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle id="bg" data-part="bg" cx="256" cy="256" r="240" fill="#111822" />
+  <circle id="bgInner" data-part="bgInner" cx="256" cy="256" r="208" fill="#182334" />
+
+  <!-- Floor Blood Pool (The mess) -->
+  <path id="bloodPool" data-part="bloodPool" d="M160 380 Q200 360 250 370 Q300 380 340 370 Q360 360 380 390 Q350 430 300 420 Q250 410 200 430 Q150 410 140 390 Q150 385 160 380" 
+        fill="#922B21" opacity="0.9" />
+
+  <!-- Bucket Group -->
+  <g id="bucketGroup" transform="translate(0, 20)">
+      <!-- Bucket Back -->
+      <path data-part="bucketBody" d="M190 220 H322 L310 350 H202 Z" fill="#455A64" stroke="#263238" stroke-width="6" />
+      <ellipse data-part="bucketRim" cx="256" cy="220" rx="66" ry="12" fill="#37474F" stroke="#263238" stroke-width="2" />
+
+      <!-- Bloody Water -->
+      <ellipse id="bloodyWater" data-part="liquid" cx="256" cy="225" rx="60" ry="10" fill="#C0392B" />
+
+      <!-- Mop Handle -->
+      <rect data-part="handle" x="260" y="60" width="14" height="280" transform="rotate(-15 260 200)" fill="#8D6E63" stroke="#4E342E" stroke-width="2" />
+
+      <!-- Mop Head (Soaked in blood) -->
+      <!-- Base of mop head (cleaner part) -->
+      <path data-part="mopStrands" d="M280 310 Q260 330 240 300" fill="none" stroke="#ECEFF1" stroke-width="18" stroke-linecap="round" />
+      <!-- Tip of mop head (bloody part) -->
+      <path data-part="mopBlood" d="M280 310 Q275 315 270 308" fill="none" stroke="#C0392B" stroke-width="18" stroke-linecap="round" />
+
+      <!-- Bucket Front (Opacity to see mop inside) -->
+      <path data-part="bucketBodyFront" d="M190 220 H322 L310 350 H202 Z" fill="url(#metalGradient)" opacity="0.4" />
+      <path data-part="bucketRimFront" d="M190 220 A66 12 0 0 0 322 220" fill="none" stroke="#263238" stroke-width="6" />
+
+      <!-- Blood drip on the side of the bucket -->
+      <path data-part="drip" d="M318 220 Q325 230 320 260 Q315 280 318 290 Q322 300 318 310" fill="none" stroke="#C0392B" stroke-width="6" stroke-linecap="round" />
+  </g>
+
+  <!-- Bloody Splashes/Bubbles -->
+  <circle data-part="bubble" cx="230" cy="210" r="6" fill="#E57373" stroke="#C0392B" stroke-width="1" />
+  <circle data-part="bubble" cx="250" cy="190" r="4" fill="#E57373" stroke="#C0392B" stroke-width="1" />
+
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="metalGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#455A64" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#90A4AE" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#455A64" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+</svg>

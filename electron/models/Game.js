@@ -59,7 +59,7 @@ const GameSchema = new mongoose.Schema({
       min: 0,
       max: 1
     },
-    recluseChance: {
+    shadyChance: {
       type: Number,
       default: 0.15, // 15% šance
       min: 0,

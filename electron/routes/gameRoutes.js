@@ -453,7 +453,7 @@ router.post('/:gameId/start-config', async (req, res) => {
     
     // Normalize chances
     const drunkChance = normalizeChance(modifiers?.drunkChance ?? modifiers?.opilýChance, 0.2);
-    const recluseChance = normalizeChance(modifiers?.recluseChance ?? modifiers?.poustevníkChance, 0.15);
+    const shadyChance = normalizeChance(modifiers?.shadyChance ?? modifiers?.recluseChance ?? modifiers?.poustevníkChance, 0.15);
     const paranoidChance = normalizeChance(modifiers?.paranoidChance, 0.1);
     const insomniacChance = normalizeChance(modifiers?.insomniacChance, 0.1);
 
@@ -476,9 +476,9 @@ router.post('/:gameId/start-config', async (req, res) => {
           }
         }
         
-        if (MODIFIERS.Recluse && Array.isArray(MODIFIERS.Recluse.allowedTeams)) {
-          if (MODIFIERS.Recluse.allowedTeams.includes(roleTeam)) {
-            validModifiers.push({ name: 'Recluse', chance: recluseChance });
+        if (MODIFIERS.Shady && Array.isArray(MODIFIERS.Shady.allowedTeams)) {
+          if (MODIFIERS.Shady.allowedTeams.includes(roleTeam)) {
+            validModifiers.push({ name: 'Shady', chance: shadyChance });
           }
         }
         
