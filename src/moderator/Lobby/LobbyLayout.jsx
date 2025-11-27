@@ -2,30 +2,21 @@ import React, { useMemo, useState } from 'react';
 import PlayersList from './PlayersList';
 import RoleConfiguration from './RoleConfiguration';
 import ModifierSettings from './ModifierSettings';
+import { ROLE_INFO } from '../../data/roleInfo';
 import './LobbyLayout.css';
 
 function LobbyLayout({ gameState, onStartGame }) {
   // Anglické názvy rolí (musí odpovídat backend Role.js)
-  const availableRoles = useMemo(() => ({
-    // Good roles
-    'Doctor': { team: 'good', emoji: '💉' },
-    'Jailer': { team: 'good', emoji: '👮' },
-    'Investigator': { team: 'good', emoji: '🔍' },
-    'Coroner': { team: 'good', emoji: '🔬' },
-    'Lookout': { team: 'good', emoji: '👁️' },
-    'Trapper': { team: 'good', emoji: '🪤' },
-    'Tracker': { team: 'good', emoji: '👣' },
-    'Hunter': { team: 'good', emoji: '🏹' },
-    'Citizen': { team: 'good', emoji: '👤' },
-    // Evil roles
-    'Killer': { team: 'evil', emoji: '🔪' },
-    'Cleaner': { team: 'evil', emoji: '🧹' },
-    'Accuser': { team: 'evil', emoji: '👉' },
-    'Consigliere': { team: 'evil', emoji: '🕵️' },
-    // Neutral roles
-    'SerialKiller': { team: 'neutral', emoji: '🛡️' },
-    'Infected': { team: 'neutral', emoji: '🦠' }
-  }), []);
+  const availableRoles = useMemo(() => {
+    const roles = {};
+    Object.keys(ROLE_INFO).forEach(roleName => {
+      roles[roleName] = {
+        team: ROLE_INFO[roleName].team,
+        emoji: ROLE_INFO[roleName].emoji
+      };
+    });
+    return roles;
+  }, []);
 
   // Výchozí počty rolí
   const [roleCount, setRoleCount] = useState({

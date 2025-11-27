@@ -1,37 +1,8 @@
 // src/moderator/GameArena/GameEndScreen.jsx
 import React, { useEffect, useState } from 'react';
 import RoleIcon from '../../components/icons/RoleIcon';
+import { getRoleInfo, getModifierInfo } from '../../data/roleInfo';
 import './GameEndScreen.css';
-
-const ROLE_INFO = {
-  // GOOD
-  'Doctor': { emoji: '💉', team: 'good', teamLabel: 'Město' },
-  'Jailer': { emoji: '👮', team: 'good', teamLabel: 'Město' },
-  'Investigator': { emoji: '🔍', team: 'good', teamLabel: 'Město' },
-  'Coroner': { emoji: '🔬', team: 'good', teamLabel: 'Město' },
-  'Lookout': { emoji: '👁️', team: 'good', teamLabel: 'Město' },
-  'Trapper': { emoji: '🪤', team: 'good', teamLabel: 'Město' },
-  'Tracker': { emoji: '👣', team: 'good', teamLabel: 'Město' },
-  'Hunter': { emoji: '🏹', team: 'good', teamLabel: 'Město' },
-  'Citizen': { emoji: '👤', team: 'good', teamLabel: 'Město' },
-  
-  // EVIL
-  'Killer': { emoji: '🔪', team: 'evil', teamLabel: 'Mafie' },
-  'Cleaner': { emoji: '🧹', team: 'evil', teamLabel: 'Mafie' },
-  'Accuser': { emoji: '👉', team: 'evil', teamLabel: 'Mafie' },
-  'Consigliere': { emoji: '🕵️', team: 'evil', teamLabel: 'Mafie' },
-  
-  // NEUTRAL (each is individual)
-  'SerialKiller': { emoji: '🛡️', team: 'neutral', teamLabel: 'Serial Killer' },
-  'Infected': { emoji: '🦠', team: 'neutral', teamLabel: 'Infected' }
-};
-
-const MODIFIER_INFO = {
-  'Drunk': { emoji: '🍺', label: 'Opilý' },
-  'Shady': { emoji: '🏚️', label: 'Podezřelý' },
-  'Paranoid': { emoji: '😱', label: 'Paranoidní' },
-  'Insomniac': { emoji: '😵', label: 'Nespavec' }
-};
 
 const WINNER_LABELS = {
   'good': { 
@@ -77,17 +48,17 @@ function GameEndScreen({ gameState, currentPlayer }) {
 
   // Rozdělení hráčů podle teamu
   const goodPlayers = players.filter(p => {
-    const role = ROLE_INFO[p.role];
+    const role = getRoleInfo(p.role);
     return role && role.team === 'good';
   });
 
   const evilPlayers = players.filter(p => {
-    const role = ROLE_INFO[p.role];
+    const role = getRoleInfo(p.role);
     return role && role.team === 'evil';
   });
 
   const neutralPlayers = players.filter(p => {
-    const role = ROLE_INFO[p.role];
+    const role = getRoleInfo(p.role);
     return role && role.team === 'neutral';
   });
 
@@ -100,8 +71,8 @@ function GameEndScreen({ gameState, currentPlayer }) {
   };
 
   const renderPlayerCard = (player, showTeamLabel = true) => {
-    const roleInfo = ROLE_INFO[player.role] || { emoji: '❓', team: 'neutral', teamLabel: '?' };
-    const modifierInfo = player.modifier ? MODIFIER_INFO[player.modifier] : null;
+    const roleInfo = getRoleInfo(player.role);
+    const modifierInfo = getModifierInfo(player.modifier);
     const isPlayerWinner = isWinner(player._id);
     const isCurrent = isCurrentPlayer(player._id);
     const isDead = !player.alive;
@@ -238,7 +209,7 @@ function GameEndScreen({ gameState, currentPlayer }) {
               </h3>
               <div className="neutrals-grid">
                 {neutralPlayers.map(player => {
-                  const roleInfo = ROLE_INFO[player.role] || { emoji: '❓', teamLabel: 'Neutrální' };
+                  const roleInfo = getRoleInfo(player.role);
                   
                   return (
                     <div key={player._id} className="neutral-container">

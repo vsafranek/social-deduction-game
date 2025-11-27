@@ -1,30 +1,13 @@
 // src/player/components/RoleCard/RoleCard.jsx
 import React, { useState } from 'react';
 import RoleIcon from '../../../components/icons/RoleIcon';
+import { getRoleInfo } from '../../../data/roleInfo';
 import './RoleCard.css';
-
-const ROLE_INFO = {
-  'Doctor': { emoji: '💉', team: 'good', teamLabel: 'Město', description: 'Každou noc chráníš jednoho hráče před smrtí', actionVerb: 'Chránit' },
-  'Jailer': { emoji: '👮', team: 'good', teamLabel: 'Město', description: 'Každou noc uzamkneš jednoho hráče - nemůže provést akci', actionVerb: 'Uzamknout' },
-  'Investigator': { emoji: '🔍', team: 'good', teamLabel: 'Město', description: 'Zjišťuješ dvě možné role živého hráče (jedna je správná)', actionVerb: 'Vyšetřit' },
-  'Coroner': { emoji: '🔬', team: 'good', teamLabel: 'Město', description: 'Provedeš pitvu na mrtvém hráči a zjistíš jeho přesnou roli', actionVerb: 'Proveď pitvu' },
-  'Lookout': { emoji: '👁️', team: 'good', teamLabel: 'Město', description: 'Sleduj dům hráče a uvidíš, kdo ho navštívil', actionVerb: 'Pozorovat' },
-  'Trapper': { emoji: '🪤', team: 'good', teamLabel: 'Město', description: 'Nastav past u svého domu - návštěvníci jsou odhaleni', actionVerb: 'Nastavit past' },
-  'Tracker': { emoji: '👣', team: 'good', teamLabel: 'Město', description: 'Sleduj hráče a zjisti, kam šel', actionVerb: 'Sledovat' },
-  'Hunter': { emoji: '🏹', team: 'good', teamLabel: 'Město', description: 'Můžeš zabíjet v noci - pokud zabiješ nevinného, zemřeš', actionVerb: 'Zastřelit' },
-  'Citizen': { emoji: '👤', team: 'good', teamLabel: 'Město', description: 'Obyčejný občan bez speciální schopnosti', actionVerb: 'Žádná' },
-  'Killer': { emoji: '🔪', team: 'evil', teamLabel: 'Mafie', description: 'Každou noc zabíjíš jednoho hráče', actionVerb: 'Zabít' },
-  'Cleaner': { emoji: '🧹', team: 'evil', teamLabel: 'Mafie', description: 'Můžeš zabíjet NEBO označit hráče - označený živý hráč ukáže Investigator falešný výsledek, mrtvý hráč bude mít skrytou roli', actionVerb: 'Zabít nebo označit' },
-  'Accuser': { emoji: '👉', team: 'evil', teamLabel: 'Mafie', description: 'Obviň hráče - bude vypadat jako zločinec při vyšetřování', actionVerb: 'Obviňovat' },
-  'Consigliere': { emoji: '🕵️', team: 'evil', teamLabel: 'Mafie', description: 'Můžeš zabíjet NEBO vyšetřit živého hráče a zjistit jeho přesnou roli', actionVerb: 'Zabít nebo vyšetřit' },
-  'SerialKiller': { emoji: '🛡️', team: 'neutral', teamLabel: 'Sériový vrah', description: 'Zabíjej všechny - vyhraj sám', actionVerb: 'Zabít' },
-  'Infected': { emoji: '🦠', team: 'neutral', teamLabel: 'Nakažlivý', description: 'Nakaz všechny hráče a vyhraj', actionVerb: 'Nakazit' }
-};
 
 function RoleCard({ player, gameState }) {
   const [expanded, setExpanded] = useState(false);
   const role = player.role || 'Citizen';
-  const roleData = ROLE_INFO[role] || ROLE_INFO['Citizen'];
+  const roleData = getRoleInfo(role);
   const isMayor = gameState?.game?.mayor && gameState.game.mayor.toString() === player._id.toString();
 
   return (

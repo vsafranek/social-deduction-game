@@ -169,7 +169,8 @@ async function resolveNightActions(game, players) {
     if (!actor || !target) continue;
 
     // Check drunk FIRST
-    if (actor.modifier === 'Drunk') {
+    // ✅ SerialKiller cannot be stopped by Drunk modifier - he always acts
+    if (actor.modifier === 'Drunk' && actor.role !== 'SerialKiller') {
       drunkPlayers.add(actorId);
       const fakeMessage = generateDrunkFakeMessage(action, target.name);
       actor.nightAction.results.push(fakeMessage);
@@ -178,7 +179,8 @@ async function resolveNightActions(game, players) {
     }
 
     // Check if actor is blocked
-    if (hasEffect(actor, 'blocked')) {
+    // ✅ SerialKiller cannot be blocked - he always goes first and cannot be stopped
+    if (hasEffect(actor, 'blocked') && actor.role !== 'SerialKiller') {
       if (!blocked.has(actorId)) {
         blocked.add(actorId);
         actor.nightAction.results.push('blocked:Byl jsi uzamčen - tvá akce selhala');
@@ -188,7 +190,8 @@ async function resolveNightActions(game, players) {
     }
 
     // Check for trap
-    if (hasEffect(target, 'trap')) {
+    // ✅ SerialKiller cannot be trapped - he always goes first and cannot be stopped
+    if (hasEffect(target, 'trap') && actor.role !== 'SerialKiller') {
       if (!trapped.has(actorId)) {
         trapped.add(actorId);
         addEffect(actor, 'trapped', null, null, {});
@@ -208,6 +211,13 @@ async function resolveNightActions(game, players) {
     // Apply action effects immediately
     switch (action) {
       case 'block': {
+        // ✅ SerialKiller cannot be blocked - remove blocked effect if target is SerialKiller
+        if (target.role === 'SerialKiller') {
+          console.log(`  👮 [P${actionData.priority}] ${actor.name} tried to jail ${target.name} (SerialKiller) - FAILED (SerialKiller cannot be blocked)`);
+          actor.nightAction.results.push(`failed:${target.name} je SerialKiller - nemůže být zablokován`);
+          break;
+        }
+        
         addEffect(target, 'blocked', actor._id, null, {});
         toSave.add(targetId);
         

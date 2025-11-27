@@ -84,7 +84,7 @@ const ROLES = {
   
   'Hunter': {
     team: 'good',
-    description: 'Může zabíjet v noci - pokud zabije nevinného, zemře',
+    description: 'Can kill at night - if kills an innocent, dies from guilt',
     actionType: 'hunter_kill',
     nightPriority: 7,
     canUseEveryNight: true,
@@ -238,7 +238,7 @@ const MODIFIERS = {
   
   'Paranoid': {
     emoji: '😱',
-    description: 'Vidí falešné návštěvníky, kteří u něj nebyly',
+    description: 'Sees fake visitors who were not actually there',
     effect: 'paranoid',
     showToPlayer: false,
      allowedTeams: ['good', 'neutral'] 
@@ -246,7 +246,7 @@ const MODIFIERS = {
   
   'Insomniac': {
     emoji: '😵',
-    description: 'Vidí všechny, kdo ho navštíví',
+    description: 'Sees everyone who visits them',
     effect: 'see_visitors',
     showToPlayer: false,
     allowedTeams: ['good', 'neutral'] 

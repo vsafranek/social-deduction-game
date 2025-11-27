@@ -1,46 +1,8 @@
 // src/player/components/NightPhase/NightPhase.jsx
 import React, { useState, useEffect } from 'react';
 import NightActionModal from '../NightActionModal/NightActionModal';
+import { getRoleInfo } from '../../../data/roleInfo';
 import './NightPhase.css';
-
-const NIGHT_ACTIONS = {
-  'Doctor': { verb: 'Chraň', icon: '💉', color: 'green', description: 'Chraň jednoho hráče' },
-  'Jailer': { verb: 'Uzamkni', icon: '👮', color: 'blue', description: 'Uzamkni jednoho hráče' },
-  'Investigator': { verb: 'Vyšetři', icon: '🔍', color: 'blue', description: 'Vyšetři jednoho živého hráče' },
-  'Coroner': { verb: 'Proveď pitvu', icon: '🔬', color: 'blue', description: 'Proveď pitvu na mrtvém hráči - zjistíš přesnou roli' },
-  'Lookout': { verb: 'Pozoruj', icon: '👁️', color: 'blue', description: 'Pozoruj jednoho hráče' },
-  'Trapper': { verb: 'Nastav Past', icon: '🪤', color: 'green', description: 'Nastav past na svém domě' },
-  'Tracker': { verb: 'Sleduj', icon: '👣', color: 'blue', description: 'Sleduj jednoho hráče' },
-  'Hunter': { verb: 'Zastřel', icon: '🏹', color: 'red', description: 'Zastřel jednoho hráče' },
-  
-  // Evil roles - základní akce
-  'Killer': { verb: 'Zabiš', icon: '🔪', color: 'red', description: 'Zabiš jednoho hráče' },
-  
-  // Dual actions
-  'Cleaner': {
-    dual: true,
-    actions: {
-      'kill': { verb: 'Zabiš', icon: '🔪', color: 'red', description: 'Zabiš jednoho hráče' },
-      'clean_role': { verb: 'Označ', icon: '🧹', color: 'purple', description: 'Označ hráče - živý ukáže Investigator falešný výsledek, mrtvý bude mít skrytou roli' }
-    }
-  },
-  'Accuser': {
-    dual: true,
-    actions: {
-      'kill': { verb: 'Zabiš', icon: '🔪', color: 'red', description: 'Zabiš jednoho hráče' },
-      'frame': { verb: 'Obviň', icon: '👉', color: 'purple', description: 'Obviň hráče - bude vypadat jako zločinec při vyšetřování' }
-    }
-  },
-  'Consigliere': {
-    dual: true,
-    actions: {
-      'kill': { verb: 'Zabiš', icon: '🔪', color: 'red', description: 'Zabiš jednoho hráče' },
-      'consig_investigate': { verb: 'Vyšetři', icon: '🕵️', color: 'blue', description: 'Zjisti přesnou roli' }
-    }
-  },
-  
-  'Infected': { verb: 'Nakazi', icon: '🦠', color: 'purple', description: 'Nakazi jednoho hráče' }
-};
 
 function NightPhase({ player, players, onAction }) {
   const [selectedMode, setSelectedMode] = useState('kill');
@@ -65,7 +27,8 @@ function NightPhase({ player, players, onAction }) {
     }
   }, [player.nightAction]);
 
-  const actionInfo = NIGHT_ACTIONS[player.role];
+  const roleInfo = getRoleInfo(player.role);
+  const actionInfo = roleInfo?.nightAction;
   const isDualRole = actionInfo?.dual;
   
   // Pro dual role - pokud není usesRemaining nastaveno, použij maxUses z role definice
