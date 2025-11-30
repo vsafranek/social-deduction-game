@@ -5,7 +5,7 @@ import ModifierSettings from './ModifierSettings';
 import { ROLE_INFO } from '../../data/roleInfo';
 import './LobbyLayout.css';
 
-function LobbyLayout({ gameState, onStartGame }) {
+function LobbyLayout({ gameState, onStartGame, onRefresh }) {
   // Anglické názvy rolí (musí odpovídat backend Role.js)
   const availableRoles = useMemo(() => {
     const roles = {};
@@ -18,29 +18,26 @@ function LobbyLayout({ gameState, onStartGame }) {
     return roles;
   }, []);
 
-  // Výchozí počty rolí
-  const [roleCount, setRoleCount] = useState({
-    'Doctor': 1,
-    'Jailer': 1,
-    'Investigator': 1,
-    'Coroner': 0,
-    'Lookout': 1,
-    'Trapper': 0,
-    'Tracker': 1,
-    'Hunter': 0,
-    'Citizen': 0, // auto-fill fallback
-    'Killer': 2,
-    'Cleaner': 0,
-    'Accuser': 0,
-    'Consigliere': 0,
-    'SerialKiller': 0,
-    'Infected': 0
+  // Výchozí počty rolí (kolikrát se role objeví v random poolu)
+  // Všechny role jsou defaultně aktivní, takže všechny mají count alespoň 1
+  const [roleCount, setRoleCount] = useState(() => {
+    const initialCounts = {};
+    Object.keys(availableRoles).forEach(role => {
+      initialCounts[role] = 1; // Všechny aktivní role mají defaultně count 1
+    });
+    initialCounts['Citizen'] = 0; // Citizen je fallback, ne aktivní role
+    return initialCounts;
   });
 
-  // Limity týmů
+  // Maximální limity pro každou roli (kolikrát se může objevit celkem)
+  const [roleMaxLimits, setRoleMaxLimits] = useState(
+    Object.fromEntries(Object.keys(availableRoles).map(r => [r, null])) // null = unlimited
+  );
+
+  // Limity týmů (defaultně 0)
   const [teamLimits, setTeamLimits] = useState({
-    good: null, // unlimited
-    evil: 2,
+    good: 0,
+    evil: 0,
     neutral: 0
   });
 
@@ -49,8 +46,8 @@ function LobbyLayout({ gameState, onStartGame }) {
     Object.fromEntries(Object.keys(availableRoles).map(r => [r, true]))
   );
 
-  // Manuální přiřazení
-  const [assignedRoles, setAssignedRoles] = useState({});
+  // Garantované role (konkrétní role, které se zaručeně objeví)
+  const [guaranteedRoles, setGuaranteedRoles] = useState([]);
 
   // Pasivní modifikátory (anglické klíče pro backend)
   const [modifierConfig, setModifierConfig] = useState({
@@ -61,46 +58,96 @@ function LobbyLayout({ gameState, onStartGame }) {
   });
 
   // Handlery
-  const handleAssignRole = (playerId, role) => {
-    setAssignedRoles(prev => ({ ...prev, [playerId]: role }));
-  };
-
-  const handleUnassignRole = (playerId) => {
-    setAssignedRoles(prev => {
-      const next = { ...prev };
-      delete next[playerId];
-      return next;
+  const toggleRoleInPool = (role) => {
+    setRandomPoolRoles(prev => {
+      const newValue = !prev[role];
+      // Pokud deaktivujeme roli, nastavíme count na 0
+      if (!newValue) {
+        setRoleCount(prevCount => ({ ...prevCount, [role]: 0 }));
+      } else {
+        // Pokud aktivujeme roli a count je 0, nastavíme na 1
+        // Použijeme funkční updater, abychom získali aktuální hodnotu
+        setRoleCount(prevCount => {
+          if (prevCount[role] === 0) {
+            return { ...prevCount, [role]: 1 };
+          }
+          return prevCount;
+        });
+      }
+      return { ...prev, [role]: newValue };
     });
   };
 
-  const toggleRoleInPool = (role) => {
-    setRandomPoolRoles(prev => ({ ...prev, [role]: !prev[role] }));
+  const setRoleCountValue = (role, value) => {
+    const numValue = Math.max(0, parseInt(value || 0));
+    setRoleCount(prev => {
+      const newCount = { ...prev, [role]: numValue };
+      // Pokud nastavíme count na 0, deaktivujeme roli (pokud není guaranteed)
+      if (numValue === 0 && randomPoolRoles[role] && !guaranteedRoles.includes(role)) {
+        setRandomPoolRoles(prevPool => ({ ...prevPool, [role]: false }));
+      }
+      // Pokud nastavíme count > 0, aktivujeme roli
+      if (numValue > 0 && !randomPoolRoles[role]) {
+        setRandomPoolRoles(prevPool => ({ ...prevPool, [role]: true }));
+      }
+      return newCount;
+    });
   };
 
-  const setRoleCountValue = (role, value) => {
-    setRoleCount(prev => ({ ...prev, [role]: Math.max(0, parseInt(value || 0)) }));
+  const setRoleMaxLimit = (role, value) => {
+    const num = value === '' ? null : Math.max(0, parseInt(value || 0));
+    setRoleMaxLimits(prev => ({ ...prev, [role]: num }));
+  };
+
+  const addGuaranteedRole = (role) => {
+    setGuaranteedRoles(prev => [...prev, role]);
+  };
+
+  const removeGuaranteedRole = (role) => {
+    setGuaranteedRoles(prev => {
+      const index = prev.findIndex(r => r === role);
+      if (index !== -1) {
+        const newGuaranteed = [...prev];
+        newGuaranteed.splice(index, 1);
+        return newGuaranteed;
+      }
+      return prev;
+    });
   };
 
   const updateTeamLimit = (team, value) => {
-    const num = value === '' ? null : Math.max(0, parseInt(value || 0));
+    const num = Math.max(0, parseInt(value || 0));
     setTeamLimits(prev => ({ ...prev, [team]: num }));
   };
 
   const buildFinalRoleDistribution = () => {
     const players = gameState.players;
     const finalRoles = {};
-    const manualIds = Object.keys(assignedRoles);
+    const roleCounts = {};
 
-    // 1) Manuální přiřazení
-    for (const pid of manualIds) {
-      finalRoles[pid] = assignedRoles[pid];
+    // 1) Přidej garantované role
+    const guaranteedToAssign = [...guaranteedRoles];
+    const playersForGuaranteed = [...players].slice(0, guaranteedToAssign.length);
+    
+    // Přiřaď garantované role
+    for (let i = 0; i < guaranteedToAssign.length && i < playersForGuaranteed.length; i++) {
+      const role = guaranteedToAssign[i];
+      const player = playersForGuaranteed[i];
+      finalRoles[player._id] = role;
+      roleCounts[role] = (roleCounts[role] || 0) + 1;
     }
 
-    // 2) Postav role pool dle roleCount + randomPoolRoles
+    // 2) Postav role pool dle roleCount + randomPoolRoles (respektuj maxLimits)
     const pool = [];
     Object.entries(roleCount).forEach(([role, count]) => {
       if (randomPoolRoles[role]) {
-        for (let i = 0; i < count; i++) pool.push(role);
+        const currentCount = roleCounts[role] || 0;
+        const maxLimit = roleMaxLimits[role];
+        const availableSlots = maxLimit === null ? count : Math.max(0, maxLimit - currentCount);
+        
+        for (let i = 0; i < Math.min(count, availableSlots); i++) {
+          pool.push(role);
+        }
       }
     });
 
@@ -112,24 +159,36 @@ function LobbyLayout({ gameState, onStartGame }) {
     });
 
     // 4) Rozdej zbytku hráčů role z poolu s respektem limitů
-    const unassigned = players.filter(p => !finalRoles[p._id]);
+    const remainingUnassigned = players.filter(p => !finalRoles[p._id]);
     const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
 
-    for (const p of unassigned) {
+    for (const p of remainingUnassigned) {
       let chosen = null;
       for (let i = 0; i < shuffledPool.length; i++) {
         const candidate = shuffledPool[i];
         const team = availableRoles[candidate]?.team || 'good';
-        const limit = teamLimits[team];
-        if (limit === null || countByTeam[team] < limit) {
+        const teamLimit = teamLimits[team];
+        const roleLimit = roleMaxLimits[candidate];
+        const currentRoleCount = roleCounts[candidate] || 0;
+        
+        // Zkontroluj limity
+        // teamLimit === null znamená neomezeno, teamLimit === 0 znamená žádné role z tohoto týmu
+        const withinTeamLimit = (teamLimit === null) || (teamLimit > 0 && countByTeam[team] < teamLimit);
+        const withinRoleLimit = roleLimit === null || currentRoleCount < roleLimit;
+        
+        if (withinTeamLimit && withinRoleLimit) {
           chosen = candidate;
           shuffledPool.splice(i, 1);
           countByTeam[team]++;
+          roleCounts[candidate] = (roleCounts[candidate] || 0) + 1;
           break;
         }
       }
       finalRoles[p._id] = chosen || 'Citizen'; // fallback
-      if (!chosen) countByTeam.good++;
+      if (!chosen) {
+        countByTeam.good++;
+        roleCounts['Citizen'] = (roleCounts['Citizen'] || 0) + 1;
+      }
     }
 
     return { finalRoles, modifierConfig };
@@ -144,10 +203,8 @@ function LobbyLayout({ gameState, onStartGame }) {
     <div className="lobby-layout">
       <PlayersList
         players={gameState.players}
-        availableRoles={availableRoles}
-        assignedRoles={assignedRoles}
-        onAssignRole={handleAssignRole}
-        onUnassignRole={handleUnassignRole}
+        gameId={gameState.game._id}
+        onRefresh={onRefresh}
       />
 
       <RoleConfiguration
@@ -155,11 +212,17 @@ function LobbyLayout({ gameState, onStartGame }) {
         availableRoles={availableRoles}
         roleCount={roleCount}
         setRoleCountValue={setRoleCountValue}
+        roleMaxLimits={roleMaxLimits}
+        setRoleMaxLimit={setRoleMaxLimit}
         randomPoolRoles={randomPoolRoles}
         toggleRoleInPool={toggleRoleInPool}
+        guaranteedRoles={guaranteedRoles}
+        addGuaranteedRole={addGuaranteedRole}
+        removeGuaranteedRole={removeGuaranteedRole}
         teamLimits={teamLimits}
         updateTeamLimit={updateTeamLimit}
         initialTimers={gameState.game.timers}
+        playersCount={gameState.players.length}
       />
 
       <ModifierSettings
@@ -167,7 +230,17 @@ function LobbyLayout({ gameState, onStartGame }) {
         modifierConfig={modifierConfig}
         setModifierConfig={setModifierConfig}
         onStartGame={onClickStartGame}
-        canStart={gameState.players.length >= 3}
+        canStart={(() => {
+          // Celkový počet rolí = součet teamLimits (good + evil + neutral) + garantované role
+          // Každý hráč musí dostat roli - buď náhodnou z poolu nebo garantovanou
+          const totalRolesForValidation = (teamLimits.good || 0) + (teamLimits.evil || 0) + (teamLimits.neutral || 0) + guaranteedRoles.length;
+          const playersCount = gameState.players.length;
+          
+          return playersCount >= 3 && totalRolesForValidation === playersCount;
+        })()}
+        totalRolesForValidation={(() => {
+          return (teamLimits.good || 0) + (teamLimits.evil || 0) + (teamLimits.neutral || 0) + guaranteedRoles.length;
+        })()}
       />
     </div>
   );

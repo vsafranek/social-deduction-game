@@ -1,15 +1,27 @@
 import React from 'react';
-import RoleIcon from '../../components/icons/RoleIcon';
+import { gameApi } from '../../api/gameApi';
 import './PlayersList.css';
 
 function PlayersList({
   players,
-  availableRoles,
-  assignedRoles,
-  onAssignRole,
-  onUnassignRole
+  gameId,
+  onRefresh
 }) {
-  const getRoleTeam = (role) => availableRoles[role]?.team || 'good';
+  const handleKick = async (playerId, playerName) => {
+    if (!window.confirm(`Opravdu chceš vyhodit hráče "${playerName}"?`)) {
+      return;
+    }
+
+    try {
+      await gameApi.kickPlayer(gameId, playerId);
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Chyba při kicknutí hráče:', error);
+      alert(error.message || 'Nepodařilo se vyhodit hráče');
+    }
+  };
 
   return (
     <div className="lobby-column players-column">
@@ -57,31 +69,14 @@ function PlayersList({
               </div>
               <div className="player-info">
                 <span className="player-name">{p.name}</span>
-                {assignedRoles[p._id] && (
-                  <span className={`assigned-role ${getRoleTeam(assignedRoles[p._id])}`}>
-                    <RoleIcon role={assignedRoles[p._id]} size={28} className="role-icon-inline" /> {assignedRoles[p._id]}
-                  </span>
-                )}
               </div>
-
-              {assignedRoles[p._id] ? (
-                <button className="btn-unassign" onClick={() => onUnassignRole(p._id)}>
-                  ✕
-                </button>
-              ) : (
-                <select
-                  className="role-select"
-                  onChange={(e) => onAssignRole(p._id, e.target.value)}
-                  value=""
-                >
-                  <option value="">Automaticky</option>
-                  {Object.keys(availableRoles).map(role => (
-                    <option key={role} value={role}>
-                      {availableRoles[role]?.emoji || '❓'} {role}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <button
+                className="btn-kick-player"
+                onClick={() => handleKick(p._id, p.name)}
+                title="Vyhodit hráče"
+              >
+                ❌
+              </button>
             </div>
           ))}
         </div>

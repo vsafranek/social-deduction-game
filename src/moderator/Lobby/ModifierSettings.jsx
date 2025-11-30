@@ -1,16 +1,86 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import RoleIcon from '../../components/icons/RoleIcon';
 import './ModifierSettings.css';
 
-function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onStartGame, canStart }) {
+function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onStartGame, canStart, totalRolesForValidation }) {
+  const iconRef = useRef(null);
+  const tooltipRef = useRef(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
+  useEffect(() => {
+    if (isTooltipVisible && iconRef.current && tooltipRef.current) {
+      const updatePosition = () => {
+        if (iconRef.current && tooltipRef.current) {
+          const iconRect = iconRef.current.getBoundingClientRect();
+          const tooltipRect = tooltipRef.current.getBoundingClientRect();
+          setTooltipPosition({
+            top: iconRect.bottom + 8,
+            left: iconRect.left + iconRect.width / 2 - tooltipRect.width / 2
+          });
+        }
+      };
+      
+      // Počkáme na render a pak nastavíme pozici
+      requestAnimationFrame(() => {
+        updatePosition();
+      });
+
+      // Aktualizujeme pozici při scrollu nebo resize
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [isTooltipVisible]);
+
+  const handleIconMouseEnter = () => {
+    setIsTooltipVisible(true);
+  };
+
+  const handleIconMouseLeave = () => {
+    setIsTooltipVisible(false);
+  };
+
   return (
     <div className="lobby-column modifiers-column">
       <div className="column-header">
-        <h2>🎲 Pasivní Modifikátory</h2>
-      </div>
-
-      <div className="modifiers-info">
-        <p className="warning-text">⚠️ Hráči nevidí své modifikátory!</p>
+        <div className="header-title-wrapper">
+          <h2>🎲 Pasivní Modifikátory</h2>
+          <div className="info-icon-wrapper">
+            <span 
+              ref={iconRef}
+              className="info-icon"
+              onMouseEnter={handleIconMouseEnter}
+              onMouseLeave={handleIconMouseLeave}
+            >?</span>
+            {isTooltipVisible && createPortal(
+              <div 
+                ref={tooltipRef}
+                className="info-tooltip"
+                style={{
+                  top: `${tooltipPosition.top}px`,
+                  left: `${tooltipPosition.left}px`
+                }}
+              >
+                <div className="info-tooltip-content">
+                  <div className="info-tooltip-title">ℹ️ Informace o modifikátorech</div>
+                  <div className="info-tooltip-body">
+                    <p>Modifikátory jsou pasivní efekty, které se náhodně přiřadí hráčům při startu hry.</p>
+                    <p>Šance určuje pravděpodobnost (v %), že se modifikátor přiřadí konkrétnímu hráči.</p>
+                    <p>Modifikátory se aplikují automaticky a ovlivňují hru, ale hráči je nevidí.</p>
+                    <p className="info-tooltip-warning">⚠️ Hráči nevidí své modifikátory!</p>
+                  </div>
+                </div>
+              </div>,
+              document.body
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="modifier-list">
@@ -116,7 +186,9 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             disabled={!canStart}
           >
             {!canStart
-              ? `⏳ Minimálně 3 hráči (${playersCount || 0}/3)`
+              ? (playersCount < 3 
+                  ? `⏳ Minimálně 3 hráči (${playersCount || 0}/3)`
+                  : `⚠️ Role se nerovnají (${totalRolesForValidation || 0} rolí / ${playersCount || 0} hráčů)`)
               : '🚀 Start Game'
             }
           </button>

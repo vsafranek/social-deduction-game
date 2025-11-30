@@ -159,3 +159,29 @@
   transform: scale(1.1); 
   box-shadow: 0 4px 12px rgba(231, 76, 60, 0.5), 0 0 20px rgba(231, 76, 60, 0.3);
 }
+
+.btn-kick-player {
+  padding: 4px 6px;
+  background: rgba(231, 76, 60, 0.2);
+  border: 1px solid rgba(231, 76, 60, 0.5);
+  border-radius: 6px;
+  color: #e74c3c;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(231, 76, 60, 0.2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.btn-kick-player:hover {
+  background: rgba(231, 76, 60, 0.3);
+  border-color: #e74c3c;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4), 0 0 20px rgba(231, 76, 60, 0.2);
+}

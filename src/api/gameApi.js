@@ -248,6 +248,22 @@ export const gameApi = {
       headers: { 'Content-Type': 'application/json' }
     });
     return res.json();
+  },
+
+  /**
+   * Kick/remove a player from the game (moderator action - lobby only)
+   */
+  async kickPlayer(gameId, playerId) {
+    const res = await fetch(`${API_BASE}/game/${gameId}/player/${playerId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to kick player');
+    }
+    
+    return res.json();
   }
 };
 

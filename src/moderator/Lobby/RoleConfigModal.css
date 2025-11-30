@@ -25,6 +25,7 @@
   flex-direction: column;
   box-shadow: 0 10px 50px rgba(0,0,0,0.6);
   animation: slideUp 0.3s ease-out;
+  overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -69,7 +70,9 @@
 .modal-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 25px;
+  box-sizing: border-box;
 }
 
 .modal-body::-webkit-scrollbar { width: 8px; }
@@ -78,6 +81,8 @@
 
 .modal-section {
   margin-bottom: 30px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-section h3 {
@@ -86,6 +91,118 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.team-header {
+  margin: 25px 0 15px; 
+  font-size: 1.2rem; 
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  border-bottom: 2px solid rgba(0,212,255,0.3); 
+  padding-bottom: 8px;
+  justify-content: space-between;
+}
+
+.team-header.good { 
+  color: #4caf50; 
+  border-color: rgba(76,175,80,0.3); 
+}
+
+.team-header.evil { 
+  color: #e74c3c; 
+  border-color: rgba(231,76,60,0.3); 
+}
+
+.team-header.neutral {
+  color: #9e9e9e;
+  border-color: rgba(158,158,158,0.3);
+}
+
+.expand-guaranteed-btn {
+  padding: 4px 10px;
+  background: rgba(255,215,0,0.1);
+  border: 1px solid rgba(255,215,0,0.4);
+  border-radius: 6px;
+  color: #ffd700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.expand-guaranteed-btn:hover {
+  background: rgba(255,215,0,0.2);
+  border-color: rgba(255,215,0,0.6);
+}
+
+.guaranteed-roles-subsection {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: rgba(255,215,0,0.05);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guaranteed-role-item-small {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 6px;
+}
+
+.guaranteed-role-name-small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.guaranteed-role-controls-small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.counter-btn-small {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255,215,0,0.5);
+  background: rgba(255,215,0,0.1);
+  color: #ffd700;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.counter-btn-small:hover:not(:disabled) {
+  background: rgba(255,215,0,0.2);
+  border-color: #ffd700;
+}
+
+.counter-btn-small:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.guaranteed-count-small {
+  min-width: 25px;
+  text-align: center;
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
 /* Timer sliders */
@@ -133,23 +250,214 @@
   margin-top: 5px;
 }
 
-/* Role grid (same as before) */
+/* Role grid */
 .role-config-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* Role cards (reuse existing styles or copy from RoleConfiguration.css) */
-.role-config-card { /* ... */ }
-.role-config-header { /* ... */ }
-.role-emoji { /* ... */ }
-.role-name { /* ... */ }
-.role-toggle { /* ... */ }
-.role-config-counter { /* ... */ }
-.counter-btn { /* ... */ }
-.count-input { /* ... */ }
-/* ... copy all relevant styles from RoleConfiguration.css ... */
+/* Role cards */
+.role-config-card {
+  background: rgba(0,0,0,0.3);
+  border: 2px solid rgba(0,212,255,0.3);
+  border-radius: 10px;
+  padding: 10px;
+  transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 1 180px;
+  min-width: 180px;
+  max-width: 200px;
+  overflow: hidden;
+}
+
+.role-config-card.active {
+  border-color: #00d4ff;
+  background: rgba(0,212,255,0.1);
+}
+
+.role-config-card.inactive {
+  opacity: 0.5;
+  border-color: rgba(255,255,255,0.1);
+}
+
+.role-config-card.guaranteed {
+  border-color: #ffd700 !important;
+  background: rgba(255,215,0,0.15) !important;
+  box-shadow: 0 0 15px rgba(255,215,0,0.5), 0 0 25px rgba(255,215,0,0.2) !important;
+}
+
+.role-config-card.guaranteed.active {
+  border-color: #ffd700 !important;
+  background: rgba(255,215,0,0.2) !important;
+  box-shadow: 0 0 20px rgba(255,215,0,0.6), 0 0 30px rgba(255,215,0,0.3) !important;
+}
+
+.role-config-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.role-emoji {
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.role-name {
+  flex: 1;
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.85rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-toggle {
+  font-size: 1.2rem;
+  color: #00d4ff;
+  font-weight: bold;
+}
+
+.role-config-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.role-config-counter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-config-counter label {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.7);
+  min-width: 70px;
+}
+
+.counter-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(0,212,255,0.5);
+  background: rgba(0,212,255,0.1);
+  color: #00d4ff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.counter-btn:hover:not(:disabled) {
+  background: rgba(0,212,255,0.3);
+  border-color: #00d4ff;
+}
+
+.counter-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.count-input {
+  flex: 1;
+  width: 50px;
+  padding: 4px 8px;
+  border: 1px solid rgba(0,212,255,0.5);
+  background: rgba(0,0,0,0.3);
+  color: #fff;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.count-input:focus {
+  outline: none;
+  border-color: #00d4ff;
+  background: rgba(0,0,0,0.5);
+}
+
+.role-config-max-limit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
+}
+
+.role-count-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255,215,0,0.9);
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  z-index: 10;
+}
+
+.role-config-max-limit label {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.7);
+  min-width: 70px;
+}
+
+.max-limit-input {
+  width: 40px;
+  padding: 4px 4px;
+  border: 1px solid rgba(255,215,0,0.5);
+  background: rgba(0,0,0,0.3);
+  color: #fff;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.max-limit-input:focus {
+  outline: none;
+  border-color: #ffd700;
+  background: rgba(0,0,0,0.5);
+}
+
+.max-limit-input::placeholder {
+  color: rgba(255,255,255,0.4);
+}
+
+.role-config-guaranteed {
+  display: flex;
+  align-items: center;
+}
+
+.role-config-guaranteed label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.8);
+}
+
+.role-config-guaranteed input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #ffd700;
+}
 
 .role-config-summary {
   background: rgba(0,212,255,0.1);

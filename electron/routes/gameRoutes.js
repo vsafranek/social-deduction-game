@@ -157,6 +157,36 @@ router.post('/join', async (req, res) => {
   }
 });
 
+// Kick/remove player from game (moderator action - lobby only)
+// IMPORTANT: This route must come before GET routes with similar patterns
+router.delete('/:gameId/player/:playerId', async (req, res) => {
+  try {
+    const { gameId, playerId } = req.params;
+    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
+    if (!ensureObjectId(playerId)) return res.status(400).json({ error: 'Invalid player id' });
+
+    const game = await Game.findById(gameId);
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+
+    // Only allow kicking players in lobby phase
+    if (game.phase !== 'lobby') {
+      return res.status(400).json({ error: 'Can only kick players in lobby phase' });
+    }
+
+    const player = await Player.findOne({ _id: playerId, gameId });
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+
+    const playerName = player.name;
+    await Player.deleteOne({ _id: playerId });
+    await GameLog.create({ gameId, message: `${playerName} was kicked from the game.` });
+
+    res.json({ success: true, message: `Player ${playerName} has been removed` });
+  } catch (e) {
+    console.error('kick player error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Get public game state (no meta)
 router.get('/:gameId/state', async (req, res) => {
   try {

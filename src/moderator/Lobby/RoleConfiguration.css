@@ -14,7 +14,20 @@
 margin-top: 18px;
   margin-bottom: 24px;
 }
-.team-limits-section h3 { margin: 0 0 15px; color: #00d4ff; font-size: 1.2rem; }
+.team-limits-section h3 { 
+  margin: 0 0 15px; 
+  color: #00d4ff; 
+  font-size: 1.2rem; 
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.roles-count-info {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: normal;
+}
 
 .team-limits { display: flex; flex-direction: column; gap: 15px; }
 .team-limit-item { 
@@ -28,6 +41,14 @@ margin-top: 18px;
   border-radius: 8px;
   border: 1px solid rgba(0, 212, 255, 0.2);
   transition: all 0.3s ease;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.team-limit-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .team-limit-item:hover {
@@ -52,6 +73,12 @@ margin-top: 18px;
   transition: all 0.3s ease;
 }
 
+.team-limit-input[readOnly] {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
 .team-limit-input:focus { 
   outline: none; 
   border-color: #ffd700; 
@@ -59,6 +86,12 @@ margin-top: 18px;
     0 0 15px rgba(255, 215, 0, 0.4),
     0 0 25px rgba(255, 215, 0, 0.2);
   transform: scale(1.05);
+}
+
+.team-limit-input[readOnly]:focus {
+  transform: none;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+  border-color: #00d4ff;
 }
 
 /* Barevné akcenty podle týmu */
@@ -371,4 +404,414 @@ margin-top: 18px;
 
 .team-limits {
   gap: 12px; /* o trochu větší svislá mezera v seznamu */
+}
+
+/* Guaranteed Roles Section */
+.guaranteed-roles-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(255,215,0,0.05);
+  border: 2px solid rgba(255,215,0,0.3);
+  border-radius: 10px;
+}
+
+.guaranteed-roles-section h4 {
+  margin: 0 0 15px;
+  color: #ffd700;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guaranteed-roles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.guaranteed-roles-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.guaranteed-roles-list::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+}
+
+.guaranteed-roles-list::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 3px;
+}
+
+.guaranteed-role-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.guaranteed-role-item:hover {
+  border-color: rgba(255,215,0,0.6);
+  background: rgba(0,0,0,0.4);
+}
+
+.guaranteed-role-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.role-icon-inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.guaranteed-role-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guaranteed-count {
+  min-width: 30px;
+  text-align: center;
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.btn-add-to-pool {
+  padding: 4px 10px;
+  background: rgba(0,212,255,0.2);
+  border: 1px solid rgba(0,212,255,0.5);
+  border-radius: 6px;
+  color: #00d4ff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 8px;
+}
+
+.btn-add-to-pool:hover {
+  background: rgba(0,212,255,0.3);
+  border-color: #00d4ff;
+  transform: translateY(-1px);
+}
+
+/* Roles Validation */
+.roles-validation {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.roles-validation.warning {
+  background: rgba(231,76,60,0.1);
+  border: 2px solid rgba(231,76,60,0.5);
+  color: #e74c3c;
+}
+
+.roles-validation.success {
+  background: rgba(76,175,80,0.1);
+  border: 2px solid rgba(76,175,80,0.5);
+  color: #4caf50;
+}
+
+.roles-validation p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.roles-validation strong {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.roles-count-info.success {
+  color: #4caf50;
+}
+
+.roles-count-info.warning {
+  color: #e74c3c;
+}
+
+.btn-guaranteed-roles {
+  padding: 8px 16px;
+  background: rgba(255,215,0,0.1);
+  border: 1px solid rgba(255,215,0,0.4);
+  border-radius: 6px;
+  color: #ffd700;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.team-limit-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-left: 12px;
+}
+
+.team-total-display {
+  color: #00d4ff;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.team-total-display strong {
+  color: #00ffff;
+  font-size: 1.3rem;
+}
+
+.team-limit-summary small {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.85rem;
+}
+
+.btn-guaranteed-roles:hover {
+  background: rgba(255,215,0,0.2);
+  border-color: rgba(255,215,0,0.6);
+  transform: scale(1.1);
+}
+
+/* Guaranteed Roles Modal */
+.guaranteed-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.guaranteed-modal {
+  background: linear-gradient(135deg, #16213e, #0f3460);
+  border: 2px solid #ffd700;
+  border-radius: 15px;
+  width: 90vw;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 50px rgba(0,0,0,0.6);
+  animation: slideUp 0.3s ease-out;
+}
+
+.guaranteed-modal-header {
+  padding: 20px 25px;
+  background: rgba(255,215,0,0.1);
+  border-bottom: 2px solid #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guaranteed-modal-header h3 {
+  margin: 0;
+  color: #ffd700;
+  font-size: 1.3rem;
+}
+
+.guaranteed-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guaranteed-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.guaranteed-modal-body::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+}
+
+.guaranteed-modal-body::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 4px;
+}
+
+.guaranteed-role-item-modal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.guaranteed-role-item-modal:hover {
+  border-color: rgba(255,215,0,0.6);
+  background: rgba(0,0,0,0.4);
+}
+
+.guaranteed-role-name-modal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.guaranteed-role-controls-modal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guaranteed-count-modal {
+  min-width: 35px;
+  text-align: center;
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* Team Limit Control in Modal */
+.team-limit-control-modal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  background: rgba(0,212,255,0.1);
+  border: 2px solid rgba(0,212,255,0.3);
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+.team-limit-control-modal label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #00d4ff;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.team-icon-modal {
+  font-size: 1.5rem;
+}
+
+.team-limit-controls-modal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-limit-value-modal {
+  min-width: 50px;
+  text-align: center;
+  color: #00ffff;
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.3);
+  border: 2px solid #00d4ff;
+  border-radius: 8px;
+}
+
+/* Random Roles Info */
+.random-roles-info-modal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.random-roles-info-modal label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.random-count-modal {
+  color: #00d4ff;
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin: 0 8px;
+}
+
+.random-roles-info-modal small {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.85rem;
+}
+
+/* Guaranteed Section in Modal */
+.guaranteed-section-modal {
+  margin-bottom: 15px;
+}
+
+.guaranteed-section-modal h4 {
+  margin: 0 0 12px 0;
+  color: #ffd700;
+  font-size: 1.1rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,215,0,0.3);
+}
+
+/* Team Summary in Modal */
+.team-summary-modal {
+  padding: 15px;
+  background: rgba(0,212,255,0.1);
+  border: 2px solid rgba(0,212,255,0.3);
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.95rem;
+}
+
+.summary-row.total {
+  border-top: 2px solid rgba(0,212,255,0.3);
+  margin-top: 8px;
+  padding-top: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #00d4ff;
+}
+
+.summary-row.total strong {
+  color: #00ffff;
+  font-size: 1.3rem;
+}
+
+.summary-row strong {
+  color: #ffd700;
+  font-size: 1.1rem;
 }

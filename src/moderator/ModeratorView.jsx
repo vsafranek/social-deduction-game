@@ -158,6 +158,7 @@ function ModeratorView() {
         <LobbyLayout
           gameState={gameState}
           onStartGame={startGame}
+          onRefresh={fetchGameState}
         />
       ) : (
         <GameArena
