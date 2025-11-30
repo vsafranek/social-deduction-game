@@ -109,7 +109,6 @@ function RoleConfiguration({
 
   // Celkový počet rolí (pro validaci - musí se rovnat počtu hráčů)
   // Total roles = sum of all team limits (good + evil + neutral) + guaranteed roles
-  // Každý hráč musí dostat roli - buď náhodnou z poolu nebo garantovanou
   const totalRolesForValidation = (teamLimits.good || 0) + (teamLimits.evil || 0) + (teamLimits.neutral || 0) + guaranteedRoles.length;
   const rolesMatchPlayers = totalRolesForValidation === (playersCount || 0);
 
@@ -245,7 +244,8 @@ function RoleConfiguration({
           {showGuaranteedModal.show && showGuaranteedModal.team && (() => {
             const currentTeam = showGuaranteedModal.team;
             const teamGuaranteedCount = guaranteedByTeam[currentTeam] || 0;
-            const teamLimit = teamLimits[currentTeam] || 0; // Random Roles = počet náhodných rolí pro tým
+            // Random Roles = počet náhodných rolí pro tým
+            const teamLimit = teamLimits[currentTeam] || 0;
             const teamTotalCount = teamGuaranteedCount + teamLimit;
             return (
               <div className="guaranteed-modal-overlay" onClick={handleCloseGuaranteedModal}>
@@ -268,25 +268,34 @@ function RoleConfiguration({
                       <div className="team-limit-controls-modal">
                         <button
                           className="counter-btn minus"
-                          onClick={() => updateTeamLimit(currentTeam, Math.max(0, teamLimit - 1))}
-                          disabled={teamLimit === 0}
+                          onClick={() => {
+                            const currentLimit = teamLimits[currentTeam] || 0;
+                            if (currentLimit > 0) {
+                              updateTeamLimit(currentTeam, currentLimit - 1);
+                            }
+                          }}
+                          disabled={(teamLimits[currentTeam] || 0) === 0}
                         >−</button>
-                        <span className="team-limit-value-modal">{teamLimit}</span>
+                        <span className="team-limit-value-modal">
+                          {teamLimits[currentTeam] || 0}
+                        </span>
                         <button
                           className="counter-btn plus"
                           onClick={() => {
+                            const currentLimit = teamLimits[currentTeam] || 0;
                             const result = canAddRandomRole({
-                              currentTeamRandomCount: teamLimit,
+                              currentTeamRandomCount: currentLimit,
                               teamGuaranteedCount,
                               teamPoolSize: teamPoolSizeByTeam[currentTeam] || 0
                             });
                             if (result.canAdd) {
-                              updateTeamLimit(currentTeam, teamLimit + 1);
+                              updateTeamLimit(currentTeam, currentLimit + 1);
                             }
                           }}
                           disabled={(() => {
+                            const currentLimit = teamLimits[currentTeam] || 0;
                             const result = canAddRandomRole({
-                              currentTeamRandomCount: teamLimit,
+                              currentTeamRandomCount: currentLimit,
                               teamGuaranteedCount,
                               teamPoolSize: teamPoolSizeByTeam[currentTeam] || 0
                             });
@@ -310,11 +319,12 @@ function RoleConfiguration({
                         // Kontrola limitu pomocí utility funkce
                         // teamPoolSize = pool size pro tým (stejná logika jako configuredSumByTeam)
                         const teamPoolSize = teamPoolSizeByTeam[currentTeam] || 0;
+                        const teamRandomCountForCheck = teamLimits[currentTeam] || 0;
                         const checkResult = canAddGuaranteedRole({
                           guaranteedCount,
                           poolCount,
                           teamGuaranteedCount,
-                          teamRandomCount: teamLimit, // teamLimit je počet random rolí
+                          teamRandomCount: teamRandomCountForCheck,
                           teamPoolSize
                         });
                         
@@ -362,7 +372,7 @@ function RoleConfiguration({
                       </div>
                       <div className="summary-row">
                         <span>Random:</span>
-                        <strong>{teamLimit}</strong>
+                        <strong>{teamLimits[currentTeam] || 0}</strong>
                       </div>
                       <div className="summary-row total">
                         <span>Total:</span>

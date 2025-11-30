@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import './TopBar.css';
 
-function TopBar({ gameState, onConnectionClick, onDevToggle }) {
+function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
   const [isDevPanelOpen, setIsDevPanelOpen] = useState(false);
   
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -27,6 +27,18 @@ function TopBar({ gameState, onConnectionClick, onDevToggle }) {
       </div>
 
       <div className="topbar-right">
+        {/* Test Stories Button - only visible in development */}
+        {isDevelopment && onTestStories && (
+          <button
+            className="topbar-button test-stories-button"
+            onClick={onTestStories}
+            title="Přehrát ukázku všech nočních příběhů"
+            style={{ marginRight: '8px', background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', border: '1px solid rgba(139, 92, 246, 0.5)' }}
+          >
+            🎬 Stories Test
+          </button>
+        )}
+
         {/* Počet připojených hráčů */}
         <div className="player-count">
           👥 {gameState?.players?.length || 0} hráčů

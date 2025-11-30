@@ -1,5 +1,5 @@
 // src/player/components/NightResultsStories/NightResultsStories.jsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './NightResultsStories.css';
 
 const RESULT_MAPPING = {
@@ -35,13 +35,6 @@ const RESULT_MAPPING = {
     emoji: '🪤', 
     label: 'Past!', 
     subtitle: 'Spadl jsi do pasti',
-    bgGradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    hideDetails: false
-  },
-  'drunk': { 
-    emoji: '🍺', 
-    label: 'Příliš opilý', 
-    subtitle: 'Tvá akce selhala',
     bgGradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
     hideDetails: false
   },
@@ -143,8 +136,18 @@ function NightResultsStories({ results = [], onComplete }) {
   const startTimeRef = useRef(Date.now());
   const pausedTimeRef = useRef(0);
 
+  const visibleResults = useMemo(() => {
+    return results.filter((r) => {
+      if (r === null || r === undefined) {
+        return false;
+      }
+      const type = typeof r === 'string' ? r.split(':')[0] : r?.type;
+      return type !== 'drunk';
+    });
+  }, [results]);
+
   const goToNext = useCallback(() => {
-    if (currentIndex < results.length - 1) {
+    if (currentIndex < visibleResults.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setProgress(0);
       startTimeRef.current = Date.now();
@@ -152,10 +155,16 @@ function NightResultsStories({ results = [], onComplete }) {
     } else {
       onComplete();
     }
-  }, [currentIndex, results.length, onComplete]);
+  }, [currentIndex, visibleResults.length, onComplete]);
 
   useEffect(() => {
-    if (currentIndex >= results.length) {
+    if (visibleResults.length === 0) {
+      onComplete();
+    }
+  }, [visibleResults.length, onComplete]);
+
+  useEffect(() => {
+    if (currentIndex >= visibleResults.length) {
       onComplete();
       return;
     }
@@ -183,9 +192,9 @@ function NightResultsStories({ results = [], onComplete }) {
         clearInterval(timerRef.current);
       }
     };
-  }, [currentIndex, isPaused, results.length, onComplete, goToNext]);
+  }, [currentIndex, isPaused, visibleResults.length, onComplete, goToNext]);
 
-  if (results.length === 0) {
+  if (visibleResults.length === 0) {
     return null;
   }
 
@@ -197,7 +206,7 @@ function NightResultsStories({ results = [], onComplete }) {
     return r;
   };
 
-  const currentResult = parseResult(results[currentIndex]);
+  const currentResult = parseResult(visibleResults[currentIndex]);
   const eventData = RESULT_MAPPING[currentResult.type] || RESULT_MAPPING['safe'];
   
   // ✅ Rozhodnutí o zobrazení detailů
@@ -242,7 +251,7 @@ function NightResultsStories({ results = [], onComplete }) {
     >
       {/* Progress bars */}
       <div className="stories-progress">
-        {results.map((_, idx) => (
+        {visibleResults.map((_, idx) => (
           <div key={idx} className="progress-bar-container">
             <div 
               className="progress-bar"
@@ -292,7 +301,7 @@ function NightResultsStories({ results = [], onComplete }) {
 
         {/* Counter */}
         <div className="story-counter">
-          {currentIndex + 1} / {results.length}
+          {currentIndex + 1} / {visibleResults.length}
         </div>
       </div>
 

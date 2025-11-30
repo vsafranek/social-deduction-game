@@ -34,10 +34,10 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
     Object.fromEntries(Object.keys(availableRoles).map(r => [r, null])) // null = unlimited
   );
 
-  // Limity týmů (defaultně 0)
+  // Limity týmů (0 = žádné random role z tohoto týmu, číslo > 0 = pevný limit)
   const [teamLimits, setTeamLimits] = useState({
-    good: 0,
-    evil: 0,
+    good: 2,
+    evil: 1,
     neutral: 0
   });
 
@@ -116,6 +116,7 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
   };
 
   const updateTeamLimit = (team, value) => {
+    // Parsuj jako číslo (minimum 0)
     const num = Math.max(0, parseInt(value || 0));
     setTeamLimits(prev => ({ ...prev, [team]: num }));
   };
@@ -172,8 +173,8 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
         const currentRoleCount = roleCounts[candidate] || 0;
         
         // Zkontroluj limity
-        // teamLimit === null znamená neomezeno, teamLimit === 0 znamená žádné role z tohoto týmu
-        const withinTeamLimit = (teamLimit === null) || (teamLimit > 0 && countByTeam[team] < teamLimit);
+        // teamLimit === 0 znamená žádné role z tohoto týmu, teamLimit > 0 znamená pevný limit
+        const withinTeamLimit = teamLimit > 0 && countByTeam[team] < teamLimit;
         const withinRoleLimit = roleLimit === null || currentRoleCount < roleLimit;
         
         if (withinTeamLimit && withinRoleLimit) {
@@ -198,6 +199,12 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
     const built = buildFinalRoleDistribution();
     onStartGame(built.finalRoles, built.modifierConfig);
   };
+
+  // Výpočet celkového počtu rolí pro validaci
+  // Total = součet teamLimits (good + evil + neutral) + garantované role
+  const totalRolesForValidation = useMemo(() => {
+    return (teamLimits.good || 0) + (teamLimits.evil || 0) + (teamLimits.neutral || 0) + guaranteedRoles.length;
+  }, [teamLimits, guaranteedRoles.length]);
 
   return (
     <div className="lobby-layout">
@@ -231,16 +238,10 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
         setModifierConfig={setModifierConfig}
         onStartGame={onClickStartGame}
         canStart={(() => {
-          // Celkový počet rolí = součet teamLimits (good + evil + neutral) + garantované role
-          // Každý hráč musí dostat roli - buď náhodnou z poolu nebo garantovanou
-          const totalRolesForValidation = (teamLimits.good || 0) + (teamLimits.evil || 0) + (teamLimits.neutral || 0) + guaranteedRoles.length;
           const playersCount = gameState.players.length;
-          
           return playersCount >= 3 && totalRolesForValidation === playersCount;
         })()}
-        totalRolesForValidation={(() => {
-          return (teamLimits.good || 0) + (teamLimits.evil || 0) + (teamLimits.neutral || 0) + guaranteedRoles.length;
-        })()}
+        totalRolesForValidation={totalRolesForValidation}
       />
     </div>
   );

@@ -5,7 +5,30 @@ import ConnectionDropdown from './ConnectionDropdown/ConnectionDropdown';
 import LobbyLayout from './Lobby/LobbyLayout';
 import GameArena from './GameArena/GameArena';
 import DevMultiPlayerTool from './DevMultiPlayerTool/DevMultiPlayerTool';
+import NightResultsStories from '../player/components/NightResultsStories/NightResultsStories';
 import './ModeratorView.css';
+
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+
+const TEST_STORIES_DATA = [
+  'killed:Testovací Hráč',
+  'attacked:Neznámý Útočník',
+  'healed:Byl jsi zachráněn',
+  'blocked:Policista tě zablokoval',
+  'trapped:Spadl jsi do pasti',
+  'success:Tvá akce byla úspěšná',
+  'visited:Někdo tě navštívil',
+  'watch:Viděl jsi: Hráč1, Hráč2',
+  'track:Sledovaný šel k: Cíl',
+  'investigate:Cíl je: MAFIA',
+  'autopsy:Příčina smrti: Nůž',
+  'safe:Klidná noc',
+  'protect:Ochránil jsi cíl',
+  'insomniac:Viděl jsi pohyb u: Hráč3',
+  'consig:Role cíle je: DETEKTIV',
+  'hunter_success:Zastřelil jsi vlkodlaka',
+  'hunter_guilt:Zabil jsi nevinného'
+];
 
 function ModeratorView() {
   const [gameId, setGameId] = useState(null);
@@ -15,6 +38,7 @@ function ModeratorView() {
   const [error, setError] = useState(null);
   const [showConnectionBox, setShowConnectionBox] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
+  const [showTestStories, setShowTestStories] = useState(false);
 
   useEffect(() => {
     initializeGame();
@@ -135,6 +159,7 @@ function ModeratorView() {
           gameState={gameState} 
           onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
           onDevToggle={setShowDevPanel}
+          onTestStories={IS_DEVELOPMENT ? () => setShowTestStories(true) : undefined}
         />
       )}
 
@@ -165,6 +190,14 @@ function ModeratorView() {
           gameState={gameState}
           onEndNight={endNight}
           onEndDay={endDay}
+        />
+      )}
+
+      {/* Test Night Stories Overlay - development only */}
+      {IS_DEVELOPMENT && showTestStories && (
+        <NightResultsStories 
+          results={TEST_STORIES_DATA}
+          onComplete={() => setShowTestStories(false)}
         />
       )}
     </div>
