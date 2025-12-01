@@ -179,14 +179,18 @@ function NightResults({ player, results = [] }) {
 
   const mainResult = getMostImportant();
   const mainEventData = RESULT_MAPPING[mainResult.type] || RESULT_MAPPING['safe'];
+  
+  // Zobraz rozklikávací šipku pouze pokud je více výsledků nebo výsledek není "safe"
+  const shouldShowExpand = displayedResults.length > 1 || mainResult.type !== 'safe';
+  const isClickable = shouldShowExpand;
 
   return (
     <div className="night-results-container">
       {/* Main summary card */}
       <div 
-        className={`night-result-summary ${mainEventData.severity}`}
+        className={`night-result-summary ${mainEventData.severity} ${isClickable ? 'clickable' : ''}`}
         style={{ background: mainEventData.bgGradient }}
-        onClick={() => setExpanded(!expanded)}
+        onClick={isClickable ? () => setExpanded(!expanded) : undefined}
       >
         <div className="result-summary-content">
           <span className="result-emoji">{mainEventData.emoji}</span>
@@ -196,9 +200,11 @@ function NightResults({ player, results = [] }) {
               <span className="result-detail">{mainResult.detail}</span>
             )}
           </div>
-          <button className="expand-btn">
-            {expanded ? '▼' : '▶'}
-          </button>
+          {shouldShowExpand && (
+            <button className="expand-btn">
+              {expanded ? '▼' : '▶'}
+            </button>
+          )}
         </div>
       </div>
 
