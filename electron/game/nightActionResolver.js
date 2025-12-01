@@ -230,10 +230,11 @@ async function resolveNightActions(game, players) {
       }
 
       case 'trap': {
-        addEffect(actor, 'trap', actor._id, null, {});
-        toSave.add(actorId);
-        actor.nightAction.results.push('success:Nastavil jsi past');
-        console.log(`  🪤 [P${actionData.priority}] ${actor.name} set a trap`);
+        // Trapper pokládá past na cílového hráče, ne na sebe
+        addEffect(target, 'trap', actor._id, null, {});
+        toSave.add(targetId);
+        actor.nightAction.results.push(`success:Nastavil jsi past u ${target.name}`);
+        console.log(`  🪤 [P${actionData.priority}] ${actor.name} set a trap on ${target.name}'s house`);
         break;
       }
 
@@ -393,7 +394,8 @@ async function resolveNightActions(game, players) {
         if (!actor.roleData.visitedPlayers) actor.roleData.visitedPlayers = [];
         
         // Přidej cílového hráče do seznamu navštívených (pokud tam ještě není)
-        const visitedIds = actor.roleData.visitedPlayers.map(id => id.toString());
+        // Použij bezpečný pattern s optional chaining a filter (stejně jako v victoryEvaluator.js)
+        const visitedIds = actor.roleData.visitedPlayers.map(id => id?.toString()).filter(Boolean);
         if (!visitedIds.includes(targetId)) {
           actor.roleData.visitedPlayers.push(target._id);
           toSave.add(actorId);

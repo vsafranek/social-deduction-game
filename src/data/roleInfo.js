@@ -74,13 +74,13 @@ export const ROLE_INFO = {
     emoji: '🪤',
     team: 'good',
     teamLabel: 'Město',
-    description: 'Nastav past u svého domu - návštěvníci jsou odhaleni',
+    description: 'Nastav past u domu jiného hráče - návštěvníci spadnou do pasti',
     actionVerb: 'Nastavit past',
     nightAction: {
       verb: 'Nastav Past',
       icon: '🪤',
       color: 'green',
-      description: 'Nastav past na svém domě'
+      description: 'Nastav past u domu jiného hráče'
     }
   },
   'Tracker': {

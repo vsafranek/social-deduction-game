@@ -60,11 +60,8 @@ function NightPhase({ player, players, onAction }) {
       mode, 
       role: player.role 
     });
-
-    // Pro Trapper - cíl je vlastní ID
-    const finalTargetId = player.role === 'Trapper' ? player._id : targetId;
     
-    onAction(finalTargetId, mode);
+    onAction(targetId, mode);
     setActionDone(true);
     setShowActionModal(false);
   };
@@ -95,33 +92,6 @@ function NightPhase({ player, players, onAction }) {
   }
 
 
-  // Trapper má speciální UI
-  if (player.role === 'Trapper') {
-    return (
-      <div className="night-phase">
-        <div className="night-header">
-          <h3>🌙 Noc - {actionInfo.icon} {actionInfo.verb}</h3>
-          <p>{actionInfo.description}</p>
-        </div>
-        
-        <div className="trap-info">
-          <p>🪤 Nastav past na svůj dům</p>
-          <p className="small">Návštěvníci budou odhaleni a jejich akce selže</p>
-        </div>
-
-        <button 
-          className={`action-button ${actionInfo.color}`}
-          onClick={() => {
-            // Trapper targets themselves
-            onAction(player._id, 'trap');
-            setActionDone(true);
-          }}
-        >
-          {actionInfo.icon} {actionInfo.verb}
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="night-phase">
@@ -186,6 +156,10 @@ function NightPhase({ player, players, onAction }) {
             // Cleaner with clean_role action can target both alive and dead players
             if (player.role === 'Cleaner' && selectedMode === 'clean_role') {
               return players.filter(p => p._id !== player._id); // Both alive and dead
+            }
+            // Trapper can target alive players (to set trap on their house)
+            if (player.role === 'Trapper') {
+              return players.filter(p => p._id !== player._id && p.alive);
             }
             // All other roles/actions target alive players
             return players.filter(p => p._id !== player._id && p.alive);
