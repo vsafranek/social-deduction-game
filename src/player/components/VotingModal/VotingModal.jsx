@@ -4,10 +4,13 @@ import './VotingModal.css';
 
 function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const SKIP_VALUE = 'skip';
 
   const handleVote = () => {
+    // Pokud je vybrán skip, pošleme null, jinak ID hráče
+    const targetId = selectedPlayer === SKIP_VALUE ? null : selectedPlayer;
     if (selectedPlayer) {
-      onVote(selectedPlayer);
+      onVote(targetId);
     }
   };
 
@@ -67,6 +70,27 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
                 )}
               </button>
             ))}
+            
+            {/* Tlačítko pro přeskočení */}
+            <button
+              className={`player-vote-item skip-vote-item ${selectedPlayer === SKIP_VALUE ? 'selected' : ''}`}
+              onClick={() => setSelectedPlayer(SKIP_VALUE)}
+            >
+              <div className="player-vote-avatar">
+                <div className="vote-avatar-fallback" style={{ display: 'flex' }}>
+                  ⏭️
+                </div>
+              </div>
+              <div className="player-vote-info">
+                <span className="player-vote-name">Přeskočit hlasování</span>
+                {selectedPlayer === SKIP_VALUE && (
+                  <span className="selected-badge">Vybráno</span>
+                )}
+              </div>
+              {selectedPlayer === SKIP_VALUE && (
+                <span className="check-icon">✓</span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -82,7 +106,7 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
             onClick={handleVote}
             disabled={!selectedPlayer}
           >
-            Potvrdit hlas
+            {selectedPlayer === SKIP_VALUE ? 'Přeskočit' : 'Potvrdit hlas'}
           </button>
         </div>
       </div>

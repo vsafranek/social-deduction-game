@@ -109,6 +109,21 @@
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
+.skip-vote-item {
+  border-color: rgba(156, 163, 175, 0.3) !important;
+}
+
+.skip-vote-item:hover {
+  border-color: rgba(156, 163, 175, 0.6) !important;
+  background: rgba(156, 163, 175, 0.1) !important;
+}
+
+.skip-vote-item.selected {
+  background: rgba(156, 163, 175, 0.2) !important;
+  border-color: rgba(156, 163, 175, 0.8) !important;
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.1) !important;
+}
+
 .player-vote-avatar {
   font-size: 28px;
   width: 44px;

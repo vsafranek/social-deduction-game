@@ -211,7 +211,7 @@ describe('votingResolver', () => {
 
   describe('Successful Execution', () => {
     
-    test('should execute player with majority (3 votes out of 5)', async () => {
+    test('should execute player with majority (4 votes out of 6)', async () => {
       const game = createMockGame();
       const target = createMockPlayer('1', 'Target', 'Citizen');
       const players = [
@@ -219,8 +219,8 @@ describe('votingResolver', () => {
         createMockPlayer('2', 'Voter1', 'Citizen', { voteFor: '1' }),
         createMockPlayer('3', 'Voter2', 'Citizen', { voteFor: '1' }),
         createMockPlayer('4', 'Voter3', 'Citizen', { voteFor: '1' }),
-        createMockPlayer('5', 'Voter4', 'Citizen', { voteFor: '1' }), // 4 votes for majority (need 4 out of 6)
-        createMockPlayer('6', 'Abstain1', 'Citizen', { voteFor: null })
+        createMockPlayer('5', 'Voter4', 'Citizen', { voteFor: '1' }), // 4 votes for majority (need 4 = floor(6/2) + 1)
+        createMockPlayer('6', 'Abstain1', 'Citizen', { voteFor: null }) // Abstain counts in totalWeightedVotes
       ];
 
       const result = await resolveDayVoting(game, players, mockGameLog);
@@ -229,7 +229,7 @@ describe('votingResolver', () => {
       // executedName should be set if target was found and executed
       if (result.executed) {
         expect(result.executedName).toBe('Target');
-        expect(result.votesAgainst).toBe(2); // 6 total - 4 votes = 2 against
+        expect(result.votesAgainst).toBe(2); // 6 total - 4 votes = 2 against (including abstain)
         expect(result.totalAlive).toBe(6);
       }
       expect(result.votesFor).toBe(4);
@@ -237,7 +237,7 @@ describe('votingResolver', () => {
       expect(target.save).toHaveBeenCalled();
       expect(mockGameLog.create).toHaveBeenCalledWith({
         gameId: game._id,
-        message: 'Executed: Target (4/6 votes)'
+        message: 'Executed: Target (4/6 weighted votes)'
       });
     });
 
@@ -446,7 +446,7 @@ describe('votingResolver', () => {
 
   describe('Vote Counting Logic', () => {
     
-    test('should correctly count votes against (abstain)', async () => {
+    test('should correctly count votes against (abstain/skip)', async () => {
       const game = createMockGame();
       const target = createMockPlayer('1', 'Target', 'Citizen');
       const players = [
@@ -460,11 +460,55 @@ describe('votingResolver', () => {
 
       const result = await resolveDayVoting(game, players, mockGameLog);
 
-      // 2 votes is not majority for 6 players (need 4)
+      // 2 votes is not majority for 6 players (need 4 = floor(6/2) + 1)
       expect(result.executed).toBeNull();
       expect(result.reason).toBe('insufficient_votes');
       expect(result.votesFor).toBe(2);
       // votesAgainst and totalAlive are only returned when execution happens
+    });
+
+    test('should correctly count skip votes as votes against (majority calculation)', async () => {
+      const game = createMockGame();
+      const target = createMockPlayer('1', 'Target', 'Citizen');
+      const players = [
+        target,
+        createMockPlayer('2', 'Voter1', 'Citizen', { voteFor: '1' }),
+        createMockPlayer('3', 'Voter2', 'Citizen', { voteFor: '1' }),
+        createMockPlayer('4', 'Skip1', 'Citizen', { voteFor: null, hasVoted: true }), // Skip vote
+        createMockPlayer('5', 'Skip2', 'Citizen', { voteFor: null, hasVoted: true }) // Skip vote
+      ];
+
+      const result = await resolveDayVoting(game, players, mockGameLog);
+
+      // 2 votes is not majority for 5 players (need 3 = floor(5/2) + 1)
+      // Skip votes count as votes against in totalWeightedVotes
+      expect(result.executed).toBeNull();
+      expect(result.reason).toBe('insufficient_votes');
+      expect(result.votesFor).toBe(2);
+      expect(target.alive).toBe(true);
+    });
+
+    test('should require majority even with skip votes (4 votes out of 6 with 2 skips)', async () => {
+      const game = createMockGame();
+      const target = createMockPlayer('1', 'Target', 'Citizen');
+      const players = [
+        target,
+        createMockPlayer('2', 'Voter1', 'Citizen', { voteFor: '1' }),
+        createMockPlayer('3', 'Voter2', 'Citizen', { voteFor: '1' }),
+        createMockPlayer('4', 'Voter3', 'Citizen', { voteFor: '1' }),
+        createMockPlayer('5', 'Voter4', 'Citizen', { voteFor: '1' }),
+        createMockPlayer('6', 'Skip1', 'Citizen', { voteFor: null, hasVoted: true }),
+        createMockPlayer('7', 'Skip2', 'Citizen', { voteFor: null, hasVoted: true })
+      ];
+
+      const result = await resolveDayVoting(game, players, mockGameLog);
+
+      // 4 votes is majority for 7 players (need 4 = floor(7/2) + 1)
+      expect(result.executed).toBeDefined();
+      expect(result.executedName).toBe('Target');
+      expect(result.votesFor).toBe(4);
+      expect(result.votesAgainst).toBe(3); // 7 total - 4 votes = 3 against (including skips)
+      expect(target.alive).toBe(false);
     });
 
     test('should handle single player voting', async () => {

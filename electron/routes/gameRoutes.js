@@ -337,23 +337,42 @@ router.post('/:gameId/vote', async (req, res) => {
     player.voteFor = targetId ? targetId : null;
     await player.save();
 
-    await GameLog.create({ gameId, message: `${player.name} voted.` });
+    // Zaznamenej zprávu o hlasování
+    if (targetId) {
+      const target = await Player.findById(targetId);
+      await GameLog.create({ gameId, message: `${player.name} voted for ${target?.name || 'unknown'}.` });
+    } else {
+      await GameLog.create({ gameId, message: `${player.name} skipped voting.` });
+    }
 
     // Zkontroluj, zda všichni živí odhlasovali
     const alivePlayers = await Player.find({ gameId, alive: true });
     const allVoted = alivePlayers.every(p => p.hasVoted);
+    
+    // Zkontroluj, zda všichni hlasovali skip (null)
+    const allSkipped = allVoted && alivePlayers.every(p => !p.voteFor);
 
     if (allVoted && game.timerState?.phaseEndsAt) {
       const now = Date.now();
       const currentEnds = new Date(game.timerState.phaseEndsAt).getTime();
-      const shortDeadline = now + 10 * 1000; // 10 sekund od teď
-
-      // Zkrať pouze pokud by to bylo dřív než původní deadline
-      if (shortDeadline < currentEnds) {
-        game.timerState.phaseEndsAt = new Date(shortDeadline);
+      
+      if (allSkipped) {
+        // Pokud všichni hlasovali skip, přeskoč čas (ukonči den okamžitě)
+        game.timerState.phaseEndsAt = new Date(now + 3 * 1000); // 3 sekundy na přechod
         await game.save();
-        await GameLog.create({ gameId, message: '⏱️ All voted, day ends in 10s' });
-        console.log('⏱️ All alive players voted, shortening day to 10s');
+        await GameLog.create({ gameId, message: '⏱️ All players skipped voting, day ends in 3s' });
+        console.log('⏱️ All alive players skipped voting, ending day in 3s');
+      } else {
+        // Normální zkrácení na 10 sekund
+        const shortDeadline = now + 10 * 1000; // 10 sekund od teď
+
+        // Zkrať pouze pokud by to bylo dřív než původní deadline
+        if (shortDeadline < currentEnds) {
+          game.timerState.phaseEndsAt = new Date(shortDeadline);
+          await game.save();
+          await GameLog.create({ gameId, message: '⏱️ All voted, day ends in 10s' });
+          console.log('⏱️ All alive players voted, shortening day to 10s');
+        }
       }
     }
 

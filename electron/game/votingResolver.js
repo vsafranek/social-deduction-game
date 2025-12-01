@@ -5,10 +5,11 @@
  * Handles day voting with majority rules:
  * - First day (round 1): Vote for Mayor instead of execution
  * - Subsequent days: Vote for execution
- * - If player doesn't vote, it counts as vote AGAINST execution (abstain)
- * - Majority (>50%) is needed to execute
+ * - If player doesn't vote or skips, it counts as vote AGAINST execution (abstain)
+ * - Majority (>50% of ALL votes) is needed to execute - includes skips and non-votes
  * - Ties or insufficient votes = no execution
  * - Mayor has 2 votes (voteWeight = 2)
+ * - Total votes = sum of all weighted votes from all alive players (including skips)
  */
 
 async function resolveDayVoting(game, players, GameLog) {
@@ -179,14 +180,18 @@ async function resolveExecutionVoting(game, players, GameLog) {
   const totalAlive = alive.length;
 
   // Count votes per candidate (with vote weight - mayor has 2 votes)
+  // POZNÁMKA: Skipy (voteFor = null) se nepočítají do voteCounts, ale jejich voteWeight
+  // se počítá do totalWeightedVotes pro výpočet většiny
   const voteCounts = new Map(); // targetId -> weighted vote count
   
   for (const p of alive) {
     if (p.voteFor) {
+      // Pouze hlasy pro konkrétního hráče (skipy mají voteFor = null)
       const key = p.voteFor.toString();
       const weight = p.voteWeight || 1;
       voteCounts.set(key, (voteCounts.get(key) || 0) + weight);
     }
+    // Skipy (voteFor = null) se přeskočí, ale jejich voteWeight se počítá do totalWeightedVotes
   }
 
   // If nobody voted for anyone
@@ -227,24 +232,31 @@ async function resolveExecutionVoting(game, players, GameLog) {
   }
 
   // Calculate total weighted votes (for majority calculation)
+  // Zahrnuje VŠECHNY živé hráče - včetně těch, co skipují nebo nehlasují
   let totalWeightedVotes = 0;
   for (const p of alive) {
     totalWeightedVotes += (p.voteWeight || 1);
   }
 
-  // ✅ NOVÉ: Hlasování proti (nehlasující = against)
+  // Hlasy pro vyloučení = součet vážených hlasů pro top kandidáta
   const votesFor = topVotes;
+  // Hlasy proti = všechny ostatní hlasy (skipy, nehlasující, hlasy pro jiné)
   const votesAgainst = totalWeightedVotes - votesFor;
+  // Nadpoloviční většina = více než 50% všech hlasů
+  // Math.floor(totalWeightedVotes / 2) + 1 zajišťuje, že potřebujeme více než polovinu
+  // Např. pro 4 hlasy: Math.floor(4/2) + 1 = 3 (více než 2)
+  // Např. pro 5 hlasů: Math.floor(5/2) + 1 = 3 (více než 2.5)
   const majorityThreshold = Math.floor(totalWeightedVotes / 2) + 1;
 
   console.log(`  📊 Voting stats:`);
   console.log(`     Total alive: ${totalAlive}`);
   console.log(`     Total weighted votes: ${totalWeightedVotes}`);
   console.log(`     Votes FOR execution: ${votesFor}`);
-  console.log(`     Votes AGAINST (abstain): ${votesAgainst}`);
-  console.log(`     Majority needed: ${majorityThreshold}`);
+  console.log(`     Votes AGAINST (skip/abstain/other): ${votesAgainst}`);
+  console.log(`     Majority needed: ${majorityThreshold} (more than 50%)`);
 
-  // Pokud nemá většinu, neexekutuje se
+  // ✅ KONTROLA: Hráč může být vyloučen pouze pokud má nadpoloviční většinu všech hlasů
+  // Pokud nemá většinu (více než 50%), neexekutuje se
   if (votesFor < majorityThreshold) {
     const target = players.find(p => p._id.toString() === topId);
     await GameLog.create({ 

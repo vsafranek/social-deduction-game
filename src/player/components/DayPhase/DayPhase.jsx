@@ -3,20 +3,32 @@ import React from 'react';
 import './DayPhase.css';
 
 function DayPhase({ onOpenVoting, hasVoted, votedPlayerName, isMayorElection = false }) {
-  if (hasVoted && votedPlayerName) {
-    return (
-      <div className="day-phase">
-        <div className="vote-confirmed">
-          <span>✅</span>
-          <p>
-            {isMayorElection 
-              ? `Hlasoval jsi pro starostu: ${votedPlayerName}`
-              : `Hlasoval jsi pro ${votedPlayerName}`
-            }
-          </p>
+  if (hasVoted) {
+    if (votedPlayerName) {
+      return (
+        <div className="day-phase">
+          <div className="vote-confirmed">
+            <span>✅</span>
+            <p>
+              {isMayorElection 
+                ? `Hlasoval jsi pro starostu: ${votedPlayerName}`
+                : `Hlasoval jsi pro ${votedPlayerName}`
+              }
+            </p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      // Hlasoval skip (přeskočit)
+      return (
+        <div className="day-phase">
+          <div className="vote-confirmed">
+            <span>⏭️</span>
+            <p>Přeskočil jsi hlasování</p>
+          </div>
+        </div>
+      );
+    }
   }
 
   return (

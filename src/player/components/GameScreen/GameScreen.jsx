@@ -71,7 +71,8 @@ function GameScreen({
 
   // Zjisti, jestli už hlasoval
   const hasVoted = currentPlayer.hasVoted || currentPlayer.voteFor;
-  const votedPlayer = hasVoted 
+  // Pokud hlasoval a má voteFor, najdi hráče, jinak null (skip nebo nehlasoval)
+  const votedPlayer = hasVoted && currentPlayer.voteFor
     ? gameState.players.find(p => p._id === currentPlayer.voteFor)
     : null;
 
