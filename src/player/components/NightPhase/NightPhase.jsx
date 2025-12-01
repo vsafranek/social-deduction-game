@@ -196,6 +196,7 @@ function NightPhase({ player, players, onAction }) {
           selectedMode={selectedMode}
           isDualRole={isDualRole}
           usesRemaining={usesRemaining}
+          visitedPlayers={player.role === 'Infected' ? (player.roleData?.visitedPlayers || []) : []}
         />
       )}
     </div>

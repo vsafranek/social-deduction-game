@@ -208,7 +208,8 @@ router.get('/:gameId/state', async (req, res) => {
       voteFor: p.voteFor,
       voteWeight: p.voteWeight || 1,
       avatar: p.avatar,
-      nightResults: p.nightAction?.results || []
+      nightResults: p.nightAction?.results || [],
+      roleData: p.roleData || {} // Přidej roleData pro sledování navštívených hráčů (Infected)
     }));
 
     res.json({

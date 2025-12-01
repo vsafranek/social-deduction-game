@@ -85,6 +85,26 @@ function evaluateCustomRule(rule, ctx) {
       return true;
     }
 
+    case 'allOthersVisited': {
+      // Pro Infected roli - zkontroluj, zda navštívil všechny živé hráče
+      const self = ctx.self;
+      if (!self || self.role !== 'Infected') return false;
+      
+      const alive = ctx.players.filter(pl => pl.alive && pl._id.toString() !== self._id.toString());
+      if (alive.length === 0) return true; // Pokud není nikdo jiný naživu, vyhrává
+      
+      const visitedPlayers = self.roleData?.visitedPlayers || [];
+      const visitedIds = visitedPlayers.map(id => id?.toString()).filter(Boolean);
+      
+      // Zkontroluj, zda všechny živé hráče byly navštíveny
+      for (const pl of alive) {
+        if (!visitedIds.includes(pl._id.toString())) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     default:
       return false;
   }

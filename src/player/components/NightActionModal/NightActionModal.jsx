@@ -9,9 +9,26 @@ function NightActionModal({
   actionInfo, 
   selectedMode,
   isDualRole,
-  usesRemaining 
+  usesRemaining,
+  visitedPlayers = []
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  
+  // Pro Infected roli - zkontroluj, zda je hráč už navštíven
+  const isPlayerVisited = (playerId) => {
+    if (!visitedPlayers || visitedPlayers.length === 0) return false;
+    
+    // Normalizuj playerId na string
+    const normalizedPlayerId = playerId?.toString();
+    if (!normalizedPlayerId) return false;
+    
+    // Zkontroluj, zda je hráč v seznamu navštívených
+    return visitedPlayers.some(visitedId => {
+      // visitedId může být ObjectId objekt nebo string
+      const normalizedVisitedId = visitedId?.toString?.() || visitedId?.toString() || String(visitedId);
+      return normalizedVisitedId === normalizedPlayerId;
+    });
+  };
 
   const handleConfirm = () => {
     if (selectedPlayer) {
@@ -50,48 +67,54 @@ function NightActionModal({
           )}
 
           <div className="players-action-list">
-            {players.map(player => (
-              <button
-                key={player._id}
-                className={`player-action-item ${selectedPlayer === player._id ? 'selected' : ''}`}
-                onClick={() => setSelectedPlayer(player._id)}
-              >
-                <div className="player-action-avatar">
-                  {player.avatar ? (
-                    <img 
-                      src={player.avatar} 
-                      alt={player.name}
-                      className="action-avatar-img"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        const fallback = e.target.nextElementSibling;
-                        if (fallback) {
-                          fallback.style.display = 'flex';
-                        }
-                      }}
-                    />
-                  ) : null}
-                  <div 
-                    className="action-avatar-fallback"
-                    style={{ display: player.avatar ? 'none' : 'flex' }}
-                  >
-                    {player.alive ? '✅' : '💀'}
+            {players.map(player => {
+              const visited = isPlayerVisited(player._id);
+              return (
+                <button
+                  key={player._id}
+                  className={`player-action-item ${selectedPlayer === player._id ? 'selected' : ''} ${visited ? 'visited' : ''}`}
+                  onClick={() => setSelectedPlayer(player._id)}
+                >
+                  <div className="player-action-avatar">
+                    {player.avatar ? (
+                      <img 
+                        src={player.avatar} 
+                        alt={player.name}
+                        className="action-avatar-img"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const fallback = e.target.nextElementSibling;
+                          if (fallback) {
+                            fallback.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className="action-avatar-fallback"
+                      style={{ display: player.avatar ? 'none' : 'flex' }}
+                    >
+                      {player.alive ? '✅' : '💀'}
+                    </div>
                   </div>
-                </div>
-                <div className="player-action-info">
-                  <span className="player-action-name">{player.name}</span>
-                  {!player.alive && (
-                    <span className="dead-badge">💀 Mrtvý</span>
-                  )}
+                  <div className="player-action-info">
+                    <span className="player-action-name">{player.name}</span>
+                    {!player.alive && (
+                      <span className="dead-badge">💀 Mrtvý</span>
+                    )}
+                    {visited && (
+                      <span className="visited-badge">🦠 Navštíveno</span>
+                    )}
+                    {selectedPlayer === player._id && (
+                      <span className="selected-badge">Vybráno</span>
+                    )}
+                  </div>
                   {selectedPlayer === player._id && (
-                    <span className="selected-badge">Vybráno</span>
+                    <span className="check-icon">✓</span>
                   )}
-                </div>
-                {selectedPlayer === player._id && (
-                  <span className="check-icon">✓</span>
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 

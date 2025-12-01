@@ -387,6 +387,18 @@ async function resolveNightActions(game, players) {
           actor.nightAction.results.push(`success:Nakazil jsi ${target.name}`);
           console.log(`  🦠 [P${actionData.priority}] ${actor.name} infected ${target.name}`);
         }
+        
+        // Sleduj navštívené hráče pro Infected roli
+        if (!actor.roleData) actor.roleData = {};
+        if (!actor.roleData.visitedPlayers) actor.roleData.visitedPlayers = [];
+        
+        // Přidej cílového hráče do seznamu navštívených (pokud tam ještě není)
+        const visitedIds = actor.roleData.visitedPlayers.map(id => id.toString());
+        if (!visitedIds.includes(targetId)) {
+          actor.roleData.visitedPlayers.push(target._id);
+          toSave.add(actorId);
+          console.log(`  📝 ${actor.name} visited ${target.name} (total visited: ${actor.roleData.visitedPlayers.length})`);
+        }
         break;
       }
 
@@ -685,6 +697,8 @@ async function resolveNightActions(game, players) {
         continue;
       }
       
+      // Přidej informaci o návštěvě do výsledků cíle
+      target.nightAction.results.push(`visited:${homeInvaders.join(', ')}`);
       console.log(`  👤 ${target.name} was home-invaded by: ${homeInvaders.join(', ')}`);
     }
   }

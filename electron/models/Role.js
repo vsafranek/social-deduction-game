@@ -213,7 +213,7 @@ const ROLES = {
       canWinWithTeams: [],
       soloWin: false,
       customRules: [
-        { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
+        { type: 'allOthersVisited' }
       ]
     }
   }
