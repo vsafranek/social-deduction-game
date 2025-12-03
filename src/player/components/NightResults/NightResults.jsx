@@ -180,8 +180,8 @@ function NightResults({ player, results = [] }) {
   const mainResult = getMostImportant();
   const mainEventData = RESULT_MAPPING[mainResult.type] || RESULT_MAPPING['safe'];
   
-  // Zobraz rozklikávací šipku pouze pokud je více výsledků nebo výsledek není "safe"
-  const shouldShowExpand = displayedResults.length > 1 || mainResult.type !== 'safe';
+  // Zobraz rozklikávací šipku pouze pokud je více výsledků (pak je co rozbalit)
+  const shouldShowExpand = displayedResults.length > 1;
   const isClickable = shouldShowExpand;
 
   return (

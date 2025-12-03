@@ -235,81 +235,6 @@ router.get('/:gameId/state', async (req, res) => {
   }
 });
 
-// Get full players with modifiers (moderator use only)
-router.get('/:gameId/players-full', async (req, res) => {
-  try {
-    const { gameId } = req.params;
-    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
-
-    const players = await Player.find({ gameId }).sort({ createdAt: 1 });
-    res.json({
-      players: players.map(p => ({
-        _id: p._id,
-        name: p.name,
-        role: p.role,
-        modifier: p.modifier,
-        affiliations: p.affiliations,
-        victoryConditions: p.victoryConditions,
-        effects: p.effects,
-        alive: p.alive,
-        hasVoted: p.hasVoted,
-        voteFor: p.voteFor
-      }))
-    });
-  } catch (e) {
-    console.error('players-full error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Get player role by sessionId
-router.get('/:gameId/player/:sessionId/role', async (req, res) => {
-  try {
-    const { gameId, sessionId } = req.params;
-    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
-
-    const player = await Player.findOne({ gameId, sessionId });
-    if (!player) return res.status(404).json({ error: 'Player not found' });
-
-    res.json({ role: player.role, modifier: player.modifier });
-  } catch (e) {
-    console.error('getPlayerRole error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Night action
-router.post('/:gameId/night-action', async (req, res) => {
-  try {
-    const { gameId } = req.params;
-    const { playerId, targetId, action } = req.body;
-
-    if (!ensureObjectId(gameId) || !ensureObjectId(playerId) || !ensureObjectId(targetId)) {
-      return res.status(400).json({ error: 'Invalid IDs' });
-    }
-
-    const player = await Player.findById(playerId);
-    if (!player || player.gameId.toString() !== gameId) {
-      return res.status(404).json({ error: 'Player not found' });
-    }
-
-    player.nightAction = {
-      targetId,
-      action,
-      results: []  
-    };
-
-    await player.save();
-    
-    console.log(`✅ Night action set: ${player.name} → ${action} → ${targetId}`);
-    res.json({ success: true });
-
-  } catch (e) {
-    console.error('nightAction error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // Vote
 // Vote endpoint with auto-shorten when all alive voted
 router.post('/:gameId/vote', async (req, res) => {
@@ -386,57 +311,10 @@ router.post('/:gameId/vote', async (req, res) => {
 
 
 // Update role configuration (lobby only) – optional if still used
-router.put('/:gameId/roles', async (req, res) => {
-  try {
-    const { gameId } = req.params;
-    const { roleConfiguration } = req.body || {};
-    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
-
-    const game = await Game.findById(gameId);
-    if (!game) return res.status(404).json({ error: 'Game not found' });
-    if (game.phase !== 'lobby') return res.status(400).json({ error: 'Cannot change roles after start' });
-
-    const total = Object.values(roleConfiguration || {}).reduce((s, n) => s + (Number(n) || 0), 0);
-    if (total === 0) return res.status(400).json({ error: 'At least one role required' });
-
-    game.roleConfiguration = roleConfiguration;
-    await game.save();
-    res.json({ success: true, roleConfiguration: game.roleConfiguration });
-  } catch (e) {
-    console.error('update roles error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Update timers (lobby only)
-router.put('/:gameId/timers', async (req, res) => {
-  try {
-    const { gameId } = req.params;
-    const { nightSeconds, daySeconds } = req.body || {};
-    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
-
-    const game = await Game.findById(gameId);
-    if (!game) return res.status(404).json({ error: 'Game not found' });
-    if (game.phase !== 'lobby') return res.status(400).json({ error: 'Timers can be changed only in lobby' });
-
-    const night = clampNum(nightSeconds, 10, 1800, game.timers.nightSeconds);
-    const day = clampNum(daySeconds, 10, 1800, game.timers.daySeconds);
-
-    game.timers.nightSeconds = night;
-    game.timers.daySeconds = day;
-    await game.save();
-
-    res.json({ success: true, timers: game.timers });
-  } catch (e) {
-    console.error('update timers error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
 router.post('/:gameId/start-config', async (req, res) => {
   try {
     const { gameId } = req.params;
-    const { assignments, modifiers } = req.body || {};
+    const { assignments, modifiers, timers } = req.body || {};
     
     if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
 
@@ -446,6 +324,17 @@ router.post('/:gameId/start-config', async (req, res) => {
 
     const players = await Player.find({ gameId });
     if (players.length < 3) return res.status(400).json({ error: 'At least 3 players required' });
+
+    if (timers) {
+      const currentTimers = game.timers ?? {};
+      const nextNight = clampNum(timers.nightSeconds, 10, 1800, currentTimers.nightSeconds ?? 90);
+      const nextDay = clampNum(timers.daySeconds, 10, 1800, currentTimers.daySeconds ?? 150);
+      game.timers = {
+        ...currentTimers,
+        nightSeconds: nextNight,
+        daySeconds: nextDay
+      };
+    }
 
     // Assign roles
     console.log('📋 Assigning roles:', assignments);

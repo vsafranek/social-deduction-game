@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { gameApi } from '../../api/gameApi';
+import React, { useState, useCallback } from 'react';
 import RoleConfigModal from './RoleConfigModal';
 import RoleIcon from '../../components/icons/RoleIcon';
 import { canAddRandomRole, canAddGuaranteedRole } from './roleLimitUtils';
 import './RoleConfiguration.css';
 
 function RoleConfiguration({
-  gameId,
   availableRoles,
   roleCount,
   setRoleCountValue,
@@ -19,39 +17,28 @@ function RoleConfiguration({
   removeGuaranteedRole,
   teamLimits,
   updateTeamLimit,
-  initialTimers,
+  timers,
+  onTimersChange,
+  timersDirty,
   playersCount
 }) {
   const [showModal, setShowModal] = useState(false);
   const [showGuaranteedModal, setShowGuaranteedModal] = useState({ team: null, show: false });
-  const [nightSeconds, setNightSeconds] = useState(initialTimers?.nightSeconds ?? 90);
-  const [daySeconds, setDaySeconds] = useState(initialTimers?.daySeconds ?? 150);
-
-  useEffect(() => {
-    if (initialTimers?.nightSeconds) setNightSeconds(initialTimers.nightSeconds);
-    if (initialTimers?.daySeconds) setDaySeconds(initialTimers.daySeconds);
-  }, [initialTimers]);
+  const nightSeconds = timers?.nightSeconds ?? 90;
+  const daySeconds = timers?.daySeconds ?? 150;
 
   const clamp = (v) => Math.max(10, Math.min(1800, Number.isFinite(+v) ? +v : 10));
-
-  // Debounced auto-save
-  const debouncedSaveTimers = useCallback(
-    debounce(async (night, day) => {
-      try {
-        await gameApi.updateTimers(gameId, {
-          nightSeconds: clamp(night),
-          daySeconds: clamp(day)
-        });
-      } catch (e) {
-        console.error('Auto-save timers error:', e);
-      }
-    }, 800),
-    [gameId]
+  const pushTimers = useCallback(
+    (type, value) => {
+      if (typeof onTimersChange !== 'function') return;
+      const safeValue = clamp(value);
+      onTimersChange({
+        nightSeconds: type === 'night' ? safeValue : nightSeconds,
+        daySeconds: type === 'day' ? safeValue : daySeconds
+      });
+    },
+    [onTimersChange, nightSeconds, daySeconds]
   );
-
-  useEffect(() => {
-    debouncedSaveTimers(nightSeconds, daySeconds);
-  }, [nightSeconds, daySeconds, debouncedSaveTimers]);
 
   // Fallback pro availableRoles, pokud není definován
   const roles = availableRoles || {};
@@ -143,7 +130,7 @@ function RoleConfiguration({
                 min="10"
                 max="300"
                 value={nightSeconds}
-                onChange={(e) => setNightSeconds(parseInt(e.target.value))}
+                onChange={(e) => pushTimers('night', parseInt(e.target.value, 10))}
               />
             </div>
             <div className="timer-slider-item">
@@ -156,11 +143,10 @@ function RoleConfiguration({
                 min="30"
                 max="600"
                 value={daySeconds}
-                onChange={(e) => setDaySeconds(parseInt(e.target.value))}
+                onChange={(e) => pushTimers('day', parseInt(e.target.value, 10))}
               />
             </div>
           </div>
-          <small className="auto-save-hint">✓ Auto-saved</small>
         </div>
 
         {/* ⚖️ Team Limits */}
@@ -407,15 +393,6 @@ function RoleConfiguration({
       )}
     </div>
   );
-}
-
-// Debounce helper
-function debounce(func, wait) {
-  let timeout;
-  return (...args) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
 }
 
 export default RoleConfiguration;

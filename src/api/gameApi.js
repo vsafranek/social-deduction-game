@@ -59,13 +59,14 @@ export const gameApi = {
   /**
    * Start game with role and modifier configuration
    */
-  async startGameWithConfig(gameId, finalRoleConfig, modifierConfig) {
+  async startGameWithConfig(gameId, finalRoleConfig, modifierConfig, timers) {
     const res = await fetch(`${API_BASE}/game/${gameId}/start-config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         assignments: finalRoleConfig,
-        modifiers: modifierConfig
+        modifiers: modifierConfig,
+        timers
       })
     });
     
@@ -78,76 +79,12 @@ export const gameApi = {
   },
 
   /**
-   * Update game timers
-   */
-  async updateTimers(gameId, { nightSeconds, daySeconds }) {
-    const res = await fetch(`${API_BASE}/game/${gameId}/timers`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nightSeconds, daySeconds })
-    });
-    return res.json();
-  },
-
-  /**
    * Reset game to lobby
    */
   async resetToLobby(gameId) {
     const res = await fetch(`${API_BASE}/game/${gameId}/reset-to-lobby`, {
       method: 'POST'
     });
-    return res.json();
-  },
-
-  /**
-   * Tick game (for timer progression)
-   */
-  async tick(gameId) {
-    const res = await fetch(`${API_BASE}/game/${gameId}/tick`, { 
-      method: 'POST' 
-    });
-    return res.json();
-  },
-
-  // ==================
-  // PLAYER QUERIES
-  // ==================
-
-  /**
-   * Get player role by sessionId
-   */
-  async getPlayerRole(gameId, sessionId) {
-    const res = await fetch(`${API_BASE}/game/${gameId}/player/${sessionId}/role`);
-    return res.json();
-  },
-
-  /**
-   * Get player role by playerId
-   */
-  async getPlayerRoleByPlayerId(gameId, playerId) {
-    console.log('📖 Fetching role for player:', playerId);
-    const res = await fetch(`${API_BASE}/game/${gameId}/player/${playerId}/role-by-id`);
-    
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data?.error || `HTTP ${res.status}`);
-    }
-
-    return res.json();
-  },
-
-  /**
-   * Get player by sessionId
-   */
-  async getPlayerBySessionId(gameId, sessionId) {
-    console.log('🔍 Fetching player by sessionId:', sessionId);
-    const res = await fetch(`${API_BASE}/game/${gameId}/player-by-session/${sessionId}`);
-    
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data?.error || `HTTP ${res.status}`);
-    }
-
     return res.json();
   },
 
@@ -181,19 +118,6 @@ export const gameApi = {
       throw new Error(error.error || 'Failed to set night action');
     }
     
-    return res.json();
-  },
-
-  /**
-   * Night action (LEGACY - backward compatible)
-   * Use setNightAction instead for new code
-   */
-  async nightAction(gameId, playerId, targetId, action) {
-    const res = await fetch(`${API_BASE}/game/${gameId}/night-action`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playerId, targetId, action })
-    });
     return res.json();
   },
 

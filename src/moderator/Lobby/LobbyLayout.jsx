@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PlayersList from './PlayersList';
 import RoleConfiguration from './RoleConfiguration';
 import ModifierSettings from './ModifierSettings';
@@ -6,6 +6,24 @@ import { ROLE_INFO } from '../../data/roleInfo';
 import './LobbyLayout.css';
 
 function LobbyLayout({ gameState, onStartGame, onRefresh }) {
+  const safeTimers = gameState?.game?.timers || {};
+  const [timers, setTimers] = useState({
+    nightSeconds: safeTimers.nightSeconds ?? 90,
+    daySeconds: safeTimers.daySeconds ?? 150
+  });
+  const [timersDirty, setTimersDirty] = useState(false);
+
+  const nightFromState = safeTimers.nightSeconds ?? 90;
+  const dayFromState = safeTimers.daySeconds ?? 150;
+
+  useEffect(() => {
+    if (!timersDirty) {
+      setTimers({
+        nightSeconds: nightFromState,
+        daySeconds: dayFromState
+      });
+    }
+  }, [nightFromState, dayFromState, timersDirty]);
   // Anglické názvy rolí (musí odpovídat backend Role.js)
   const availableRoles = useMemo(() => {
     const roles = {};
@@ -195,9 +213,17 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
     return { finalRoles, modifierConfig };
   };
 
-  const onClickStartGame = () => {
+  const onClickStartGame = async () => {
     const built = buildFinalRoleDistribution();
-    onStartGame(built.finalRoles, built.modifierConfig);
+    const success = await onStartGame(built.finalRoles, built.modifierConfig, timers);
+    if (success) {
+      setTimersDirty(false);
+    }
+  };
+
+  const handleTimersChange = (nextTimers) => {
+    setTimers(nextTimers);
+    setTimersDirty(true);
   };
 
   // Výpočet celkového počtu rolí pro validaci
@@ -215,7 +241,9 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
       />
 
       <RoleConfiguration
-        gameId={gameState.game._id}
+        timers={timers}
+        onTimersChange={handleTimersChange}
+        timersDirty={timersDirty}
         availableRoles={availableRoles}
         roleCount={roleCount}
         setRoleCountValue={setRoleCountValue}
@@ -228,7 +256,6 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
         removeGuaranteedRole={removeGuaranteedRole}
         teamLimits={teamLimits}
         updateTeamLimit={updateTeamLimit}
-        initialTimers={gameState.game.timers}
         playersCount={gameState.players.length}
       />
 

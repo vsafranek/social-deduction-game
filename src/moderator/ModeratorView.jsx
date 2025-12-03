@@ -97,13 +97,15 @@ function ModeratorView() {
     await fetchGameState();
   };
 
-  const startGame = async (finalRoleConfig, modifierConfig) => {
+  const startGame = async (finalRoleConfig, modifierConfig, timers) => {
     try {
-      await gameApi.startGameWithConfig(gameId, finalRoleConfig, modifierConfig);
+      await gameApi.startGameWithConfig(gameId, finalRoleConfig, modifierConfig, timers);
       await fetchGameState();
+      return true;
     } catch (error) {
       console.error('Chyba při startu hry:', error);
       alert(error.message || 'Nepodařilo se spustit hru');
+      return false;
     }
   };
 
