@@ -39,7 +39,7 @@ describe('victoryEvaluator', () => {
     test('liveTeamCounts should count alive players per team', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Killer', true, ['evil']),
+        createPlayer('2', 'Cleaner', true, ['evil']),
         createPlayer('3', 'Doctor', true, ['good']),
         createPlayer('4', 'Cleaner', false, ['evil']),
       ];
@@ -53,7 +53,7 @@ describe('victoryEvaluator', () => {
     test('groupByAffiliation should group alive players by team', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Killer', true, ['evil']),
+        createPlayer('2', 'Cleaner', true, ['evil']),
         createPlayer('3', 'Doctor', false, ['good']),
       ];
 
@@ -115,7 +115,7 @@ describe('victoryEvaluator', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Doctor', true, ['good']),
-        createPlayer('3', 'Killer', false, ['evil']),
+        createPlayer('3', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -140,7 +140,7 @@ describe('victoryEvaluator', () => {
             { type: 'aliveExactly', team: 'evil', count: 0 }
           ]
         }),
-        createPlayer('4', 'Killer', false, ['evil']),
+        createPlayer('4', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -160,7 +160,7 @@ describe('victoryEvaluator', () => {
             { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
           ]
         }),
-        createPlayer('4', 'Killer', false, ['evil']),
+        createPlayer('4', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -177,7 +177,7 @@ describe('victoryEvaluator', () => {
           soloWin: true,
           customRules: []
         }),
-        createPlayer('3', 'Killer', false, ['evil']),
+        createPlayer('3', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -196,7 +196,7 @@ describe('victoryEvaluator', () => {
             { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
           ]
         }),
-        createPlayer('3', 'Killer', false, ['evil']),
+        createPlayer('3', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -211,7 +211,7 @@ describe('victoryEvaluator', () => {
     test('Evil wins with 1v1 (cannot be lynched)', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Killer', true, ['evil']),
+        createPlayer('2', 'Cleaner', true, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -226,7 +226,7 @@ describe('victoryEvaluator', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Doctor', true, ['good']),
-        createPlayer('3', 'Killer', true, ['evil']),
+        createPlayer('3', 'Cleaner', true, ['evil']),
         createPlayer('4', 'Cleaner', true, ['evil']),
         createPlayer('5', 'Accuser', true, ['evil']),
       ];
@@ -241,7 +241,7 @@ describe('victoryEvaluator', () => {
     test('Evil wins with 2v1', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Killer', true, ['evil']),
+        createPlayer('2', 'Cleaner', true, ['evil']),
         createPlayer('3', 'Cleaner', true, ['evil']),
       ];
 
@@ -254,7 +254,7 @@ describe('victoryEvaluator', () => {
     test('Evil wins when only 2 players left with 1 evil', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Killer', true, ['evil']),
+        createPlayer('2', 'Cleaner', true, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -270,7 +270,7 @@ describe('victoryEvaluator', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Doctor', true, ['good']),
-        createPlayer('3', 'Killer', true, ['evil']),
+        createPlayer('3', 'Cleaner', true, ['evil']),
         createPlayer('4', 'Cleaner', true, ['evil']),
       ];
 
@@ -284,7 +284,7 @@ describe('victoryEvaluator', () => {
         createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Doctor', true, ['good']),
         createPlayer('3', 'Investigator', true, ['good']),
-        createPlayer('4', 'Killer', true, ['evil']),
+        createPlayer('4', 'Cleaner', true, ['evil']),
         createPlayer('5', 'Cleaner', true, ['evil']),
       ];
 
@@ -297,7 +297,7 @@ describe('victoryEvaluator', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Doctor', true, ['good']),
-        createPlayer('3', 'Killer', true, ['evil']),
+        createPlayer('3', 'Cleaner', true, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -310,7 +310,7 @@ describe('victoryEvaluator', () => {
         createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Doctor', true, ['good']),
         createPlayer('3', 'Investigator', true, ['good']),
-        createPlayer('4', 'Killer', true, ['evil']),
+        createPlayer('4', 'Cleaner', true, ['evil']),
         createPlayer('5', 'Cleaner', true, ['evil']),
         createPlayer('6', 'Accuser', true, ['evil']),
       ];
@@ -328,7 +328,7 @@ describe('victoryEvaluator', () => {
           soloWin: true,
           customRules: []
         }),
-        createPlayer('3', 'Killer', false, ['evil']),
+        createPlayer('3', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -353,7 +353,7 @@ describe('victoryEvaluator', () => {
       const players = [
         serialKiller,
         createPlayer('2', 'Citizen', false, ['good']),
-        createPlayer('3', 'Killer', false, ['evil']),
+        createPlayer('3', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -394,7 +394,7 @@ describe('victoryEvaluator', () => {
       const victim1 = createPlayer('2', 'Citizen', true, ['good']);
       victim1.effects = [{ type: 'infected', expiresAt: new Date(Date.now() + 10000) }];
 
-      const victim2 = createPlayer('3', 'Killer', true, ['evil']);
+      const victim2 = createPlayer('3', 'Cleaner', true, ['evil']);
       victim2.effects = [{ type: 'infected', expiresAt: new Date(Date.now() + 10000) }];
 
       const players = [infected, victim1, victim2];
@@ -417,7 +417,7 @@ describe('victoryEvaluator', () => {
       const victim1 = createPlayer('2', 'Citizen', true, ['good']);
       victim1.effects = [{ type: 'infected', expiresAt: new Date(Date.now() + 10000) }];
 
-      const healthy = createPlayer('3', 'Killer', true, ['evil']);
+      const healthy = createPlayer('3', 'Cleaner', true, ['evil']);
       healthy.effects = [];
 
       const players = [infected, victim1, healthy];
@@ -438,7 +438,7 @@ describe('victoryEvaluator', () => {
       const victim1 = createPlayer('2', 'Citizen', true, ['good']);
       victim1.effects = [{ type: 'infected', expiresAt: new Date(Date.now() + 10000) }];
 
-      const victim2 = createPlayer('3', 'Killer', true, ['evil']);
+      const victim2 = createPlayer('3', 'Cleaner', true, ['evil']);
       victim2.effects = [{ type: 'infected', expiresAt: new Date(Date.now() + 10000) }];
 
       const players = [infected, victim1, victim2];
@@ -454,7 +454,7 @@ describe('victoryEvaluator', () => {
     test('No players alive - evil wins by default', () => {
       const players = [
         createPlayer('1', 'Citizen', false, ['good']),
-        createPlayer('2', 'Killer', false, ['evil']),
+        createPlayer('2', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -467,7 +467,7 @@ describe('victoryEvaluator', () => {
     test('Last player standing (good) wins', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Killer', false, ['evil']),
+        createPlayer('2', 'Cleaner', false, ['evil']),
         createPlayer('3', 'Cleaner', false, ['evil']),
       ];
 
@@ -480,7 +480,7 @@ describe('victoryEvaluator', () => {
 
     test('Last player standing (evil) wins', () => {
       const players = [
-        createPlayer('1', 'Killer', true, ['evil']),
+        createPlayer('1', 'Cleaner', true, ['evil']),
         createPlayer('2', 'Citizen', false, ['good']),
         createPlayer('3', 'Doctor', false, ['good']),
       ];
@@ -507,7 +507,7 @@ describe('victoryEvaluator', () => {
             { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
           ]
         }),
-        createPlayer('4', 'Killer', false, ['evil']),
+        createPlayer('4', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -523,7 +523,7 @@ describe('victoryEvaluator', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
         createPlayer('2', 'Doctor', true, ['good']),
-        createPlayer('3', 'Killer', false, ['evil']),
+        createPlayer('3', 'Cleaner', false, ['evil']),
       ];
 
       const result = evaluateVictory(players);
@@ -537,7 +537,7 @@ describe('victoryEvaluator', () => {
     test('Winner IDs correct for evil win', () => {
       const players = [
         createPlayer('1', 'Citizen', true, ['good']),
-        createPlayer('2', 'Killer', true, ['evil']),
+        createPlayer('2', 'Cleaner', true, ['evil']),
       ];
 
       const result = evaluateVictory(players);

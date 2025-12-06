@@ -63,7 +63,7 @@ describe('votingResolver', () => {
       const game = createMockGame();
       const players = [
         createMockPlayer('1', 'Dead1', 'Citizen', { alive: false }),
-        createMockPlayer('2', 'Dead2', 'Killer', { alive: false })
+        createMockPlayer('2', 'Dead2', 'Cleaner', { alive: false })
       ];
 
       const result = await resolveDayVoting(game, players, mockGameLog);

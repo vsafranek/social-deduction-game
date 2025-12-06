@@ -64,18 +64,18 @@ describe('nightActionResolver', () => {
   describe('Basic Action Resolution', () => {
     
     test('should resolve simple kill action', async () => {
-      const killer = createMockPlayer('1', 'Killer', 'Killer', {
+      const cleaner = createMockPlayer('1', 'Cleaner', 'Cleaner', {
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
       const victim = createMockPlayer('2', 'Victim', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [killer, victim]);
+      await resolveNightActions({}, [cleaner, victim]);
 
       expect(victim.alive).toBe(false);
       expect(victim.nightAction.results).toContain('killed:Zavražděn');
-      expect(killer.nightAction.results).toContain('success:Zaútočil Victim');
+      expect(cleaner.nightAction.results).toContain('success:Zaútočil Victim');
     });
 
     test('should resolve protect action', async () => {
@@ -96,7 +96,7 @@ describe('nightActionResolver', () => {
       const jailer = createMockPlayer('1', 'Jailer', 'Jailer', {
         nightAction: { targetId: '2', action: 'block', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true
       });
 
@@ -110,7 +110,7 @@ describe('nightActionResolver', () => {
       const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
         nightAction: { targetId: '2', action: 'investigate', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true
       });
 
@@ -135,7 +135,7 @@ describe('nightActionResolver', () => {
       const target = createMockPlayer('2', 'Target', 'Citizen', {
         alive: true
       });
-      const visitor = createMockPlayer('3', 'Visitor', 'Killer', {
+      const visitor = createMockPlayer('3', 'Visitor', 'Cleaner', {
         alive: true,
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
@@ -150,7 +150,7 @@ describe('nightActionResolver', () => {
       const tracker = createMockPlayer('1', 'Tracker', 'Tracker', {
         nightAction: { targetId: '2', action: 'track', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true,
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
@@ -179,24 +179,24 @@ describe('nightActionResolver', () => {
 
   describe('Priority Ordering', () => {
     
-    test('should process actions in priority order (Jailer before Killer)', async () => {
+    test('should process actions in priority order (Jailer before Cleaner)', async () => {
       const jailer = createMockPlayer('1', 'Jailer', 'Jailer', {
         nightAction: { targetId: '2', action: 'block', results: [] }
       });
-      const killer = createMockPlayer('2', 'Killer', 'Killer', {
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
       const target = createMockPlayer('3', 'Target', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [jailer, killer, target]);
+      await resolveNightActions({}, [jailer, cleaner, target]);
 
-      // Killer should be blocked
-      const hasBlocked = killer.effects.some(e => e.type === 'blocked');
+      // Cleaner should be blocked
+      const hasBlocked = cleaner.effects.some(e => e.type === 'blocked');
       expect(hasBlocked).toBe(true);
       
-      // Target should not be killed because killer was blocked
+      // Target should not be killed because cleaner was blocked
       expect(target.alive).toBe(true);
     });
 
@@ -204,14 +204,14 @@ describe('nightActionResolver', () => {
       const doctor = createMockPlayer('1', 'Doctor', 'Doctor', {
         nightAction: { targetId: '3', action: 'protect', results: [] }
       });
-      const killer = createMockPlayer('2', 'Killer', 'Killer', {
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
       const target = createMockPlayer('3', 'Target', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [doctor, killer, target]);
+      await resolveNightActions({}, [doctor, cleaner, target]);
 
       // Target should be protected and not die
       expect(target.alive).toBe(true);
@@ -224,7 +224,7 @@ describe('nightActionResolver', () => {
   describe('Drunk Modifier', () => {
     
     test('should prevent drunk player from acting', async () => {
-      const drunk = createMockPlayer('1', 'Drunk', 'Killer', {
+      const drunk = createMockPlayer('1', 'Drunk', 'Cleaner', {
         modifier: 'Drunk',
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
@@ -261,11 +261,11 @@ describe('nightActionResolver', () => {
   describe('Blocked Effects', () => {
     
     test('should prevent blocked player from acting', async () => {
-      // Jailer blocks the killer in the same night
+      // Jailer blocks the cleaner in the same night
       const jailer = createMockPlayer('1', 'Jailer', 'Jailer', {
         nightAction: { targetId: '2', action: 'block', results: [] }
       });
-      const blocked = createMockPlayer('2', 'Blocked', 'Killer', {
+      const blocked = createMockPlayer('2', 'Blocked', 'Cleaner', {
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
       const target = createMockPlayer('3', 'Target', 'Citizen', {
@@ -302,7 +302,7 @@ describe('nightActionResolver', () => {
       });
       // Visitor tries to visit trapper in the same night
       // Note: trap effect is added during processing, so visitor should be trapped
-      const visitor = createMockPlayer('2', 'Visitor', 'Killer', {
+      const visitor = createMockPlayer('2', 'Visitor', 'Cleaner', {
         nightAction: { targetId: '1', action: 'kill', results: [] }
       });
 
@@ -412,7 +412,7 @@ describe('nightActionResolver', () => {
           source: null, 
           addedAt: new Date(), 
           expiresAt: null, 
-          meta: { fakeEvilRole: 'Killer' } 
+          meta: { fakeEvilRole: 'Cleaner' } 
         }]
       });
 
@@ -420,8 +420,8 @@ describe('nightActionResolver', () => {
 
       const autopsyResult = coroner.nightAction.results.find(r => r.startsWith('autopsy:'));
       expect(autopsyResult).toBeDefined();
-      // Should show the fake evil role (Killer), not the true role (Citizen)
-      expect(autopsyResult).toContain('Killer');
+      // Should show the fake evil role (Cleaner), not the true role (Citizen)
+      expect(autopsyResult).toContain('Cleaner');
       expect(autopsyResult).not.toContain('Citizen');
     });
   });
@@ -447,7 +447,7 @@ describe('nightActionResolver', () => {
       const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
         nightAction: { targetId: '2', action: 'investigate', results: [] }
       });
-      const cleaned = createMockPlayer('2', 'Cleaned', 'Killer', {
+      const cleaned = createMockPlayer('2', 'Cleaned', 'Cleaner', {
         alive: false,
         roleHidden: true
       });
@@ -466,7 +466,7 @@ describe('nightActionResolver', () => {
       const coroner = createMockPlayer('1', 'Coroner', 'Coroner', {
         nightAction: { targetId: '2', action: 'autopsy', results: [] }
       });
-      const dead = createMockPlayer('2', 'Dead', 'Killer', {
+      const dead = createMockPlayer('2', 'Dead', 'Cleaner', {
         alive: false,
         roleHidden: false
       });
@@ -475,7 +475,7 @@ describe('nightActionResolver', () => {
 
       const autopsyResult = coroner.nightAction.results.find(r => r.startsWith('autopsy:'));
       expect(autopsyResult).toBeDefined();
-      expect(autopsyResult).toContain('Killer');
+      expect(autopsyResult).toContain('Cleaner');
       expect(autopsyResult).toContain('Dead');
       
       // Check that autopsy history is stored
@@ -504,7 +504,7 @@ describe('nightActionResolver', () => {
       const coroner = createMockPlayer('1', 'Coroner', 'Coroner', {
         nightAction: { targetId: '2', action: 'autopsy', results: [] }
       });
-      const cleaned = createMockPlayer('2', 'Cleaned', 'Killer', {
+      const cleaned = createMockPlayer('2', 'Cleaned', 'Cleaner', {
         alive: false,
         roleHidden: true
       });
@@ -516,7 +516,7 @@ describe('nightActionResolver', () => {
       expect(autopsyResult).toContain('Unknown');
       expect(autopsyResult).toContain('vyčištěna');
       // Should not contain the actual role
-      expect(autopsyResult).not.toContain('Killer');
+      expect(autopsyResult).not.toContain('Cleaner');
     });
   });
 
@@ -555,7 +555,7 @@ describe('nightActionResolver', () => {
         modifier: 'Insomniac',
         alive: true
       });
-      const visitor = createMockPlayer('2', 'Visitor', 'Killer', {
+      const visitor = createMockPlayer('2', 'Visitor', 'Cleaner', {
         alive: true,
         nightAction: { targetId: '1', action: 'kill', results: [] }
       });
@@ -571,14 +571,14 @@ describe('nightActionResolver', () => {
   describe('Kill Resolution', () => {
     
     test('should kill unprotected target', async () => {
-      const killer = createMockPlayer('1', 'Killer', 'Killer', {
+      const cleaner = createMockPlayer('1', 'Cleaner', 'Cleaner', {
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
       const target = createMockPlayer('2', 'Target', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [killer, target]);
+      await resolveNightActions({}, [cleaner, target]);
 
       expect(target.alive).toBe(false);
       expect(target.nightAction.results).toContain('killed:Zavražděn');
@@ -588,14 +588,14 @@ describe('nightActionResolver', () => {
       const doctor = createMockPlayer('1', 'Doctor', 'Doctor', {
         nightAction: { targetId: '3', action: 'protect', results: [] }
       });
-      const killer = createMockPlayer('2', 'Killer', 'Killer', {
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
       const target = createMockPlayer('3', 'Target', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [doctor, killer, target]);
+      await resolveNightActions({}, [doctor, cleaner, target]);
 
       expect(target.alive).toBe(true);
       expect(target.nightAction.results).toContain('attacked:Útok');
@@ -606,14 +606,14 @@ describe('nightActionResolver', () => {
       const doctor = createMockPlayer('1', 'Doctor', 'Doctor', {
         nightAction: { targetId: '3', action: 'protect', results: [] }
       });
-      const killer = createMockPlayer('2', 'Killer', 'Killer', {
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
       const target = createMockPlayer('3', 'Target', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [doctor, killer, target]);
+      await resolveNightActions({}, [doctor, cleaner, target]);
 
       const saveMessage = doctor.nightAction.results.find(r => r.includes('Zachránil'));
       expect(saveMessage).toBeDefined();
@@ -640,7 +640,7 @@ describe('nightActionResolver', () => {
       const jailer = createMockPlayer('1', 'Jailer', 'Jailer', {
         nightAction: { targetId: '2', action: 'block', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true,
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
@@ -693,7 +693,7 @@ describe('nightActionResolver', () => {
         alive: true,
         nightAction: { targetId: '2', action: 'hunter_kill', results: [] }
       });
-      const evil = createMockPlayer('2', 'Evil', 'Killer', {
+      const evil = createMockPlayer('2', 'Evil', 'Cleaner', {
         alive: true
       });
 
@@ -747,7 +747,7 @@ describe('nightActionResolver', () => {
         roleData: { usesRemaining: 2 },
         nightAction: { targetId: '2', action: 'consig_investigate', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true
       });
 
@@ -755,7 +755,7 @@ describe('nightActionResolver', () => {
 
       const consigResult = consig.nightAction.results.find(r => r.startsWith('consig:'));
       expect(consigResult).toBeDefined();
-      expect(consigResult).toContain('Killer');
+      expect(consigResult).toContain('Cleaner');
       expect(consig.roleData.usesRemaining).toBe(1);
       
       // Check that investigation history is stored
@@ -770,7 +770,7 @@ describe('nightActionResolver', () => {
         roleData: { usesRemaining: 2 },
         nightAction: { targetId: '2', action: 'consig_investigate', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: false
       });
 
@@ -788,7 +788,7 @@ describe('nightActionResolver', () => {
         roleData: { usesRemaining: 2 },
         nightAction: { targetId: '2', action: 'consig_investigate', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true,
         effects: [
           { type: 'marked_for_cleaning', source: null, addedAt: new Date(), expiresAt: null, meta: {} },
@@ -800,8 +800,8 @@ describe('nightActionResolver', () => {
 
       const consigResult = consig.nightAction.results.find(r => r.startsWith('consig:'));
       expect(consigResult).toBeDefined();
-      // Should contain the TRUE role (Killer), not fake roles
-      expect(consigResult).toContain('Killer');
+      // Should contain the TRUE role (Cleaner), not fake roles
+      expect(consigResult).toContain('Cleaner');
       expect(consigResult).not.toContain('Accuser');
       expect(consig.roleData.usesRemaining).toBe(1);
     });
@@ -811,7 +811,7 @@ describe('nightActionResolver', () => {
         roleData: { usesRemaining: 0 },
         nightAction: { targetId: '2', action: 'consig_investigate', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true
       });
 
@@ -830,14 +830,14 @@ describe('nightActionResolver', () => {
         roleData: { usesRemaining: 2 },
         nightAction: { targetId: '2', action: 'clean_role', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true
       });
-      const killer = createMockPlayer('3', 'Killer', 'Killer', {
+      const killerCleaner = createMockPlayer('3', 'KillerCleaner', 'Cleaner', {
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
 
-      await resolveNightActions({}, [cleaner, target, killer]);
+      await resolveNightActions({}, [cleaner, target, killerCleaner]);
 
       // Target should be dead
       expect(target.alive).toBe(false);
@@ -851,7 +851,7 @@ describe('nightActionResolver', () => {
         roleData: { usesRemaining: 2 },
         nightAction: { targetId: '2', action: 'clean_role', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true,
         roleHidden: false
       });
@@ -890,14 +890,14 @@ describe('nightActionResolver', () => {
         roleData: { usesRemaining: 2 },
         nightAction: { targetId: '2', action: 'clean_role', results: [] }
       });
-      const killer = createMockPlayer('3', 'Killer', 'Killer', {
+      const killerCleaner = createMockPlayer('3', 'KillerCleaner', 'Cleaner', {
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
       const target = createMockPlayer('2', 'Target', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [cleaner, killer, target]);
+      await resolveNightActions({}, [cleaner, killerCleaner, target]);
 
       // Target should be dead
       expect(target.alive).toBe(false);
@@ -916,7 +916,7 @@ describe('nightActionResolver', () => {
       const investigator = createMockPlayer('2', 'Investigator', 'Investigator', {
         nightAction: { targetId: '3', action: 'investigate', results: [] }
       });
-      const target = createMockPlayer('3', 'Target', 'Killer', {
+      const target = createMockPlayer('3', 'Target', 'Citizen', {
         alive: true,
         effects: [{ type: 'marked_for_cleaning', source: null, addedAt: new Date(), expiresAt: null, meta: {} }]
       });
@@ -929,10 +929,10 @@ describe('nightActionResolver', () => {
       expect(investigateResult).toContain('Target');
       // Should contain two roles (both fake)
       expect(investigateResult).toContain(' = ');
-      // Should NOT contain the true role (Killer) as a separate word - this is critical for the bug fix
-      // Use regex to check for "Killer" as a whole word (not as substring in "SerialKiller")
-      const killerRegex = /\bKiller\b/;
-      expect(investigateResult).not.toMatch(killerRegex);
+      // Should NOT contain the true role (Citizen) as a separate word - this is critical for the bug fix
+      // Use regex to check for "Citizen" as a whole word
+      const citizenRegex = /\bCitizen\b/;
+      expect(investigateResult).not.toMatch(citizenRegex);
       
       // Run multiple times to ensure true role never appears
       for (let i = 0; i < 10; i++) {
@@ -941,7 +941,7 @@ describe('nightActionResolver', () => {
         });
         await resolveNightActions({}, [newInvestigator, target]);
         const result = newInvestigator.nightAction.results.find(r => r.startsWith('investigate:'));
-        expect(result).not.toMatch(killerRegex);
+        expect(result).not.toMatch(citizenRegex);
       }
     });
 
@@ -1010,7 +1010,7 @@ describe('nightActionResolver', () => {
       const target = createMockPlayer('2', 'Target', 'Citizen', {
         alive: true
       });
-      const visitor1 = createMockPlayer('3', 'Visitor1', 'Killer', {
+      const visitor1 = createMockPlayer('3', 'Visitor1', 'Cleaner', {
         alive: true,
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
@@ -1045,7 +1045,7 @@ describe('nightActionResolver', () => {
       const tracker = createMockPlayer('1', 'Tracker', 'Tracker', {
         nightAction: { targetId: '2', action: 'track', results: [] }
       });
-      const target = createMockPlayer('2', 'Target', 'Killer', {
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
         alive: true,
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
@@ -1064,7 +1064,7 @@ describe('nightActionResolver', () => {
       const tracker = createMockPlayer('1', 'Tracker', 'Tracker', {
         nightAction: { targetId: '2', action: 'track', results: [] }
       });
-      const drunk = createMockPlayer('2', 'Drunk', 'Killer', {
+      const drunk = createMockPlayer('2', 'Drunk', 'Cleaner', {
         modifier: 'Drunk',
         alive: true,
         nightAction: { targetId: '3', action: 'kill', results: [] }
@@ -1100,7 +1100,7 @@ describe('nightActionResolver', () => {
         modifier: 'Insomniac',
         alive: true
       });
-      const visitor = createMockPlayer('2', 'Visitor', 'Killer', {
+      const visitor = createMockPlayer('2', 'Visitor', 'Cleaner', {
         alive: true,
         nightAction: { targetId: '1', action: 'kill', results: [] }
       });
@@ -1118,7 +1118,7 @@ describe('nightActionResolver', () => {
   describe('Edge Cases', () => {
     
     test('should skip dead players', async () => {
-      const dead = createMockPlayer('1', 'Dead', 'Killer', {
+      const dead = createMockPlayer('1', 'Dead', 'Cleaner', {
         alive: false,
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
@@ -1132,7 +1132,7 @@ describe('nightActionResolver', () => {
     });
 
     test('should skip actions with invalid targets', async () => {
-      const actor = createMockPlayer('1', 'Actor', 'Killer', {
+      const actor = createMockPlayer('1', 'Actor', 'Cleaner', {
         nightAction: { targetId: '999', action: 'kill', results: [] }
       });
       const target = createMockPlayer('2', 'Target', 'Citizen', {
@@ -1146,7 +1146,7 @@ describe('nightActionResolver', () => {
     });
 
     test('should skip actions with dead targets', async () => {
-      const actor = createMockPlayer('1', 'Actor', 'Killer', {
+      const actor = createMockPlayer('1', 'Actor', 'Cleaner', {
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
       const deadTarget = createMockPlayer('2', 'DeadTarget', 'Citizen', {
@@ -1191,17 +1191,17 @@ describe('nightActionResolver', () => {
   describe('Multiple Actions on Same Target', () => {
     
     test('should handle multiple killers targeting same victim', async () => {
-      const killer1 = createMockPlayer('1', 'Killer1', 'Killer', {
+      const cleaner1 = createMockPlayer('1', 'Cleaner1', 'Cleaner', {
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
-      const killer2 = createMockPlayer('2', 'Killer2', 'Killer', {
+      const cleaner2 = createMockPlayer('2', 'Cleaner2', 'Cleaner', {
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
       const victim = createMockPlayer('3', 'Victim', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [killer1, killer2, victim]);
+      await resolveNightActions({}, [cleaner1, cleaner2, victim]);
 
       expect(victim.alive).toBe(false);
     });
@@ -1213,14 +1213,14 @@ describe('nightActionResolver', () => {
       const doctor2 = createMockPlayer('2', 'Doctor2', 'Doctor', {
         nightAction: { targetId: '3', action: 'protect', results: [] }
       });
-      const killer = createMockPlayer('4', 'Killer', 'Killer', {
+      const cleaner = createMockPlayer('4', 'Cleaner', 'Cleaner', {
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
       const target = createMockPlayer('3', 'Target', 'Citizen', {
         alive: true
       });
 
-      await resolveNightActions({}, [doctor1, doctor2, killer, target]);
+      await resolveNightActions({}, [doctor1, doctor2, cleaner, target]);
 
       expect(target.alive).toBe(true);
     });

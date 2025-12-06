@@ -167,11 +167,11 @@ describe('GameRoutes Integration Tests', () => {
       });
       await player.save();
 
-      player.role = 'Killer';
+      player.role = 'Cleaner';
       await player.save();
 
       const found = await Player.findById(player._id);
-      expect(found.role).toBe('Killer');
+      expect(found.role).toBe('Cleaner');
     });
   });
 
@@ -198,7 +198,7 @@ describe('GameRoutes Integration Tests', () => {
           gameId,
           name: `Player${i + 1}`,
           sessionId: `session${i + 1}`,
-          role: i === 0 ? 'Killer' : 'Citizen',
+          role: i === 0 ? 'Cleaner' : 'Citizen',
           alive: true,
           avatar: `/avatars/${i + 1}.png`
         });
@@ -349,7 +349,7 @@ describe('GameRoutes Integration Tests', () => {
 
       const assignments = {
         [playerIds[0].toString()]: 'Citizen',
-        [playerIds[1].toString()]: 'Killer',
+        [playerIds[1].toString()]: 'Cleaner',
         [playerIds[2].toString()]: 'Doctor'
       };
 
@@ -361,7 +361,7 @@ describe('GameRoutes Integration Tests', () => {
 
       const players = await Player.find({ gameId });
       expect(players.find(p => p._id.toString() === playerIds[0].toString()).role).toBe('Citizen');
-      expect(players.find(p => p._id.toString() === playerIds[1].toString()).role).toBe('Killer');
+      expect(players.find(p => p._id.toString() === playerIds[1].toString()).role).toBe('Cleaner');
       expect(players.find(p => p._id.toString() === playerIds[2].toString()).role).toBe('Doctor');
     });
 
@@ -382,7 +382,7 @@ describe('GameRoutes Integration Tests', () => {
       const players = await Player.find({ gameId });
       for (const p of players) {
         p.alive = false;
-        p.role = 'Killer';
+        p.role = 'Cleaner';
         p.hasVoted = true;
         p.voteFor = playerIds[0];
         await p.save();
