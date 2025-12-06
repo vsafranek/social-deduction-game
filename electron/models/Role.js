@@ -108,22 +108,6 @@ const ROLES = {
   // MAFIA (Evil)
   // ==================
   
-  'Killer': {
-    team: 'evil',
-    description: 'Kills one player each night',
-    actionType: 'kill',
-    nightPriority: 7,
-    canUseEveryNight: true,
-    visitsTarget: true,
-    hasLimitedUses: false,
-    defaultAffiliations: ['evil'],
-    defaultVictory: { 
-      canWinWithTeams: ['evil'], 
-      soloWin: false, 
-      customRules: [] // ✅ Removed - uses victoryEvaluator logic
-    }
-  },
-  
   'Cleaner': {
     team: 'evil',
     description: 'Can kill OR mark players for cleaning. Marked alive players show fake investigation results. Dead marked players have hidden roles (3 uses per game)',

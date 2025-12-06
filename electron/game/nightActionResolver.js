@@ -47,22 +47,91 @@ function clearExpiredEffects(players) {
 
 /**
  * Generate fake success message for drunk player based on action type
+ * Generates random results instead of fixed values
  */
-function generateDrunkFakeMessage(action, targetName) {
-  const messages = {
-    'protect': `success:Chráníš ${targetName}`,
-    'block': `success:Uzamkl jsi ${targetName}`,
-    'investigate': `investigate:${targetName} = Doctor / Killer`,
-    'autopsy': `autopsy:${targetName} = Citizen`,
-    'watch': `watch:U ${targetName} nikdo nebyl`,
-    'track': `track:${targetName} nikam nešel`,
-    'kill': `success:Zaútočil jsi na ${targetName}`,
-    'clean_kill': `success:Zaútočil jsi na ${targetName}`,
-    'frame': `success:Obvinil jsi ${targetName}`,
-    'infect': `success:Nakazil jsi ${targetName}`,
-    'trap': `success:Nastavil jsi past`
+function generateDrunkFakeMessage(action, targetName, players = []) {
+  // Get all available roles for random selection
+  const allRoles = Object.keys(ROLES);
+  const goodRoles = allRoles.filter(r => ROLES[r].team === 'good');
+  const evilRoles = allRoles.filter(r => ROLES[r].team === 'evil');
+  const neutralRoles = allRoles.filter(r => ROLES[r].team === 'neutral');
+  
+  // Helper to get random role from array
+  const getRandomRole = (roleArray) => {
+    if (roleArray.length === 0) return 'Citizen';
+    return roleArray[Math.floor(Math.random() * roleArray.length)];
   };
-  return messages[action] || `success:Akce provedena`;
+  
+  // Helper to get random player names
+  const getRandomPlayerNames = (count = 1) => {
+    const alivePlayers = players.filter(p => p.alive && p.name !== targetName);
+    if (alivePlayers.length === 0) return [];
+    const shuffled = [...alivePlayers].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count).map(p => p.name);
+  };
+  
+  switch (action) {
+    case 'protect':
+      return `success:Chráníš ${targetName}`;
+    
+    case 'block':
+      return `success:Uzamkl jsi ${targetName}`;
+    
+    case 'investigate': {
+      // Random two roles (one good, one evil/neutral)
+      const role1 = getRandomRole(goodRoles);
+      const role2 = getRandomRole([...evilRoles, ...neutralRoles]);
+      const roles = Math.random() < 0.5 ? [role1, role2] : [role2, role1];
+      return `investigate:${targetName} = ${roles.join(' / ')}`;
+    }
+    
+    case 'autopsy': {
+      // Random role
+      const randomRole = getRandomRole(allRoles);
+      return `autopsy:${targetName} = ${randomRole}`;
+    }
+    
+    case 'watch': {
+      // Random 0-3 visitors
+      const visitorCount = Math.floor(Math.random() * 4);
+      if (visitorCount === 0) {
+        return `watch:U ${targetName} nikdo nebyl`;
+      }
+      const visitors = getRandomPlayerNames(visitorCount);
+      if (visitors.length === 0) {
+        return `watch:U ${targetName} nikdo nebyl`;
+      }
+      return `watch:${visitors.join(', ')} navštívili ${targetName}`;
+    }
+    
+    case 'track': {
+      // Random target or "nikam nešel"
+      if (Math.random() < 0.5) {
+        return `track:${targetName} nikam nešel`;
+      }
+      const trackedTargets = getRandomPlayerNames(1);
+      if (trackedTargets.length === 0) {
+        return `track:${targetName} nikam nešel`;
+      }
+      return `track:${targetName} navštívil ${trackedTargets[0]}`;
+    }
+    
+    case 'kill':
+    case 'clean_kill':
+      return `success:Zaútočil jsi na ${targetName}`;
+    
+    case 'frame':
+      return `success:Obvinil jsi ${targetName}`;
+    
+    case 'infect':
+      return `success:Nakazil jsi ${targetName}`;
+    
+    case 'trap':
+      return `success:Nastavil jsi past`;
+    
+    default:
+      return `success:Akce provedena`;
+  }
 }
 
 /**
@@ -172,7 +241,7 @@ async function resolveNightActions(game, players) {
     // ✅ SerialKiller cannot be stopped by Drunk modifier - he always acts
     if (actor.modifier === 'Drunk' && actor.role !== 'SerialKiller') {
       drunkPlayers.add(actorId);
-      const fakeMessage = generateDrunkFakeMessage(action, target.name);
+      const fakeMessage = generateDrunkFakeMessage(action, target.name, players);
       actor.nightAction.results.push(fakeMessage);
       console.log(`  🍺 ${actor.name}: Too drunk - stayed home (fake: ${action} → ${target.name})`);
       continue;
@@ -333,11 +402,11 @@ async function resolveNightActions(game, players) {
         if (target.modifier === 'Shady') {
           // Pick a random evil role
           const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
-          investigatedRole = evilRoles[Math.floor(Math.random() * evilRoles.length)] || 'Killer';
+          investigatedRole = evilRoles[Math.floor(Math.random() * evilRoles.length)] || 'Cleaner';
         } else if (hasEffect(target, 'framed')) {
           // Get the fake evil role from framed effect meta
           const framedEffect = target.effects.find(e => e.type === 'framed');
-          investigatedRole = framedEffect?.meta?.fakeEvilRole || 'Killer';
+          investigatedRole = framedEffect?.meta?.fakeEvilRole || 'Cleaner';
         }
         
         const possibleRoles = Math.random() < 0.5 
@@ -395,7 +464,7 @@ async function resolveNightActions(game, players) {
         let exactRole = target.role || 'Unknown';
         if (hasEffect(target, 'framed')) {
           const framedEffect = target.effects.find(e => e.type === 'framed');
-          exactRole = framedEffect?.meta?.fakeEvilRole || 'Killer';
+          exactRole = framedEffect?.meta?.fakeEvilRole || 'Cleaner';
           console.log(`  🔬 [P${actionData.priority}] ${actor.name} autopsied ${target.name}: ${exactRole} (framed evil role, true: ${target.role})`);
         } else {
           console.log(`  🔬 [P${actionData.priority}] ${actor.name} autopsied ${target.name}: ${exactRole}`);
@@ -497,7 +566,7 @@ async function resolveNightActions(game, players) {
           const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
           const fakeEvilRole = evilRoles.length > 0 
             ? evilRoles[Math.floor(Math.random() * evilRoles.length)]
-            : 'Killer';
+            : 'Cleaner';
           
           // Store the fake evil role in the effect meta
           addEffect(target, 'framed', actor._id, null, { fakeEvilRole });

@@ -56,7 +56,6 @@ const GameSchema = new mongoose.Schema({
       'Trapper': 1,
       'Tracker': 1,
       'Citizen': 1,
-      'Killer': 2,
       'Cleaner': 0,
       'Falšovač': 0
     }
