@@ -88,12 +88,15 @@ function GameScreen({
 
   // End screen
   if (phase === 'end') {
-    const winner = gameState?.game?.winner;
+    const winnerIds = (gameState?.game?.winnerPlayerIds || []).map(id => id?.toString?.() ?? id);
+    const currentId = currentPlayer?._id?.toString();
+    const playerWon = currentId ? winnerIds.includes(currentId) : false;
+    const personalResult = playerWon ? 'Vyhrál jsi! 🎉' : 'Prohrál jsi.';
     return (
       <div className="game-screen phase-end">
         <div className="end-screen">
-          <h1>🏁 Hra skončila!</h1>
-          <h2>Vítěz: {winner || 'Neznámý'}</h2>
+          <h1>Hra skončila!</h1>
+          <h2>{personalResult}</h2>
           <p className="player-name">Jsi: {playerName}</p>
           <p className="player-role">Role: {currentPlayer.role}</p>
           <p className="player-status">

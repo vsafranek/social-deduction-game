@@ -563,7 +563,7 @@ describe('votingResolver', () => {
 
       expect(mockGameLog.create).toHaveBeenCalledWith({
         gameId: game._id,
-        message: 'Executed: Target (2/3 votes)'
+        message: 'Executed: Target (2/3 weighted votes)'
       });
     });
 

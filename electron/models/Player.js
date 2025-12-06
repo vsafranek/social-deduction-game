@@ -85,7 +85,7 @@ const PlayerSchema = new mongoose.Schema({
     default: Date.now
   },
   roleData: {
-    type: Object,
+    type: mongoose.Schema.Types.Mixed,
     default: {}
   },
   roleHidden: {

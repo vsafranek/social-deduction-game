@@ -5,16 +5,19 @@ import ModifierSettings from './ModifierSettings';
 import { ROLE_INFO } from '../../data/roleInfo';
 import './LobbyLayout.css';
 
+const DEFAULT_NIGHT_SECONDS = 30;
+const DEFAULT_DAY_SECONDS = 30;
+
 function LobbyLayout({ gameState, onStartGame, onRefresh }) {
   const safeTimers = gameState?.game?.timers || {};
   const [timers, setTimers] = useState({
-    nightSeconds: safeTimers.nightSeconds ?? 90,
-    daySeconds: safeTimers.daySeconds ?? 150
+    nightSeconds: safeTimers.nightSeconds ?? DEFAULT_NIGHT_SECONDS,
+    daySeconds: safeTimers.daySeconds ?? DEFAULT_DAY_SECONDS
   });
   const [timersDirty, setTimersDirty] = useState(false);
 
-  const nightFromState = safeTimers.nightSeconds ?? 90;
-  const dayFromState = safeTimers.daySeconds ?? 150;
+  const nightFromState = safeTimers.nightSeconds ?? DEFAULT_NIGHT_SECONDS;
+  const dayFromState = safeTimers.daySeconds ?? DEFAULT_DAY_SECONDS;
 
   useEffect(() => {
     if (!timersDirty) {

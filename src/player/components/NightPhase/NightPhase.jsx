@@ -43,6 +43,11 @@ function NightPhase({ player, players, onAction }) {
     }
   }
 
+  // Get investigation history from roleData (persisted across nights)
+  const investigationHistory = React.useMemo(() => {
+    return player.roleData?.investigationHistory || {};
+  }, [player.roleData?.investigationHistory]);
+
   // Pro dual role - get current action info
   const currentActionInfo = isDualRole 
     ? actionInfo.actions[selectedMode]
@@ -171,6 +176,7 @@ function NightPhase({ player, players, onAction }) {
           isDualRole={isDualRole}
           usesRemaining={usesRemaining}
           visitedPlayers={player.role === 'Infected' ? (player.roleData?.visitedPlayers || []) : []}
+          investigationHistory={investigationHistory}
         />
       )}
     </div>

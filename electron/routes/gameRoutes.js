@@ -220,7 +220,9 @@ router.get('/:gameId/state', async (req, res) => {
         round: game.round,
         mayor: game.mayor,
         timers: game.timers,
-        timerState: game.timerState
+        timerState: game.timerState,
+        winner: game.winner,
+        winnerPlayerIds: game.winnerPlayerIds || []
       },
       players: publicPlayers,
       logs: logs.map(l => ({
@@ -492,6 +494,8 @@ router.post('/:gameId/end-night', async (req, res) => {
     const win = evaluateVictory(players);
     if (win) {
       game.phase = 'end';
+      game.winner = win.winner;
+      game.winnerPlayerIds = win.players || [];
       await game.save();
       await GameLog.create({ gameId, message: `🏁 Victory: ${win.winner}` });
       return res.json({ success: true, phase: 'end', winner: win.winner, winners: win.players });
@@ -536,6 +540,8 @@ router.post('/:gameId/end-day', async (req, res) => {
     const win = evaluateVictory(players);
     if (win) {
       game.phase = 'end';
+      game.winner = win.winner;
+      game.winnerPlayerIds = win.players || [];
       await game.save();
       await GameLog.create({ gameId, message: `🏁 Victory: ${win.winner}` });
       return res.json({ success: true, phase: 'end', winner: win.winner, winners: win.players });
@@ -568,6 +574,8 @@ router.post('/:gameId/reset-to-lobby', async (req, res) => {
     game.round = 0;
     game.mayor = null; // Reset mayor
     game.timerState = { phaseEndsAt: null };
+    game.winner = null;
+    game.winnerPlayerIds = [];
     await game.save();
 
     const players = await Player.find({ gameId });
@@ -637,6 +645,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
       if (win) {
         game.phase = 'end';
         game.winner = win.winner;
+        game.winnerPlayerIds = win.players || [];
         await game.save();
         await GameLog.create({ gameId, message: `🏁 Victory: ${win.winner}` });
         console.log(`✅ Victory: ${win.winner}`);
@@ -674,6 +683,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
       if (win) {
         game.phase = 'end';
         game.winner = win.winner;
+        game.winnerPlayerIds = win.players || [];
         await game.save();
         await GameLog.create({ gameId, message: `🏁 Victory: ${win.winner}` });
         console.log(`✅ Victory: ${win.winner}`);

@@ -28,6 +28,12 @@ const WINNER_LABELS = {
     emoji: '🌟', 
     gradient: 'linear-gradient(135deg, #a855f7, #9333ea)',
     description: 'Speciální win condition!'
+  },
+  'unknown': {
+    label: 'Výsledek neznámý',
+    emoji: '❔',
+    gradient: 'linear-gradient(135deg, #6b7280, #4b5563)',
+    description: 'Čekáme na potvrzení vítěze.'
   }
 };
 
@@ -41,8 +47,8 @@ function GameEndScreen({ gameState, currentPlayer }) {
 
   if (!gameState || !gameState.game) return null;
 
-  const winner = gameState.game.winner || 'good';
-  const winnerInfo = WINNER_LABELS[winner] || WINNER_LABELS['good'];
+  const winner = gameState.game.winner || 'unknown';
+  const winnerInfo = WINNER_LABELS[winner] || WINNER_LABELS['unknown'];
   const players = gameState.players || [];
   const winnerIds = gameState.game.winnerPlayerIds || [];
 

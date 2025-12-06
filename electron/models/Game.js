@@ -16,6 +16,17 @@ const GameSchema = new mongoose.Schema({
     phaseEndsAt: { type: Date, default: null } 
   },
 
+  winner: {
+    type: String,
+    enum: ['good', 'evil', 'solo', 'custom'],
+    default: null
+  },
+  winnerPlayerIds: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'Player',
+    default: []
+  },
+
   phase: {
     type: String,
     enum: ['lobby', 'night', 'day', 'end'],

@@ -11,5 +11,10 @@ module.exports = {
     '**/__tests__/**/*.js',
     '**/?(*.)+(spec|test).js'
   ],
+  // Ignore tests in src/ that use ES6 modules (they need Babel)
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/src/'
+  ],
   verbose: true
 };

@@ -1,5 +1,7 @@
 // src/player/components/NightActionModal/NightActionModal.jsx
 import React, { useState } from 'react';
+import RoleIcon from '../../../components/icons/RoleIcon';
+import { ROLE_INFO } from '../../../data/roleInfo';
 import './NightActionModal.css';
 
 function NightActionModal({ 
@@ -10,7 +12,8 @@ function NightActionModal({
   selectedMode,
   isDualRole,
   usesRemaining,
-  visitedPlayers = []
+  visitedPlayers = [],
+  investigationHistory = {}
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   
@@ -69,10 +72,14 @@ function NightActionModal({
           <div className="players-action-list">
             {players.map(player => {
               const visited = isPlayerVisited(player._id);
+              // Normalize player._id to string for lookup
+              const playerId = player._id?.toString?.() || player._id?.toString() || String(player._id);
+              const investigation = investigationHistory[playerId];
+              
               return (
                 <button
                   key={player._id}
-                  className={`player-action-item ${selectedPlayer === player._id ? 'selected' : ''} ${visited ? 'visited' : ''}`}
+                  className={`player-action-item ${selectedPlayer === player._id ? 'selected' : ''} ${visited ? 'visited' : ''} ${investigation ? 'investigated' : ''}`}
                   onClick={() => setSelectedPlayer(player._id)}
                 >
                   <div className="player-action-avatar">
@@ -104,6 +111,24 @@ function NightActionModal({
                     )}
                     {visited && (
                       <span className="visited-badge">🦠 Navštíveno</span>
+                    )}
+                    {investigation && (
+                      <div className="investigation-badge">
+                        {investigation.type === 'investigate' && '🔍'}
+                        {investigation.type === 'consig' && '🕵️'}
+                        {investigation.type === 'autopsy' && '🔬'}
+                        <span className="investigation-roles-inline">
+                          {investigation.roles && investigation.roles.split('/').map((role, idx) => {
+                            const roleTeam = ROLE_INFO[role.trim()]?.team || 'neutral';
+                            return (
+                              <span key={idx} className={`role-icon-inline team-${roleTeam}`}>
+                                <RoleIcon role={role.trim()} size={16} />
+                              </span>
+                            );
+                          })}
+                        </span>
+                        <span className="investigation-text">{investigation.roles}</span>
+                      </div>
                     )}
                     {selectedPlayer === player._id && (
                       <span className="selected-badge">Vybráno</span>

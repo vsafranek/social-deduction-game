@@ -373,5 +373,84 @@
   }
 }
 
+/* Investigation Badge */
+.investigation-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(59, 130, 246, 1);
+  margin-top: 2px;
+}
 
+.investigation-roles-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.role-icon-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+/* Team-based colors for role icons */
+.role-icon-inline.team-good {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.role-icon-inline.team-evil {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.role-icon-inline.team-neutral {
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.investigation-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-action-item.investigated {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.player-action-item.investigated:hover {
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+.dead-badge {
+  font-size: 11px;
+  color: rgba(239, 68, 68, 0.9);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 600px) {
+  .investigation-badge {
+    padding: 3px 6px;
+    gap: 4px;
+  }
+
+  .investigation-text {
+    font-size: 10px;
+  }
+}
 

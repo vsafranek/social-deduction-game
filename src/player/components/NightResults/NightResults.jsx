@@ -123,6 +123,31 @@ function NightResults({ player, results = [] }) {
   const [displayedResults, setDisplayedResults] = useState([]);
   const [lastResultsStr, setLastResultsStr] = useState('');
   const [expanded, setExpanded] = useState(true);
+  const canSeeVisitorNames = player?.modifier === 'Insomniac';
+
+  const formatDetail = (result) => {
+    if (!result?.detail) return null;
+
+    if (result.type === 'visited' && !canSeeVisitorNames) {
+      const names = result.detail
+        .split(',')
+        .map(name => name.trim())
+        .filter(Boolean);
+      const count = names.length;
+
+      if (count === 0) {
+        return 'Někdo tě pravděpodobně navštívil.';
+      }
+
+      if (count === 1) {
+        return 'Někdo tě navštívil (detaily skryté).';
+      }
+
+      return `${count} hráčů tě navštívilo (detaily skryté).`;
+    }
+
+    return result.detail;
+  };
 
   useEffect(() => {
     if (!results || results.length === 0) {
@@ -179,6 +204,7 @@ function NightResults({ player, results = [] }) {
 
   const mainResult = getMostImportant();
   const mainEventData = RESULT_MAPPING[mainResult.type] || RESULT_MAPPING['safe'];
+  const mainDetail = formatDetail(mainResult);
   
   // Zobraz rozklikávací šipku pouze pokud je více výsledků (pak je co rozbalit)
   const shouldShowExpand = displayedResults.length > 1;
@@ -196,8 +222,8 @@ function NightResults({ player, results = [] }) {
           <span className="result-emoji">{mainEventData.emoji}</span>
           <div className="result-text">
             <span className="result-label">{mainEventData.label}</span>
-            {mainResult.detail && (
-              <span className="result-detail">{mainResult.detail}</span>
+            {mainDetail && (
+              <span className="result-detail">{mainDetail}</span>
             )}
           </div>
           {shouldShowExpand && (
@@ -226,8 +252,8 @@ function NightResults({ player, results = [] }) {
                 <span className="result-emoji-small">{eventData.emoji}</span>
                 <div className="result-item-text">
                   <span className="result-label-small">{eventData.label}</span>
-                  {result.detail && (
-                    <span className="result-detail-small">{result.detail}</span>
+                  {formatDetail(result) && (
+                    <span className="result-detail-small">{formatDetail(result)}</span>
                   )}
                 </div>
               </div>

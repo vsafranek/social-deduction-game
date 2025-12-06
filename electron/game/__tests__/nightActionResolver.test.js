@@ -37,6 +37,12 @@ const createMockPlayer = (id, name, role, options = {}) => {
 
   // Set save method after player is created
   player.save = jest.fn().mockResolvedValue(player);
+  
+  // Mock markModified for Mongoose (used for roleData changes)
+  player.markModified = jest.fn(function(field) {
+    // In tests, we don't need to do anything, but the method should exist
+    return this;
+  });
 
   return player;
 };
@@ -68,8 +74,8 @@ describe('nightActionResolver', () => {
       await resolveNightActions({}, [killer, victim]);
 
       expect(victim.alive).toBe(false);
-      expect(victim.nightAction.results).toContain('killed:Byl jsi zavražděn');
-      expect(killer.nightAction.results).toContain('success:Zaútočil jsi na Victim');
+      expect(victim.nightAction.results).toContain('killed:Zavražděn');
+      expect(killer.nightAction.results).toContain('success:Zaútočil Victim');
     });
 
     test('should resolve protect action', async () => {
@@ -108,12 +114,18 @@ describe('nightActionResolver', () => {
         alive: true
       });
 
-      await resolveNightActions({}, [investigator, target]);
+      await resolveNightActions({ round: 1 }, [investigator, target]);
 
       const investigateResult = investigator.nightAction.results.find(r => r.startsWith('investigate:'));
       expect(investigateResult).toBeDefined();
       expect(investigateResult).toContain('Target');
       expect(investigateResult).toContain('=');
+      
+      // Check that investigation history is stored
+      expect(investigator.roleData.investigationHistory).toBeDefined();
+      expect(investigator.roleData.investigationHistory['2']).toBeDefined();
+      expect(investigator.roleData.investigationHistory['2'].type).toBe('investigate');
+      expect(investigator.roleData.investigationHistory['2'].round).toBe(1);
     });
 
     test('should resolve watch action', async () => {
@@ -161,7 +173,7 @@ describe('nightActionResolver', () => {
 
       const hasTrap = trapper.effects.some(e => e.type === 'trap');
       expect(hasTrap).toBe(true);
-      expect(trapper.nightAction.results).toContain('success:Nastavil jsi past');
+      expect(trapper.nightAction.results).toContain('success:Nastavil jsi past u Trapper');
     });
   });
 
@@ -203,9 +215,9 @@ describe('nightActionResolver', () => {
 
       // Target should be protected and not die
       expect(target.alive).toBe(true);
-      expect(target.nightAction.results).toContain('attacked:Na tebe byl proveden útok');
-      expect(target.nightAction.results).toContain('healed:Doktor tě zachránil!');
-      expect(doctor.nightAction.results.some(r => r.includes('Zachránil jsi'))).toBe(true);
+      expect(target.nightAction.results).toContain('attacked:Útok');
+      expect(target.nightAction.results).toContain('healed:Zachráněn');
+      expect(doctor.nightAction.results.some(r => r.includes('Zachránil'))).toBe(true);
     });
   });
 
@@ -263,7 +275,7 @@ describe('nightActionResolver', () => {
       await resolveNightActions({}, [jailer, blocked, target]);
 
       expect(target.alive).toBe(true);
-      expect(blocked.nightAction.results).toContain('blocked:Byl jsi uzamčen - tvá akce selhala');
+      expect(blocked.nightAction.results).toContain('blocked:Uzamčen');
     });
 
     test('should clear blocked effects at start of night', async () => {
@@ -303,7 +315,7 @@ describe('nightActionResolver', () => {
       // Visitor should be trapped (trap is checked before action)
       // However, since trap is set in the same night, the visitor might not be trapped
       // because trap effect is added during processing. Let's test that trap is set correctly.
-      expect(trapper.nightAction.results).toContain('success:Nastavil jsi past');
+      expect(trapper.nightAction.results).toContain('success:Nastavil jsi past u Trapper');
     });
   });
 
@@ -459,12 +471,18 @@ describe('nightActionResolver', () => {
         roleHidden: false
       });
 
-      await resolveNightActions({}, [coroner, dead]);
+      await resolveNightActions({ round: 1 }, [coroner, dead]);
 
       const autopsyResult = coroner.nightAction.results.find(r => r.startsWith('autopsy:'));
       expect(autopsyResult).toBeDefined();
       expect(autopsyResult).toContain('Killer');
       expect(autopsyResult).toContain('Dead');
+      
+      // Check that autopsy history is stored
+      expect(coroner.roleData.investigationHistory).toBeDefined();
+      expect(coroner.roleData.investigationHistory['2']).toBeDefined();
+      expect(coroner.roleData.investigationHistory['2'].type).toBe('autopsy');
+      expect(coroner.roleData.investigationHistory['2'].round).toBe(1);
     });
 
     test('should not allow Coroner to autopsy alive player', async () => {
@@ -563,7 +581,7 @@ describe('nightActionResolver', () => {
       await resolveNightActions({}, [killer, target]);
 
       expect(target.alive).toBe(false);
-      expect(target.nightAction.results).toContain('killed:Byl jsi zavražděn');
+      expect(target.nightAction.results).toContain('killed:Zavražděn');
     });
 
     test('should not kill protected target', async () => {
@@ -580,8 +598,8 @@ describe('nightActionResolver', () => {
       await resolveNightActions({}, [doctor, killer, target]);
 
       expect(target.alive).toBe(true);
-      expect(target.nightAction.results).toContain('attacked:Na tebe byl proveden útok');
-      expect(target.nightAction.results).toContain('healed:Doktor tě zachránil!');
+      expect(target.nightAction.results).toContain('attacked:Útok');
+      expect(target.nightAction.results).toContain('healed:Zachráněn');
     });
 
     test('should give Doctor feedback when saving someone', async () => {
@@ -597,7 +615,7 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [doctor, killer, target]);
 
-      const saveMessage = doctor.nightAction.results.find(r => r.includes('Zachránil jsi'));
+      const saveMessage = doctor.nightAction.results.find(r => r.includes('Zachránil'));
       expect(saveMessage).toBeDefined();
     });
 
@@ -611,7 +629,7 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [doctor, target]);
 
-      const noAttackMessage = doctor.nightAction.results.find(r => r.includes('nebyl napaden'));
+      const noAttackMessage = doctor.nightAction.results.find(r => r.includes('Chránil'));
       expect(noAttackMessage).toBeDefined();
     });
   });
@@ -632,7 +650,7 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [jailer, target, victim]);
 
-      const triedToLeave = jailer.nightAction.results.find(r => r.includes('pokusil se odejít'));
+      const triedToLeave = jailer.nightAction.results.find(r => r.includes('odešel'));
       expect(triedToLeave).toBeDefined();
     });
 
@@ -647,7 +665,7 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [jailer, target]);
 
-      const stayedHome = jailer.nightAction.results.find(r => r.includes('zůstal doma'));
+      const stayedHome = jailer.nightAction.results.find(r => r.includes('doma'));
       expect(stayedHome).toBeDefined();
     });
   });
@@ -667,7 +685,7 @@ describe('nightActionResolver', () => {
 
       expect(innocent.alive).toBe(false);
       expect(hunter.alive).toBe(false);
-      expect(hunter.nightAction.results).toContain('hunter_guilt:Zabil jsi nevinného - umíráš výčitkami!');
+      expect(hunter.nightAction.results).toContain('hunter_guilt:Zabil nevinného');
     });
 
     test('should kill evil target without Hunter dying', async () => {
@@ -683,7 +701,7 @@ describe('nightActionResolver', () => {
 
       expect(evil.alive).toBe(false);
       expect(hunter.alive).toBe(true);
-      const successMessage = hunter.nightAction.results.find(r => r.includes('Úspěšně jsi zabil'));
+      const successMessage = hunter.nightAction.results.find(r => r.includes('Zabil'));
       expect(successMessage).toBeDefined();
     });
   });
@@ -704,7 +722,7 @@ describe('nightActionResolver', () => {
       const hasFramed = target.effects.some(e => e.type === 'framed');
       expect(hasFramed).toBe(true);
       expect(accuser.roleData.usesRemaining).toBe(1);
-      const successMessage = accuser.nightAction.results.find(r => r.includes('Obvinil jsi'));
+      const successMessage = accuser.nightAction.results.find(r => r.includes('Obvinil'));
       expect(successMessage).toBeDefined();
     });
 
@@ -721,7 +739,7 @@ describe('nightActionResolver', () => {
 
       const hasFramed = target.effects.some(e => e.type === 'framed');
       expect(hasFramed).toBe(false);
-      expect(accuser.nightAction.results).toContain('failed:Už nemáš žádná použití!');
+      expect(accuser.nightAction.results).toContain('failed:Žádná použití');
     });
 
     test('should allow Consigliere to investigate with uses remaining', async () => {
@@ -733,12 +751,18 @@ describe('nightActionResolver', () => {
         alive: true
       });
 
-      await resolveNightActions({}, [consig, target]);
+      await resolveNightActions({ round: 1 }, [consig, target]);
 
       const consigResult = consig.nightAction.results.find(r => r.startsWith('consig:'));
       expect(consigResult).toBeDefined();
       expect(consigResult).toContain('Killer');
       expect(consig.roleData.usesRemaining).toBe(1);
+      
+      // Check that investigation history is stored
+      expect(consig.roleData.investigationHistory).toBeDefined();
+      expect(consig.roleData.investigationHistory['2']).toBeDefined();
+      expect(consig.roleData.investigationHistory['2'].type).toBe('consig');
+      expect(consig.roleData.investigationHistory['2'].round).toBe(1);
     });
 
     test('should not allow Consigliere to investigate dead player', async () => {
@@ -795,7 +819,7 @@ describe('nightActionResolver', () => {
 
       const failedResult = consig.nightAction.results.find(r => r.includes('failed:'));
       expect(failedResult).toBeDefined();
-      expect(failedResult).toContain('Už nemáš žádná použití');
+      expect(failedResult).toContain('Žádná použití');
     });
   });
 
@@ -905,8 +929,10 @@ describe('nightActionResolver', () => {
       expect(investigateResult).toContain('Target');
       // Should contain two roles (both fake)
       expect(investigateResult).toContain(' = ');
-      // Should NOT contain the true role (Killer) - this is critical for the bug fix
-      expect(investigateResult).not.toContain('Killer');
+      // Should NOT contain the true role (Killer) as a separate word - this is critical for the bug fix
+      // Use regex to check for "Killer" as a whole word (not as substring in "SerialKiller")
+      const killerRegex = /\bKiller\b/;
+      expect(investigateResult).not.toMatch(killerRegex);
       
       // Run multiple times to ensure true role never appears
       for (let i = 0; i < 10; i++) {
@@ -915,7 +941,7 @@ describe('nightActionResolver', () => {
         });
         await resolveNightActions({}, [newInvestigator, target]);
         const result = newInvestigator.nightAction.results.find(r => r.startsWith('investigate:'));
-        expect(result).not.toContain('Killer');
+        expect(result).not.toMatch(killerRegex);
       }
     });
 
@@ -956,7 +982,7 @@ describe('nightActionResolver', () => {
 
       const hasInfected = target.effects.some(e => e.type === 'infected');
       expect(hasInfected).toBe(true);
-      expect(infected.nightAction.results).toContain('success:Nakazil jsi Target');
+      expect(infected.nightAction.results).toContain('success:Nakazil Target');
     });
 
     test('should not infect already infected target', async () => {

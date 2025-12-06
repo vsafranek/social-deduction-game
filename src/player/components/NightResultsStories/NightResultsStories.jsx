@@ -1,5 +1,7 @@
 // src/player/components/NightResultsStories/NightResultsStories.jsx
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import RoleIcon from '../../../components/icons/RoleIcon';
+import { ROLE_INFO } from '../../../data/roleInfo';
 import './NightResultsStories.css';
 
 const RESULT_MAPPING = {
@@ -206,12 +208,50 @@ function NightResultsStories({ results = [], onComplete }) {
     return r;
   };
 
+  // Parse investigation/autopsy/consig result to extract player name and roles
+  const parseInvestigationResult = (detail) => {
+    if (!detail) return null;
+    
+    // Format options:
+    // 1. "PlayerName = Role1 / Role2" (Investigator)
+    // 2. "PlayerName = Role (X)" (Consigliere)
+    // 3. "PlayerName = Role" (Autopsy)
+    
+    let playerName = '';
+    let rolesStr = '';
+    
+    // Try "PlayerName = ..." format first (Investigator, Autopsy, Consigliere)
+    let match = detail.match(/^(.+?)\s*=\s*(.+?)(?:\s*\([^)]*\))?$/);
+    if (match) {
+      playerName = match[1].trim();
+      rolesStr = match[2].trim();
+    } else {
+      // Try "PlayerName je Role (zbývá X)" format (legacy Consigliere)
+      match = detail.match(/^(.+?)\s+je\s+(.+?)(?:\s*\(|$)/);
+      if (match) {
+        playerName = match[1].trim();
+        rolesStr = match[2].trim();
+      }
+    }
+    
+    if (!playerName || !rolesStr) return null;
+    
+    // Split by "/" for multiple roles (Investigator shows 2 possibilities)
+    const roles = rolesStr.split('/').map(r => r.trim());
+    
+    return { playerName, roles };
+  };
+
   const currentResult = parseResult(visibleResults[currentIndex]);
   const eventData = RESULT_MAPPING[currentResult.type] || RESULT_MAPPING['safe'];
   
   // ✅ Rozhodnutí o zobrazení detailů
   const shouldShowDetail = !eventData.hideDetails && currentResult.detail;
   const subtitle = shouldShowDetail ? currentResult.detail : eventData.subtitle;
+  
+  // Check if this is an investigation-like result (investigate, consig, autopsy)
+  const shouldShowRoleIcons = ['investigate', 'consig', 'autopsy'].includes(currentResult.type);
+  const investigationData = shouldShowRoleIcons ? parseInvestigationResult(currentResult.detail) : null;
 
   const handleNext = () => {
     goToNext();
@@ -296,7 +336,24 @@ function NightResultsStories({ results = [], onComplete }) {
         {/* Text content */}
         <div className="story-text">
           <h2>{eventData.label}</h2>
-          <p>{subtitle}</p>
+          {investigationData ? (
+            <div className="investigation-story-result">
+              <p className="investigated-player-story">{investigationData.playerName}</p>
+              <div className="investigation-roles-story">
+                {investigationData.roles.map((role, roleIdx) => {
+                  const roleTeam = ROLE_INFO[role]?.team || 'neutral';
+                  return (
+                    <div key={roleIdx} className={`investigation-role-story-item team-${roleTeam}`}>
+                      <RoleIcon role={role} size={48} />
+                      <span className="role-name-story">{role}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <p>{subtitle}</p>
+          )}
         </div>
 
         {/* Counter */}

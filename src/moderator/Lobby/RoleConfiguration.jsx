@@ -24,8 +24,8 @@ function RoleConfiguration({
 }) {
   const [showModal, setShowModal] = useState(false);
   const [showGuaranteedModal, setShowGuaranteedModal] = useState({ team: null, show: false });
-  const nightSeconds = timers?.nightSeconds ?? 90;
-  const daySeconds = timers?.daySeconds ?? 150;
+  const nightSeconds = timers?.nightSeconds ?? 30;
+  const daySeconds = timers?.daySeconds ?? 30;
 
   const clamp = (v) => Math.max(10, Math.min(1800, Number.isFinite(+v) ? +v : 10));
   const pushTimers = useCallback(
