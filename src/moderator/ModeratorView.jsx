@@ -15,7 +15,7 @@ const TEST_STORIES_DATA = [
   'attacked:Neznámý Útočník',
   'healed:Byl jsi zachráněn',
   'blocked:Policista tě zablokoval',
-  'trapped:Spadl jsi do pasti',
+  'guarded:Zastaven stráží',
   'success:Tvá akce byla úspěšná',
   'visited:Někdo tě navštívil',
   'watch:Viděl jsi: Hráč1, Hráč2',

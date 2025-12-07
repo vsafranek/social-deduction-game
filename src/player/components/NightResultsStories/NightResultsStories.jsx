@@ -33,10 +33,10 @@ const RESULT_MAPPING = {
     bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     hideDetails: false
   },
-  'trapped': { 
-    emoji: '🪤', 
-    label: 'Past!', 
-    subtitle: 'Spadl jsi do pasti',
+  'guarded': { 
+    emoji: '🛡️', 
+    label: 'Stráž!', 
+    subtitle: 'Zastaven stráží',
     bgGradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
     hideDetails: false
   },
@@ -52,7 +52,7 @@ const RESULT_MAPPING = {
     label: 'Návštěva', 
     subtitle: 'Někdo tě navštívil',
     bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-    hideDetails: true // ✅ Skryj jména návštěvníků (pokud nemáš Lookout/Trapper)
+    hideDetails: true // ✅ Skryj jména návštěvníků (pokud nemáš Lookout/Guardian)
   },
   'watch': { 
     emoji: '👁️', 

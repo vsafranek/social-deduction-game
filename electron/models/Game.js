@@ -53,7 +53,7 @@ const GameSchema = new mongoose.Schema({
       'Police': 1,
       'Investigator': 1,
       'Lookout': 1,
-      'Trapper': 1,
+      'Guardian': 1,
       'Tracker': 1,
       'Citizen': 1,
       'Cleaner': 0,

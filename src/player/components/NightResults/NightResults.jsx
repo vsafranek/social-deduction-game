@@ -33,9 +33,9 @@ const RESULT_MAPPING = {
     bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', 
     severity: 'neutral' 
   },
-  'trapped': { 
-    emoji: '🪤', 
-    label: 'V pasti', 
+  'guarded': { 
+    emoji: '🛡️', 
+    label: 'Zastaven stráží', 
     bgGradient: 'linear-gradient(135deg, #f59e0b, #d97706)', 
     severity: 'negative' 
   },

@@ -60,10 +60,10 @@ const ROLES = {
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
   
-  'Trapper': {
+  'Guardian': {
     team: 'good',
-    description: 'Sets a trap; visitors are revealed and their action fails',
-    actionType: 'trap',
+    description: 'Guards a player; visitors are revealed and their action fails',
+    actionType: 'guard',
     nightPriority: 3,
     canUseEveryNight: true,
     visitsTarget: false,

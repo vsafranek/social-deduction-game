@@ -164,16 +164,16 @@ describe('nightActionResolver', () => {
       expect(trackResult).toBeDefined();
     });
 
-    test('should resolve trap action', async () => {
-      const trapper = createMockPlayer('1', 'Trapper', 'Trapper', {
-        nightAction: { targetId: '1', action: 'trap', results: [] }
+    test('should resolve guard action', async () => {
+      const guardian = createMockPlayer('1', 'Guardian', 'Guardian', {
+        nightAction: { targetId: '1', action: 'guard', results: [] }
       });
 
-      await resolveNightActions({}, [trapper]);
+      await resolveNightActions({}, [guardian]);
 
-      const hasTrap = trapper.effects.some(e => e.type === 'trap');
-      expect(hasTrap).toBe(true);
-      expect(trapper.nightAction.results).toContain('success:Nastavil jsi past u Trapper');
+      const hasGuard = guardian.effects.some(e => e.type === 'guard');
+      expect(hasGuard).toBe(true);
+      expect(guardian.nightAction.results).toContain('success:Nastavil jsi stráž u Guardian');
     });
   });
 
@@ -295,27 +295,27 @@ describe('nightActionResolver', () => {
 
   describe('Trap Effects', () => {
     
-    test('should trap visitor when target has trap', async () => {
-      // Trapper sets trap on themselves in the same night
-      const trapper = createMockPlayer('1', 'Trapper', 'Trapper', {
-        nightAction: { targetId: '1', action: 'trap', results: [] }
+    test('should guard visitor when target has guard', async () => {
+      // Guardian sets guard on themselves in the same night
+      const guardian = createMockPlayer('1', 'Guardian', 'Guardian', {
+        nightAction: { targetId: '1', action: 'guard', results: [] }
       });
-      // Visitor tries to visit trapper in the same night
-      // Note: trap effect is added during processing, so visitor should be trapped
+      // Visitor tries to visit guardian in the same night
+      // Note: guard effect is added during processing, so visitor should be guarded
       const visitor = createMockPlayer('2', 'Visitor', 'Cleaner', {
         nightAction: { targetId: '1', action: 'kill', results: [] }
       });
 
-      await resolveNightActions({}, [trapper, visitor]);
+      await resolveNightActions({}, [guardian, visitor]);
 
-      // Trapper should have trap effect
-      const hasTrap = trapper.effects.some(e => e.type === 'trap');
-      expect(hasTrap).toBe(true);
+      // Guardian should have guard effect
+      const hasGuard = guardian.effects.some(e => e.type === 'guard');
+      expect(hasGuard).toBe(true);
       
-      // Visitor should be trapped (trap is checked before action)
-      // However, since trap is set in the same night, the visitor might not be trapped
-      // because trap effect is added during processing. Let's test that trap is set correctly.
-      expect(trapper.nightAction.results).toContain('success:Nastavil jsi past u Trapper');
+      // Visitor should be guarded (guard is checked before action)
+      // However, since guard is set in the same night, the visitor might not be guarded
+      // because guard effect is added during processing. Let's test that guard is set correctly.
+      expect(guardian.nightAction.results).toContain('success:Nastavil jsi stráž u Guardian');
     });
   });
 

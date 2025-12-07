@@ -70,17 +70,17 @@ export const ROLE_INFO = {
       description: 'Pozoruj jednoho hráče'
     }
   },
-  'Trapper': {
-    emoji: '🪤',
+  'Guardian': {
+    emoji: '🛡️',
     team: 'good',
     teamLabel: 'Město',
-    description: 'Nastav past u domu jiného hráče - návštěvníci spadnou do pasti',
-    actionVerb: 'Nastavit past',
+    description: 'Nastav stráž u domu jiného hráče - návštěvníci jsou odhaleni a zastaveni',
+    actionVerb: 'Nastavit stráž',
     nightAction: {
-      verb: 'Nastav Past',
-      icon: '🪤',
+      verb: 'Nastav Stráž',
+      icon: '🛡️',
       color: 'green',
-      description: 'Nastav past u domu jiného hráče'
+      description: 'Nastav stráž u domu jiného hráče'
     }
   },
   'Tracker': {

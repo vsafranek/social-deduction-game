@@ -126,8 +126,8 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
     case 'infect':
       return `success:Nakazil jsi ${targetName}`;
     
-    case 'trap':
-      return `success:Nastavil jsi past`;
+    case 'guard':
+      return `success:Nastavil jsi stráž u ${targetName}`;
     
     default:
       return `success:Akce provedena`;
@@ -142,7 +142,7 @@ async function resolveNightActions(game, players) {
   
   const idMap = new Map(players.map(p => [p._id.toString(), p]));
   const blocked = new Set();
-  const trapped = new Set();
+  const guarded = new Set();
   const allVisits = [];
   const drunkPlayers = new Set();
   const jailTargets = new Map(); 
@@ -154,9 +154,9 @@ async function resolveNightActions(game, players) {
   for (const p of players) {
     removeEffects(p, e => 
       e.type === 'blocked' || 
-      e.type === 'trapped' || 
+      e.type === 'guarded' || 
       e.type === 'protected' ||
-      e.type === 'trap'
+      e.type === 'guard'
       // marked_for_cleaning is NOT removed here - it persists until player dies
     );
   }
@@ -258,14 +258,14 @@ async function resolveNightActions(game, players) {
       continue;
     }
 
-    // Check for trap
-    // ✅ SerialKiller cannot be trapped - he always goes first and cannot be stopped
-    if (hasEffect(target, 'trap') && actor.role !== 'SerialKiller') {
-      if (!trapped.has(actorId)) {
-        trapped.add(actorId);
-        addEffect(actor, 'trapped', null, null, {});
-        actor.nightAction.results.push('trapped:Past');
-        console.log(`  🪤 ${actor.name}: Trapped by ${target.name}`);
+    // Check for guard
+    // ✅ SerialKiller cannot be guarded - he always goes first and cannot be stopped
+    if (hasEffect(target, 'guard') && actor.role !== 'SerialKiller') {
+      if (!guarded.has(actorId)) {
+        guarded.add(actorId);
+        addEffect(actor, 'guarded', null, null, {});
+        actor.nightAction.results.push('guarded:Stráž');
+        console.log(`  🛡️ ${actor.name}: Guarded by ${target.name}`);
       }
       continue;
     }
@@ -298,12 +298,12 @@ async function resolveNightActions(game, players) {
         break;
       }
 
-      case 'trap': {
-        // Trapper pokládá past na cílového hráče, ne na sebe
-        addEffect(target, 'trap', actor._id, null, {});
+      case 'guard': {
+        // Guardian nastaví stráž u cílového hráče, ne u sebe
+        addEffect(target, 'guard', actor._id, null, {});
         toSave.add(targetId);
-        actor.nightAction.results.push(`success:Nastavil jsi past u ${target.name}`);
-        console.log(`  🪤 [P${actionData.priority}] ${actor.name} set a trap on ${target.name}'s house`);
+        actor.nightAction.results.push(`success:Nastavil jsi stráž u ${target.name}`);
+        console.log(`  🛡️ [P${actionData.priority}] ${actor.name} set a guard on ${target.name}'s house`);
         break;
       }
 
@@ -743,7 +743,7 @@ async function resolveNightActions(game, players) {
       const targetId = v.targetId;
       
       // ✅ Get ONLY visitors who actually made it to the target
-      // (not blocked, not drunk, not trapped)
+      // (not blocked, not drunk, not guarded)
       const successfulVisitors = allVisits
         .filter(visit => {
           // Visit to this target
@@ -756,10 +756,10 @@ async function resolveNightActions(game, players) {
           // Skip self
           if (visitorId === actor._id.toString()) return false;
           
-          // Check if visitor was blocked/drunk/trapped
+          // Check if visitor was blocked/drunk/guarded
           if (drunkPlayers.has(visitorId)) return false;
           if (blocked.has(visitorId)) return false;
-          if (trapped.has(visitorId)) return false;
+          if (guarded.has(visitorId)) return false;
           
           return true;
         })
@@ -796,10 +796,10 @@ async function resolveNightActions(game, players) {
         continue;
       }
       
-      // Check if target was trapped - stayed home (fell into trap)
-      if (trapped.has(targetId)) {
+      // Check if target was guarded - stayed home (was guarded)
+      if (guarded.has(targetId)) {
         actor.nightAction.results.push(`track:${target.name} nikam nešel`);
-        console.log(`    👣 ${actor.name} tracked trapped ${target.name} - stayed home`);
+        console.log(`    👣 ${actor.name} tracked guarded ${target.name} - stayed home`);
         continue;
       }
       
@@ -914,7 +914,7 @@ async function resolveNightActions(game, players) {
         
         if (drunkPlayers.has(visitorId)) return false;
         if (blocked.has(visitorId)) return false;
-        if (trapped.has(visitorId)) return false;
+        if (guarded.has(visitorId)) return false;
         
         return true;
       })

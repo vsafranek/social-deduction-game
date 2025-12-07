@@ -20,7 +20,7 @@ const EMOJI_FALLBACK = {
   'Investigator': '🔍',
   'Coroner': '🔬',
   'Lookout': '👁️',
-  'Trapper': '🪤',
+  'Guardian': '🛡️',
   'Tracker': '👣',
   'Hunter': '🏹',
   'Citizen': '👤',

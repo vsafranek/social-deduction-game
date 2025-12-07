@@ -162,8 +162,8 @@ function NightPhase({ player, players, onAction }) {
             if (player.role === 'Cleaner' && selectedMode === 'clean_role') {
               return players.filter(p => p._id !== player._id); // Both alive and dead
             }
-            // Trapper can target alive players (to set trap on their house)
-            if (player.role === 'Trapper') {
+            // Guardian can target alive players (to set guard on their house)
+            if (player.role === 'Guardian') {
               return players.filter(p => p._id !== player._id && p.alive);
             }
             // All other roles/actions target alive players
