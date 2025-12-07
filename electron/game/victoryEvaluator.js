@@ -75,6 +75,8 @@ function evaluateCustomRule(rule, ctx) {
 
     case 'allOthersHaveEffect': {
       const { effect, negate } = rule;
+      // For Infected: check all alive players (excluding self)
+      // Infected wins if all other alive players have the 'infected' effect
       const alive = ctx.players.filter(pl => pl.alive);
       const selfId = ctx.self?._id?.toString();
       for (const pl of alive) {

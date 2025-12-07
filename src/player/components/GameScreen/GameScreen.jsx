@@ -88,17 +88,57 @@ function GameScreen({
 
   // End screen
   if (phase === 'end') {
+    const winner = gameState?.game?.winner;
     const winnerIds = (gameState?.game?.winnerPlayerIds || []).map(id => id?.toString?.() ?? id);
     const currentId = currentPlayer?._id?.toString();
     const playerWon = currentId ? winnerIds.includes(currentId) : false;
-    const personalResult = playerWon ? 'Vyhrál jsi! 🎉' : 'Prohrál jsi.';
+    
+    // Check if custom winner (Jester or Infected)
+    const isCustomWin = winner === 'custom';
+    const customWinner = isCustomWin ? gameState.players.find(p => winnerIds.includes(p._id?.toString?.() ?? p._id)) : null;
+    const isJesterWin = isCustomWin && customWinner?.role === 'Jester';
+    const isInfectedWin = isCustomWin && customWinner?.role === 'Infected';
+    
+    let personalResult;
+    let victoryMessage;
+    
+    if (isJesterWin && customWinner) {
+      if (playerWon) {
+        personalResult = 'Vyhrál jsi! 🎭';
+        victoryMessage = 'Byl jsi vyhlasován a vyhrál jsi jako Šašek!';
+      } else {
+        personalResult = 'Prohrál jsi.';
+        victoryMessage = `Šašek ${customWinner.name} byl vyhlasován a vyhrál!`;
+      }
+    } else if (isInfectedWin && customWinner) {
+      if (playerWon) {
+        personalResult = 'Vyhrál jsi! 🦠';
+        victoryMessage = 'Všichni hráči byli nakaženi - vyhrál jsi jako Nakažený!';
+      } else {
+        personalResult = 'Prohrál jsi.';
+        victoryMessage = `Nakažený ${customWinner.name} vyhrál - všichni hráči byli nakaženi!`;
+      }
+    } else {
+      personalResult = playerWon ? 'Vyhrál jsi! 🎉' : 'Prohrál jsi.';
+      victoryMessage = null;
+    }
+    
     return (
       <div className="game-screen phase-end">
         <div className="end-screen">
           <h1>Hra skončila!</h1>
           <h2>{personalResult}</h2>
-          <p className="player-name">Jsi: {playerName}</p>
-          <p className="player-role">Role: {currentPlayer.role}</p>
+          {victoryMessage && (
+            <p className="victory-message" style={{ 
+              marginTop: '8px', 
+              fontSize: '16px', 
+              color: '#a855f7',
+              fontWeight: '600'
+            }}>
+              {victoryMessage}
+            </p>
+          )}
+          <p className="player-role">Role: {currentPlayer.modifier === 'Amnesiac' ? 'Neznámá' : currentPlayer.role}</p>
           <p className="player-status">
             {currentPlayer.alive ? '✅ Přežil jsi' : '💀 Zemřel jsi'}
           </p>

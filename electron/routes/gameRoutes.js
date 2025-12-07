@@ -397,6 +397,7 @@ router.post('/:gameId/start-config', async (req, res) => {
     const shadyChance = normalizeChance(modifiers?.shadyChance ?? modifiers?.recluseChance ?? modifiers?.poustevníkChance, 0.15);
     const paranoidChance = normalizeChance(modifiers?.paranoidChance, 0.1);
     const insomniacChance = normalizeChance(modifiers?.insomniacChance, 0.1);
+    const amnesiacChance = normalizeChance(modifiers?.amnesiacChance, 0);
 
     // ✅ Check if MODIFIERS exists
     if (!MODIFIERS) {
@@ -432,6 +433,12 @@ router.post('/:gameId/start-config', async (req, res) => {
         if (MODIFIERS.Insomniac && Array.isArray(MODIFIERS.Insomniac.allowedTeams)) {
           if (MODIFIERS.Insomniac.allowedTeams.includes(roleTeam)) {
             validModifiers.push({ name: 'Insomniac', chance: insomniacChance });
+          }
+        }
+        
+        if (MODIFIERS.Amnesiac && Array.isArray(MODIFIERS.Amnesiac.allowedTeams)) {
+          if (MODIFIERS.Amnesiac.allowedTeams.includes(roleTeam)) {
+            validModifiers.push({ name: 'Amnesiac', chance: amnesiacChance });
           }
         }
 
@@ -534,8 +541,23 @@ router.post('/:gameId/end-day', async (req, res) => {
     if (game.phase !== 'day') return res.status(400).json({ error: 'Not in day phase' });
 
     let players = await Player.find({ gameId });
-    await resolveDayVoting(game, players);
+    const votingResult = await resolveDayVoting(game, players, GameLog);
     players = await Player.find({ gameId });
+
+    // ✅ Check if Jester won (was executed)
+    console.log('🔍 Voting result:', JSON.stringify(votingResult, null, 2));
+    if (votingResult && votingResult.jesterWin === true) {
+      console.log('🎭 Jester win detected!');
+      const jester = players.find(p => p.role === 'Jester' && !p.alive);
+      console.log('🎭 Found Jester:', jester ? jester.name : 'not found');
+      game.phase = 'end';
+      game.winner = 'custom';
+      game.winnerPlayerIds = jester ? [jester._id] : [];
+      await game.save();
+      await GameLog.create({ gameId, message: `🏁 Victory: Jester ${jester?.name || 'unknown'} wins!` });
+      console.log('🎭 Game ended - Jester wins!');
+      return res.json({ success: true, phase: 'end', winner: 'custom', winners: jester ? [jester._id] : [] });
+    }
 
     const win = evaluateVictory(players);
     if (win) {
@@ -623,10 +645,29 @@ router.post('/:gameId/end-phase', async (req, res) => {
       console.log('📋 Processing day voting...');
       
       let players = await Player.find({ gameId });
-      await resolveDayVoting(game, players, GameLog);
+      const votingResult = await resolveDayVoting(game, players, GameLog);
       
       // Reload players after voting
       players = await Player.find({ gameId });
+      
+      // ✅ Check if Jester won (was executed)
+      if (votingResult && votingResult.jesterWin === true) {
+        console.log('🎭 Jester win detected in end-phase!');
+        const jester = players.find(p => p.role === 'Jester' && !p.alive);
+        console.log('🎭 Found Jester:', jester ? jester.name : 'not found');
+        game.phase = 'end';
+        game.winner = 'custom';
+        game.winnerPlayerIds = jester ? [jester._id] : [];
+        await game.save();
+        await GameLog.create({ gameId, message: `🏁 Victory: Jester ${jester?.name || 'unknown'} wins!` });
+        console.log('🎭 Game ended - Jester wins!');
+        return res.json({
+          success: true,
+          phase: 'end',
+          winner: 'custom',
+          winners: jester ? [jester._id] : []
+        });
+      }
       
       // ✅ RESET nočních akcí pro novou noc
       console.log('🧹 Resetting night actions for new night...');

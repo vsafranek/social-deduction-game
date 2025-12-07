@@ -120,19 +120,6 @@ export const ROLE_INFO = {
   // ==================
   // MAFIA (Evil)
   // ==================
-  'Killer': {
-    emoji: '🔪',
-    team: 'evil',
-    teamLabel: 'Mafie',
-    description: 'Každou noc zabíjíš jednoho hráče',
-    actionVerb: 'Zabít',
-    nightAction: {
-      verb: 'Zabiš',
-      icon: '🔪',
-      color: 'red',
-      description: 'Zabiš jednoho hráče'
-    }
-  },
   'Cleaner': {
     emoji: '🧹',
     team: 'evil',
@@ -234,6 +221,15 @@ export const ROLE_INFO = {
       color: 'purple',
       description: 'Nakazi jednoho hráče'
     }
+  },
+  
+  'Jester': {
+    emoji: '🎭',
+    team: 'neutral',
+    teamLabel: 'Šašek',
+    description: 'Vyhraj, pokud jsi vyhlasován. Hra končí okamžitě, když jsi vyhlasován.',
+    actionVerb: 'Žádná',
+    nightAction: null // No night action
   }
 };
 

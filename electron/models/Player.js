@@ -34,12 +34,12 @@ const PlayerSchema = new mongoose.Schema({
     type: String,
     enum: ['Doctor', 'Jailer', 'Investigator', 'Coroner', 'Lookout', 'Trapper', 'Tracker',
            'Hunter', 'Citizen', 'Cleaner', 'Accuser', 'Consigliere',
-           'SerialKiller', 'Infected', null],
+           'SerialKiller', 'Infected', 'Jester', null],
     default: null
   },
   modifier: {
     type: String,
-    enum: ['Drunk', 'Shady', 'Paranoid', 'Insomniac', null],
+    enum: ['Drunk', 'Shady', 'Paranoid', 'Insomniac', 'Amnesiac', null],
     default: null
   },
   effects: { type: [EffectSchema], default: [] },

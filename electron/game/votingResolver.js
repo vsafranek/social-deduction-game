@@ -179,9 +179,7 @@ async function resolveExecutionVoting(game, players, GameLog) {
   const alive = players.filter(p => p.alive);
   const totalAlive = alive.length;
 
-  // Count votes per candidate (with vote weight - mayor has 2 votes)
-  // POZNÁMKA: Skipy (voteFor = null) se nepočítají do voteCounts, ale jejich voteWeight
-  // se počítá do totalWeightedVotes pro výpočet většiny
+
   const voteCounts = new Map(); // targetId -> weighted vote count
   
   for (const p of alive) {
@@ -231,32 +229,26 @@ async function resolveExecutionVoting(game, players, GameLog) {
     return { executed: null, reason: 'tie', tied };
   }
 
-  // Calculate total weighted votes (for majority calculation)
-  // Zahrnuje VŠECHNY živé hráče - včetně těch, co skipují nebo nehlasují
   let totalWeightedVotes = 0;
   for (const p of alive) {
     totalWeightedVotes += (p.voteWeight || 1);
   }
 
-  // Hlasy pro vyloučení = součet vážených hlasů pro top kandidáta
   const votesFor = topVotes;
-  // Hlasy proti = všechny ostatní hlasy (skipy, nehlasující, hlasy pro jiné)
+
   const votesAgainst = totalWeightedVotes - votesFor;
-  // Nadpoloviční většina = více než 50% všech hlasů
-  // Math.floor(totalWeightedVotes / 2) + 1 zajišťuje, že potřebujeme více než polovinu
-  // Např. pro 4 hlasy: Math.floor(4/2) + 1 = 3 (více než 2)
-  // Např. pro 5 hlasů: Math.floor(5/2) + 1 = 3 (více než 2.5)
-  const majorityThreshold = Math.floor(totalWeightedVotes / 2) + 1;
+
+  const majorityThreshold = Math.ceil(totalWeightedVotes / 2);
 
   console.log(`  📊 Voting stats:`);
   console.log(`     Total alive: ${totalAlive}`);
   console.log(`     Total weighted votes: ${totalWeightedVotes}`);
   console.log(`     Votes FOR execution: ${votesFor}`);
   console.log(`     Votes AGAINST (skip/abstain/other): ${votesAgainst}`);
-  console.log(`     Majority needed: ${majorityThreshold} (more than 50%)`);
+  console.log(`     Majority needed: ${majorityThreshold} (50% or more)`);
 
-  // ✅ KONTROLA: Hráč může být vyloučen pouze pokud má nadpoloviční většinu všech hlasů
-  // Pokud nemá většinu (více než 50%), neexekutuje se
+  // ✅ KONTROLA: Hráč může být vyloučen pouze pokud má nadpoloviční většinu všech hlasů (50% nebo více)
+  // Pokud nemá většinu (alespoň 50%), neexekutuje se
   if (votesFor < majorityThreshold) {
     const target = players.find(p => p._id.toString() === topId);
     await GameLog.create({ 
@@ -280,6 +272,33 @@ async function resolveExecutionVoting(game, players, GameLog) {
         gameId: game._id, 
         message: `🏛️ Mayor ${target.name} was executed` 
       });
+    }
+    
+    // ✅ Check if Jester was executed - special win condition
+    if (target.role === 'Jester') {
+      target.alive = false;
+      await target.save();
+      await GameLog.create({ 
+        gameId: game._id, 
+        message: `🎭 Jester ${target.name} was executed - Jester wins!` 
+      });
+      console.log(`  🎭 ${target.name} (Jester) executed - Jester wins!`);
+      
+      // Clear daily votes
+      for (const p of alive) {
+        p.hasVoted = false;
+        p.voteFor = null;
+        await p.save();
+      }
+      
+      return { 
+        executed: target._id, 
+        executedName: target.name,
+        votesFor, 
+        votesAgainst, 
+        totalAlive,
+        jesterWin: true // Special flag for Jester win
+      };
     }
     
     target.alive = false;

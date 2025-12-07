@@ -30,6 +30,7 @@ const EMOJI_FALLBACK = {
   'Consigliere': '🕵️',
   'SerialKiller': '🛡️',
   'Infected': '🦠',
+  'Jester': '🎭',
 };
 
 // Fallback emoji pro modifikátory bez SVG ikon

@@ -197,8 +197,23 @@ const ROLES = {
       canWinWithTeams: [],
       soloWin: false,
       customRules: [
-        { type: 'allOthersVisited' }
+        { type: 'allOthersHaveEffect', effect: 'infected', negate: false }
       ]
+    }
+  },
+  
+  'Jester': {
+    team: 'neutral',
+    description: 'Wins if executed by vote. Game ends immediately when Jester is executed.',
+    actionType: null, // No night action
+    nightPriority: null,
+    canUseEveryNight: false,
+    visitsTarget: false,
+    defaultAffiliations: ['neutral', 'solo'],
+    defaultVictory: {
+      canWinWithTeams: [],
+      soloWin: true,
+      customRules: [] // Special win condition handled in votingResolver
     }
   }
 };
@@ -234,6 +249,14 @@ const MODIFIERS = {
     effect: 'see_visitors',
     showToPlayer: false,
     allowedTeams: ['good', 'neutral'] 
+  },
+  
+  'Amnesiac': {
+    emoji: '🧠',
+    description: 'Does not know their role, but can perform actions normally',
+    effect: 'hide_role',
+    showToPlayer: false,
+    allowedTeams: ['good', 'evil', 'neutral']
   }
 };
 

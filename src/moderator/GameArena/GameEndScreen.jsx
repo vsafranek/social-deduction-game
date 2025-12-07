@@ -48,9 +48,29 @@ function GameEndScreen({ gameState, currentPlayer }) {
   if (!gameState || !gameState.game) return null;
 
   const winner = gameState.game.winner || 'unknown';
-  const winnerInfo = WINNER_LABELS[winner] || WINNER_LABELS['unknown'];
   const players = gameState.players || [];
   const winnerIds = gameState.game.winnerPlayerIds || [];
+  
+  // Determine custom winner type (Jester or Infected)
+  let winnerInfo = WINNER_LABELS[winner] || WINNER_LABELS['unknown'];
+  if (winner === 'custom') {
+    const winnerPlayer = players.find(p => winnerIds.includes(p._id?.toString?.() ?? p._id));
+    if (winnerPlayer?.role === 'Jester') {
+      winnerInfo = {
+        label: 'Vítězství Šaška!',
+        emoji: '🎭',
+        gradient: 'linear-gradient(135deg, #a855f7, #9333ea)',
+        description: 'Šašek byl vyhlasován a vyhrál!'
+      };
+    } else if (winnerPlayer?.role === 'Infected') {
+      winnerInfo = {
+        label: 'Vítězství Nakaženého!',
+        emoji: '🦠',
+        gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+        description: 'Všichni hráči byli nakaženi!'
+      };
+    }
+  }
 
   // Rozdělení hráčů podle teamu
   const goodPlayers = players.filter(p => {
