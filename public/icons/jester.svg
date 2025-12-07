@@ -1,0 +1,46 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle id="bg" data-part="bg" cx="256" cy="256" r="240" fill="#111822" />
+  <circle id="bgInner" data-part="bgInner" cx="256" cy="256" r="208" fill="#182334" />
+
+  <!-- Jester Head Group -->
+  <g id="jester" transform="translate(0, 40)">
+
+      <!-- 1. The Mask (Same as before) -->
+      <path data-part="face" d="M180 200 C180 150 210 120 256 120 C302 120 332 150 332 200 C332 280 290 340 256 350 C222 340 180 280 180 200 Z" 
+            fill="#F5F5F5" stroke="#B0BEC5" stroke-width="2" />
+
+      <!-- Eyes -->
+      <path data-part="eyes" d="M205 190 L220 170 L235 190 L220 210 Z" fill="#2C3E50" />
+      <path data-part="eyes" d="M277 190 L292 170 L307 190 L292 210 Z" fill="#2C3E50" />
+
+      <!-- Mouth -->
+      <path data-part="mouth" d="M210 250 Q256 290 302 250 Q302 270 256 290 Q210 270 210 250" fill="#C0392B" />
+      <path data-part="smileLines" d="M200 240 Q210 250 205 260" stroke="#B0BEC5" stroke-width="2" fill="none" />
+      <path data-part="smileLines" d="M312 240 Q302 250 307 260" stroke="#B0BEC5" stroke-width="2" fill="none" />
+
+      <!-- 2. The New Hat (Volumetric / Stuffed Fabric Look) -->
+      <g id="hat" transform="translate(256, 120)">
+
+        <!-- Center Horn (Background) -->
+        <path data-part="hatCenter" d="M-20 -10 C-30 -50 0 -90 40 -80 C50 -50 30 -10 20 0" 
+              fill="#5E35B1" stroke="#4527A0" stroke-width="2" />
+        <circle data-part="bell" cx="40" cy="-80" r="10" fill="#FFD54F" stroke="#FF6F00" stroke-width="2" />
+
+        <!-- Left Horn (Large Curve) -->
+        <path data-part="hatLeft" d="M-60 10 C-100 0 -140 40 -150 90 C-140 110 -110 100 -90 80 C-70 60 -50 40 -40 10" 
+              fill="#8E44AD" stroke="#4A148C" stroke-width="2" />
+        <circle data-part="bell" cx="-150" cy="90" r="12" fill="#FFD54F" stroke="#FF6F00" stroke-width="2" />
+
+        <!-- Right Horn (Large Curve) -->
+        <path data-part="hatRight" d="M60 10 C100 0 140 40 150 90 C140 110 110 100 90 80 C70 60 50 40 40 10" 
+              fill="#C0392B" stroke="#922B21" stroke-width="2" />
+        <circle data-part="bell" cx="150" cy="90" r="12" fill="#FFD54F" stroke="#FF6F00" stroke-width="2" />
+
+        <!-- Hat Brim / Headband (Curved to fit head) -->
+        <path data-part="hatRim" d="M-75 10 Q0 35 75 10 L75 -5 Q0 20 -75 -5 Z" 
+              fill="#FFD54F" stroke="#FF6F00" stroke-width="2" />
+      </g>
+  </g>
+
+</svg>

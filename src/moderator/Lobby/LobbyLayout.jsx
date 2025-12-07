@@ -74,8 +74,10 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
   const [modifierConfig, setModifierConfig] = useState({
     drunkChance: 20,      // backend bere drunkChance i opilýChance
     shadyChance: 15,
+    innocentChance: 15,
     paranoidChance: 10,
-    insomniacChance: 10
+    insomniacChance: 10,
+    amnesiacChance: 0
   });
 
   // Handlery

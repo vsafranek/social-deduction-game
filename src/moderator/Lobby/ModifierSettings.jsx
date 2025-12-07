@@ -50,7 +50,7 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
     <div className="lobby-column modifiers-column">
       <div className="column-header">
         <div className="header-title-wrapper">
-          <h2>🎲 Pasivní Modifikátory</h2>
+          <h2>🎲 Passive Modifiers</h2>
           <div className="info-icon-wrapper">
             <span 
               ref={iconRef}
@@ -68,12 +68,12 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
                 }}
               >
                 <div className="info-tooltip-content">
-                  <div className="info-tooltip-title">ℹ️ Informace o modifikátorech</div>
+                  <div className="info-tooltip-title">ℹ️ Modifier Information</div>
                   <div className="info-tooltip-body">
-                    <p>Modifikátory jsou pasivní efekty, které se náhodně přiřadí hráčům při startu hry.</p>
-                    <p>Šance určuje pravděpodobnost (v %), že se modifikátor přiřadí konkrétnímu hráči.</p>
-                    <p>Modifikátory se aplikují automaticky a ovlivňují hru, ale hráči je nevidí.</p>
-                    <p className="info-tooltip-warning">⚠️ Hráči nevidí své modifikátory!</p>
+                    <p>Modifiers are passive effects that are randomly assigned to players at game start.</p>
+                    <p>Chance determines the probability (in %) that a modifier will be assigned to a specific player.</p>
+                    <p>Modifiers are applied automatically and affect gameplay, but players cannot see them.</p>
+                    <p className="info-tooltip-warning">⚠️ Players cannot see their modifiers!</p>
                   </div>
                 </div>
               </div>,
@@ -89,11 +89,17 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <span className="modifier-icon">
               <RoleIcon role="Drunk" size={48} className="modifier-icon-svg" isModifier={true} />
             </span>
-            <span className="modifier-name">Drunk</span>
+            <div className="modifier-name-badge-wrapper">
+              <span className="modifier-name">Drunk</span>
+              <div className="modifier-team-badges">
+                <span className="team-badge good">Good</span>
+                <span className="team-badge neutral">Neutral</span>
+              </div>
+            </div>
           </div>
-          <p className="modifier-desc">Zůstane doma a dostane falešné výsledky akcí</p>
+          <p className="modifier-desc">Stays home and receives fake action results</p>
           <div className="modifier-control">
-            <label>Šance: <strong>{modifierConfig.drunkChance || modifierConfig.opilýChance || 0}%</strong></label>
+            <label>Chance: <strong>{modifierConfig.drunkChance || modifierConfig.opilýChance || 0}%</strong></label>
             <input
               type="range" min="0" max="100" step="5"
               value={modifierConfig.drunkChance || modifierConfig.opilýChance || 0}
@@ -104,7 +110,7 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
               }))}
             />
             <div className="modifier-estimate">
-              ≈ {Math.round((playersCount || 0) * ((modifierConfig.drunkChance || modifierConfig.opilýChance || 0) / 100))} hráčů
+              ≈ {Math.round((playersCount || 0) * ((modifierConfig.drunkChance || modifierConfig.opilýChance || 0) / 100))} players
             </div>
           </div>
         </div>
@@ -114,11 +120,16 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <span className="modifier-icon">
               <RoleIcon role="Shady" size={48} className="modifier-icon-svg" isModifier={true} />
             </span>
-            <span className="modifier-name">Shady / Innocent</span>
+            <div className="modifier-name-badge-wrapper">
+              <span className="modifier-name">Shady</span>
+              <div className="modifier-team-badges">
+                <span className="team-badge good">Dobrý</span>
+              </div>
+            </div>
           </div>
-          <p className="modifier-desc">Shady (dobrý tým): vypadá jako zlý při vyšetřování. Innocent (zlý tým): vypadá jako dobrý/neutrální při vyšetřování.</p>
+          <p className="modifier-desc">Appears as evil during investigation, even if good</p>
           <div className="modifier-control">
-            <label>Šance: <strong>{modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}%</strong></label>
+            <label>Chance: <strong>{modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}%</strong></label>
             <input
               type="range" min="0" max="100" step="5"
               value={modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}
@@ -130,7 +141,33 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
               }))}
             />
             <div className="modifier-estimate">
-              ≈ {Math.round((playersCount || 0) * ((modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0) / 100))} hráčů
+              ≈ {Math.round((playersCount || 0) * ((modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0) / 100))} players
+            </div>
+          </div>
+        </div>
+
+        <div className="modifier-card">
+          <div className="modifier-header">
+            <span className="modifier-icon">
+              <RoleIcon role="Innocent" size={48} className="modifier-icon-svg" isModifier={true} />
+            </span>
+            <div className="modifier-name-badge-wrapper">
+              <span className="modifier-name">Innocent</span>
+              <div className="modifier-team-badges">
+                <span className="team-badge evil">Evil</span>
+              </div>
+            </div>
+          </div>
+          <p className="modifier-desc">Appears as good or neutral during investigation, even if evil</p>
+          <div className="modifier-control">
+            <label>Chance: <strong>{modifierConfig.innocentChance || 0}%</strong></label>
+            <input
+              type="range" min="0" max="100" step="5"
+              value={modifierConfig.innocentChance || 0}
+              onChange={(e) => setModifierConfig(prev => ({ ...prev, innocentChance: parseInt(e.target.value) }))}
+            />
+            <div className="modifier-estimate">
+              ≈ {Math.round((playersCount || 0) * ((modifierConfig.innocentChance || 0) / 100))} players
             </div>
           </div>
         </div>
@@ -140,18 +177,24 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <span className="modifier-icon">
               <RoleIcon role="Paranoid" size={48} className="modifier-icon-svg" isModifier={true} />
             </span>
-            <span className="modifier-name">Paranoid</span>
+            <div className="modifier-name-badge-wrapper">
+              <span className="modifier-name">Paranoid</span>
+              <div className="modifier-team-badges">
+                <span className="team-badge good">Good</span>
+                <span className="team-badge neutral">Neutral</span>
+              </div>
+            </div>
           </div>
-          <p className="modifier-desc">Vidí falešné návštěvníky, kteří u něj nebyly</p>
+          <p className="modifier-desc">Sees fake visitors who were not actually there</p>
           <div className="modifier-control">
-            <label>Šance: <strong>{modifierConfig.paranoidChance || 0}%</strong></label>
+            <label>Chance: <strong>{modifierConfig.paranoidChance || 0}%</strong></label>
             <input
               type="range" min="0" max="100" step="5"
               value={modifierConfig.paranoidChance || 0}
               onChange={(e) => setModifierConfig(prev => ({ ...prev, paranoidChance: parseInt(e.target.value) }))}
             />
             <div className="modifier-estimate">
-              ≈ {Math.round((playersCount || 0) * ((modifierConfig.paranoidChance || 0) / 100))} hráčů
+              ≈ {Math.round((playersCount || 0) * ((modifierConfig.paranoidChance || 0) / 100))} players
             </div>
           </div>
         </div>
@@ -161,18 +204,52 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <span className="modifier-icon">
               <RoleIcon role="Insomniac" size={48} className="modifier-icon-svg" isModifier={true} />
             </span>
-            <span className="modifier-name">Insomniac</span>
+            <div className="modifier-name-badge-wrapper">
+              <span className="modifier-name">Insomniac</span>
+              <div className="modifier-team-badges">
+                <span className="team-badge good">Good</span>
+                <span className="team-badge neutral">Neutral</span>
+              </div>
+            </div>
           </div>
-          <p className="modifier-desc">Vidí všechny, kdo ho navštíví</p>
+          <p className="modifier-desc">Sees everyone who visits them</p>
           <div className="modifier-control">
-            <label>Šance: <strong>{modifierConfig.insomniacChance || 0}%</strong></label>
+            <label>Chance: <strong>{modifierConfig.insomniacChance || 0}%</strong></label>
             <input
               type="range" min="0" max="100" step="5"
               value={modifierConfig.insomniacChance || 0}
               onChange={(e) => setModifierConfig(prev => ({ ...prev, insomniacChance: parseInt(e.target.value) }))}
             />
             <div className="modifier-estimate">
-              ≈ {Math.round((playersCount || 0) * ((modifierConfig.insomniacChance || 0) / 100))} hráčů
+              ≈ {Math.round((playersCount || 0) * ((modifierConfig.insomniacChance || 0) / 100))} players
+            </div>
+          </div>
+        </div>
+
+        <div className="modifier-card">
+          <div className="modifier-header">
+            <span className="modifier-icon">
+              <RoleIcon role="Amnesiac" size={48} className="modifier-icon-svg" isModifier={true} />
+            </span>
+            <div className="modifier-name-badge-wrapper">
+              <span className="modifier-name">Amnesiac</span>
+              <div className="modifier-team-badges">
+                <span className="team-badge good">Dobrý</span>
+                <span className="team-badge evil">Evil</span>
+                <span className="team-badge neutral">Neutrální</span>
+              </div>
+            </div>
+          </div>
+          <p className="modifier-desc">Does not know their role, but can perform actions normally</p>
+          <div className="modifier-control">
+            <label>Chance: <strong>{modifierConfig.amnesiacChance || 0}%</strong></label>
+            <input
+              type="range" min="0" max="100" step="5"
+              value={modifierConfig.amnesiacChance || 0}
+              onChange={(e) => setModifierConfig(prev => ({ ...prev, amnesiacChance: parseInt(e.target.value) }))}
+            />
+            <div className="modifier-estimate">
+              ≈ {Math.round((playersCount || 0) * ((modifierConfig.amnesiacChance || 0) / 100))} players
             </div>
           </div>
         </div>
@@ -187,8 +264,8 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
           >
             {!canStart
               ? (playersCount < 3 
-                  ? `⏳ Minimálně 3 hráči (${playersCount || 0}/3)`
-                  : `⚠️ Role se nerovnají (${totalRolesForValidation || 0} rolí / ${playersCount || 0} hráčů)`)
+                  ? `⏳ Minimum 3 players (${playersCount || 0}/3)`
+                  : `⚠️ Roles don't match (${totalRolesForValidation || 0} roles / ${playersCount || 0} players)`)
               : '🚀 Start Game'
             }
           </button>

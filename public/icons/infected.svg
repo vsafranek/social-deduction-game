@@ -1,0 +1,71 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle id="bg" data-part="bg" cx="256" cy="256" r="240" fill="#111822" />
+  <circle id="bgInner" data-part="bgInner" cx="256" cy="256" r="208" fill="#182334" />
+
+  <!-- Toxic Aura / Gas (Background glow) -->
+  <circle data-part="aura" cx="256" cy="256" r="160" fill="#76FF03" opacity="0.15" filter="url(#blur)" />
+
+  <!-- The Virus/Bacteria Structure -->
+  <g id="virus" transform="translate(256, 256)">
+
+      <!-- Protein Spikes (sticking out) -->
+      <g data-part="spikes" fill="#AED581" stroke="#558B2F" stroke-width="4">
+         <!-- We create a few spikes and rotate them via transforms in groups if needed, 
+              but manual placement is cleaner for a single path in simple SVG -->
+
+         <!-- Top/Bottom/Left/Right -->
+         <path d="M-10 -110 L0 -150 L10 -110 Z" />
+         <path d="M-10 110 L0 150 L10 110 Z" />
+         <path d="M-110 -10 L-150 0 L-110 10 Z" />
+         <path d="M110 -10 L150 0 L110 10 Z" />
+
+         <!-- Diagonals -->
+         <path d="M-80 -80 L-110 -110 L-70 -90 Z" />
+         <path d="M80 -80 L110 -110 L70 -90 Z" />
+         <path d="M-80 80 L-110 110 L-70 90 Z" />
+         <path d="M80 80 L110 110 L70 90 Z" />
+
+         <!-- Bulbous tips on spikes -->
+         <circle cx="0" cy="-150" r="12" fill="#76FF03" stroke="none" />
+         <circle cx="0" cy="150" r="12" fill="#76FF03" stroke="none" />
+         <circle cx="-150" cy="0" r="12" fill="#76FF03" stroke="none" />
+         <circle cx="150" cy="0" r="12" fill="#76FF03" stroke="none" />
+
+         <circle cx="-110" cy="-110" r="10" fill="#76FF03" stroke="none" />
+         <circle cx="110" cy="-110" r="10" fill="#76FF03" stroke="none" />
+         <circle cx="-110" cy="110" r="10" fill="#76FF03" stroke="none" />
+         <circle cx="110" cy="110" r="10" fill="#76FF03" stroke="none" />
+      </g>
+
+      <!-- Main Cell Body -->
+      <circle data-part="body" cx="0" cy="0" r="110" fill="#8BC34A" stroke="#33691E" stroke-width="6" />
+
+      <!-- Surface Texture / Pores -->
+      <g data-part="pores" fill="#33691E" opacity="0.3">
+          <circle cx="-40" cy="-50" r="15" />
+          <circle cx="50" cy="-20" r="20" />
+          <circle cx="-20" cy="60" r="18" />
+          <circle cx="40" cy="50" r="12" />
+          <circle cx="0" cy="0" r="25" />
+      </g>
+
+      <!-- Nucleus / RNA (The evil center) -->
+      <path data-part="nucleus" d="M-20 -20 Q0 -40 20 -20 Q40 0 20 20 Q0 40 -20 20 Q-40 0 -20 -20" 
+            fill="none" stroke="#C6FF00" stroke-width="6" stroke-linecap="round" opacity="0.8" />
+  </g>
+
+  <!-- Floating Spores (Infection spreading) -->
+  <circle data-part="spore" cx="380" cy="180" r="8" fill="#76FF03" opacity="0.8" />
+  <circle data-part="spore" cx="400" cy="200" r="5" fill="#76FF03" opacity="0.6" />
+  <circle data-part="spore" cx="120" cy="350" r="6" fill="#76FF03" opacity="0.8" />
+  <circle data-part="spore" cx="150" cy="120" r="4" fill="#76FF03" opacity="0.6" />
+
+  <!-- Filter defs -->
+  <defs>
+    <filter id="blur">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" />
+    </filter>
+  </defs>
+
+</svg>

@@ -8,7 +8,7 @@ function PlayersList({
   onRefresh
 }) {
   const handleKick = async (playerId, playerName) => {
-    if (!window.confirm(`Opravdu chceš vyhodit hráče "${playerName}"?`)) {
+    if (!window.confirm(`Do you really want to kick player "${playerName}"?`)) {
       return;
     }
 
@@ -18,21 +18,21 @@ function PlayersList({
         onRefresh();
       }
     } catch (error) {
-      console.error('Chyba při kicknutí hráče:', error);
-      alert(error.message || 'Nepodařilo se vyhodit hráče');
+      console.error('Error kicking player:', error);
+      alert(error.message || 'Failed to kick player');
     }
   };
 
   return (
     <div className="lobby-column players-column">
       <div className="column-header">
-        <h2>👥 Hráči ({players.length})</h2>
+        <h2>👥 Players ({players.length})</h2>
       </div>
 
       {players.length === 0 ? (
         <div className="empty-state">
-          <p>Žádní hráči</p>
-          <small>Čekám na připojení...</small>
+          <p>No players</p>
+          <small>Waiting for connections...</small>
         </div>
       ) : (
         <div className="players-list">
@@ -73,7 +73,7 @@ function PlayersList({
               <button
                 className="btn-kick-player"
                 onClick={() => handleKick(p._id, p.name)}
-                title="Vyhodit hráče"
+                title="Kick player"
               >
                 ❌
               </button>

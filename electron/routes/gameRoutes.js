@@ -395,6 +395,7 @@ router.post('/:gameId/start-config', async (req, res) => {
     // Normalize chances
     const drunkChance = normalizeChance(modifiers?.drunkChance ?? modifiers?.opilýChance, 0.2);
     const shadyChance = normalizeChance(modifiers?.shadyChance ?? modifiers?.recluseChance ?? modifiers?.poustevníkChance, 0.15);
+    const innocentChance = normalizeChance(modifiers?.innocentChance, 0.15);
     const paranoidChance = normalizeChance(modifiers?.paranoidChance, 0.1);
     const insomniacChance = normalizeChance(modifiers?.insomniacChance, 0.1);
     const amnesiacChance = normalizeChance(modifiers?.amnesiacChance, 0);
@@ -424,10 +425,10 @@ router.post('/:gameId/start-config', async (req, res) => {
           }
         }
         
-        // Innocent uses the same chance as Shady, but for evil team
+        // Innocent uses its own chance, for evil team
         if (MODIFIERS.Innocent && Array.isArray(MODIFIERS.Innocent.allowedTeams)) {
           if (MODIFIERS.Innocent.allowedTeams.includes(roleTeam)) {
-            validModifiers.push({ name: 'Innocent', chance: shadyChance });
+            validModifiers.push({ name: 'Innocent', chance: innocentChance });
           }
         }
         

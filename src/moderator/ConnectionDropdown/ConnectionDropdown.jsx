@@ -6,19 +6,19 @@ function ConnectionDropdown({ connectionInfo, onClose }) {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text).then(() => {
-      alert('✅ Zkopírováno!');
+      alert('✅ Copied!');
     });
   };
 
   return (
     <div className="connection-dropdown">
       <div className="connection-content">
-        <h3>📱 Připojení hráčů</h3>
+        <h3>📱 Player Connection</h3>
         
         <div className="url-display" onClick={() => copyToClipboard(connectionInfo.url)}>
           {connectionInfo.url}
         </div>
-        <small className="copy-hint">👆 Klikni pro zkopírování</small>
+        <small className="copy-hint">👆 Click to copy</small>
         
         <div className="connection-info">
           <div className="info-row">

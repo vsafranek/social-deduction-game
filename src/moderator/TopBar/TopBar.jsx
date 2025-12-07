@@ -23,7 +23,7 @@ function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
   return (
     <div className="topbar">
       <div className="topbar-left">
-        <h1>🎮 Lobby - Čekání na Hráče</h1>
+        <h1>🎮 Lobby - Waiting for Players</h1>
       </div>
 
       <div className="topbar-right">
@@ -32,7 +32,7 @@ function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
           <button
             className="topbar-button test-stories-button"
             onClick={onTestStories}
-            title="Přehrát ukázku všech nočních příběhů"
+            title="Play preview of all night stories"
             style={{ marginRight: '8px', background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', border: '1px solid rgba(139, 92, 246, 0.5)' }}
           >
             🎬 Stories Test
@@ -41,16 +41,16 @@ function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
 
         {/* Počet připojených hráčů */}
         <div className="player-count">
-          👥 {gameState?.players?.length || 0} hráčů
+          👥 {gameState?.players?.length || 0} players
         </div>
 
         {/* Info tlačítko */}
         <button 
           className="topbar-button info-button"
           onClick={onConnectionClick}
-          title="Zobrazit room code a URL pro připojení"
+          title="Show room code and connection URL"
         >
-          ℹ️ Připojení
+          ℹ️ Connection
         </button>
 
         {/* Dev tlačítko - pouze v development */}
@@ -58,7 +58,7 @@ function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
           <button 
             className={`topbar-button dev-button ${isDevPanelOpen ? 'active' : ''}`}
             onClick={handleDevToggle}
-            title="Otevřít dev panel (pro testování)"
+            title="Open dev panel (for testing)"
           >
             🛠️ Dev Panel
           </button>
