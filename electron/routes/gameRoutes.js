@@ -424,6 +424,13 @@ router.post('/:gameId/start-config', async (req, res) => {
           }
         }
         
+        // Innocent uses the same chance as Shady, but for evil team
+        if (MODIFIERS.Innocent && Array.isArray(MODIFIERS.Innocent.allowedTeams)) {
+          if (MODIFIERS.Innocent.allowedTeams.includes(roleTeam)) {
+            validModifiers.push({ name: 'Innocent', chance: shadyChance });
+          }
+        }
+        
         if (MODIFIERS.Paranoid && Array.isArray(MODIFIERS.Paranoid.allowedTeams)) {
           if (MODIFIERS.Paranoid.allowedTeams.includes(roleTeam)) {
             validModifiers.push({ name: 'Paranoid', chance: paranoidChance });

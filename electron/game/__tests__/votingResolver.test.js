@@ -625,5 +625,111 @@ describe('votingResolver', () => {
       expect(result.reason).toBe('no_votes');
     });
   });
+
+  describe('Jester Win Condition', () => {
+    
+    test('should return jesterWin flag when Jester is executed', async () => {
+      const game = createMockGame();
+      const jester = createMockPlayer('1', 'Jester', 'Jester', {
+        alive: true,
+        voteFor: null
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        hasVoted: true
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        hasVoted: true
+      });
+      const players = [jester, voter1, voter2];
+
+      const result = await resolveDayVoting(game, players, mockGameLog);
+
+      expect(result).toHaveProperty('jesterWin');
+      expect(result.jesterWin).toBe(true);
+      expect(result.executed).toBe('1');
+      expect(result.executedName).toBe('Jester');
+      expect(jester.alive).toBe(false);
+      expect(jester.save).toHaveBeenCalled();
+    });
+
+    test('should end game immediately when Jester is executed', async () => {
+      const game = createMockGame();
+      const jester = createMockPlayer('1', 'Jester', 'Jester', {
+        alive: true,
+        voteFor: null
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        hasVoted: true
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        hasVoted: true
+      });
+      const players = [jester, voter1, voter2];
+
+      const result = await resolveDayVoting(game, players, mockGameLog);
+
+      expect(result.jesterWin).toBe(true);
+      // All votes should be cleared
+      expect(voter1.hasVoted).toBe(false);
+      expect(voter1.voteFor).toBeNull();
+      expect(voter2.hasVoted).toBe(false);
+      expect(voter2.voteFor).toBeNull();
+      expect(voter1.save).toHaveBeenCalled();
+      expect(voter2.save).toHaveBeenCalled();
+    });
+
+    test('should not trigger jesterWin for non-Jester execution', async () => {
+      const game = createMockGame();
+      const target = createMockPlayer('1', 'Target', 'Citizen', {
+        alive: true,
+        voteFor: null
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        hasVoted: true
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        hasVoted: true
+      });
+      const players = [target, voter1, voter2];
+
+      const result = await resolveDayVoting(game, players, mockGameLog);
+
+      expect(result.jesterWin).toBeUndefined();
+      expect(result.executed).toBe('1');
+      expect(target.alive).toBe(false);
+    });
+
+    test('should create GameLog entry when Jester wins', async () => {
+      const game = createMockGame();
+      const jester = createMockPlayer('1', 'Jester', 'Jester', {
+        alive: true,
+        voteFor: null
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        hasVoted: true
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        hasVoted: true
+      });
+      const players = [jester, voter1, voter2];
+
+      await resolveDayVoting(game, players, mockGameLog);
+
+      expect(mockGameLog.create).toHaveBeenCalled();
+      const logCalls = mockGameLog.create.mock.calls;
+      const jesterWinLog = logCalls.find(call => 
+        call[0].message && call[0].message.includes('Jester') && call[0].message.includes('wins')
+      );
+      expect(jesterWinLog).toBeDefined();
+    });
+  });
 });
 

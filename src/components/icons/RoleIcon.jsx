@@ -37,6 +37,7 @@ const EMOJI_FALLBACK = {
 const MODIFIER_EMOJI_FALLBACK = {
   'Drunk': '🍺',
   'Shady': '🏚️',
+  'Innocent': '😇',
   'Paranoid': '😱',
   'Insomniac': '😵',
 };

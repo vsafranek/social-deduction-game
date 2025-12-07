@@ -321,7 +321,7 @@ describe('nightActionResolver', () => {
 
   describe('Shady Modifier', () => {
     
-    test('should show Shady as evil to Investigator', async () => {
+    test('should show Shady as true role + evil role to Investigator', async () => {
       const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
         nightAction: { targetId: '2', action: 'investigate', results: [] }
       });
@@ -334,10 +334,40 @@ describe('nightActionResolver', () => {
 
       const investigateResult = investigator.nightAction.results.find(r => r.startsWith('investigate:'));
       expect(investigateResult).toBeDefined();
-      // Should show an evil role
+      // Should show true role (Citizen)
+      expect(investigateResult).toContain('Citizen');
+      // Should also show an evil role
       const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
       const showsEvil = evilRoles.some(role => investigateResult.includes(role));
       expect(showsEvil).toBe(true);
+      // Should have format "Citizen / EvilRole" or "EvilRole / Citizen"
+      expect(investigateResult).toMatch(/Citizen\s*\/\s*\w+|\w+\s*\/\s*Citizen/);
+    });
+  });
+
+  describe('Innocent Modifier', () => {
+    
+    test('should show Innocent as good or neutral to Investigator', async () => {
+      const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
+        nightAction: { targetId: '2', action: 'investigate', results: [] }
+      });
+      const innocent = createMockPlayer('2', 'Innocent', 'Cleaner', {
+        modifier: 'Innocent',
+        alive: true
+      });
+
+      await resolveNightActions({}, [investigator, innocent]);
+
+      const investigateResult = investigator.nightAction.results.find(r => r.startsWith('investigate:'));
+      expect(investigateResult).toBeDefined();
+      // Should show a good or neutral role (not evil)
+      const goodOrNeutralRoles = Object.keys(ROLES).filter(r => 
+        ROLES[r].team === 'good' || ROLES[r].team === 'neutral'
+      );
+      const showsGoodOrNeutral = goodOrNeutralRoles.some(role => investigateResult.includes(role));
+      expect(showsGoodOrNeutral).toBe(true);
+      // Should NOT show the true evil role (Cleaner)
+      expect(investigateResult).not.toContain('Cleaner');
     });
   });
 
@@ -998,6 +1028,39 @@ describe('nightActionResolver', () => {
 
       const infectedCount = target.effects.filter(e => e.type === 'infected').length;
       expect(infectedCount).toBe(1); // Should still be 1, not 2
+    });
+
+    test('should track visited players in roleData', async () => {
+      const infected = createMockPlayer('1', 'Infected', 'Infected', {
+        nightAction: { targetId: '2', action: 'infect', results: [] },
+        roleData: {}
+      });
+      const target = createMockPlayer('2', 'Target', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({}, [infected, target]);
+
+      expect(infected.roleData.visitedPlayers).toBeDefined();
+      expect(Array.isArray(infected.roleData.visitedPlayers)).toBe(true);
+      expect(infected.roleData.visitedPlayers).toContain('2');
+      expect(infected.markModified).toHaveBeenCalledWith('roleData');
+    });
+
+    test('should not infect dead target', async () => {
+      const infected = createMockPlayer('1', 'Infected', 'Infected', {
+        nightAction: { targetId: '2', action: 'infect', results: [] }
+      });
+      const target = createMockPlayer('2', 'Target', 'Citizen', {
+        alive: false
+      });
+
+      await resolveNightActions({}, [infected, target]);
+
+      const hasInfected = target.effects.some(e => e.type === 'infected');
+      expect(hasInfected).toBe(false);
+      const failedResult = infected.nightAction.results.find(r => r.includes('mrtvého'));
+      expect(failedResult).toBeDefined();
     });
   });
 

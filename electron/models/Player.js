@@ -39,7 +39,7 @@ const PlayerSchema = new mongoose.Schema({
   },
   modifier: {
     type: String,
-    enum: ['Drunk', 'Shady', 'Paranoid', 'Insomniac', 'Amnesiac', null],
+    enum: ['Drunk', 'Shady', 'Paranoid', 'Insomniac', 'Amnesiac', 'Innocent', null],
     default: null
   },
   effects: { type: [EffectSchema], default: [] },

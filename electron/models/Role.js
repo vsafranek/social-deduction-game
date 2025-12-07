@@ -235,6 +235,14 @@ const MODIFIERS = {
     allowedTeams: ['good'] 
   },
   
+  'Innocent': {
+    emoji: '😇',
+    description: 'Appears as good or neutral to investigations even if evil',
+    effect: 'appears_good',
+    showToPlayer: false,
+    allowedTeams: ['evil'] 
+  },
+  
   'Paranoid': {
     emoji: '😱',
     description: 'Sees fake visitors who were not actually there',

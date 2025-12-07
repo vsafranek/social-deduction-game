@@ -191,8 +191,8 @@ async function resolveNightActions(game, players) {
     
     // Most actions require alive target, but some actions need to validate dead targets themselves
     // autopsy and clean_role can target dead players
-    // investigate and consig_investigate need to validate dead targets and provide user feedback
-    if (action !== 'autopsy' && action !== 'clean_role' && action !== 'investigate' && action !== 'consig_investigate' && !target.alive) {
+    // investigate, consig_investigate, and infect need to validate dead targets and provide user feedback
+    if (action !== 'autopsy' && action !== 'clean_role' && action !== 'investigate' && action !== 'consig_investigate' && action !== 'infect' && !target.alive) {
       console.log(`  ⚠️ ${actor.name}: Target must be alive for action ${action}`);
       continue;
     }
@@ -390,28 +390,52 @@ async function resolveNightActions(game, players) {
           break;
         }
         
-        // Normal investigation logic
-        const otherRoles = allRoles.filter(r => r !== trueRole);
-        const fakeRole = otherRoles.length > 0 
-          ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
-          : 'Citizen';
-        
-        // ✅ Check Shady modifier - appear as evil
+        // ✅ Check Shady modifier - show true role + evil role
+        // ✅ Check Innocent modifier - appear as good or neutral
         // ✅ Check framed effect - show evil role instead of true role
-        let investigatedRole = trueRole;
-        if (target.modifier === 'Shady') {
-          // Pick a random evil role
-          const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
-          investigatedRole = evilRoles[Math.floor(Math.random() * evilRoles.length)] || 'Cleaner';
-        } else if (hasEffect(target, 'framed')) {
-          // Get the fake evil role from framed effect meta
-          const framedEffect = target.effects.find(e => e.type === 'framed');
-          investigatedRole = framedEffect?.meta?.fakeEvilRole || 'Cleaner';
-        }
+        let possibleRoles;
         
-        const possibleRoles = Math.random() < 0.5 
-          ? [investigatedRole, fakeRole]
-          : [fakeRole, investigatedRole];
+        if (target.modifier === 'Shady') {
+          // Shady: show true role + one evil role
+          const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
+          const evilRole = evilRoles[Math.floor(Math.random() * evilRoles.length)] || 'Cleaner';
+          possibleRoles = Math.random() < 0.5 
+            ? [trueRole, evilRole]
+            : [evilRole, trueRole];
+        } else if (target.modifier === 'Innocent') {
+          // Innocent: show good/neutral role instead of true role
+          const goodOrNeutralRoles = Object.keys(ROLES).filter(r => 
+            ROLES[r].team === 'good' || ROLES[r].team === 'neutral'
+          );
+          const fakeGoodOrNeutral = goodOrNeutralRoles[Math.floor(Math.random() * goodOrNeutralRoles.length)] || 'Citizen';
+          const otherRoles = allRoles.filter(r => r !== trueRole && r !== fakeGoodOrNeutral);
+          const fakeRole = otherRoles.length > 0 
+            ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
+            : 'Citizen';
+          possibleRoles = Math.random() < 0.5 
+            ? [fakeGoodOrNeutral, fakeRole]
+            : [fakeRole, fakeGoodOrNeutral];
+        } else if (hasEffect(target, 'framed')) {
+          // Framed: show evil role instead of true role
+          const framedEffect = target.effects.find(e => e.type === 'framed');
+          const fakeEvilRole = framedEffect?.meta?.fakeEvilRole || 'Cleaner';
+          const otherRoles = allRoles.filter(r => r !== trueRole && r !== fakeEvilRole);
+          const fakeRole = otherRoles.length > 0 
+            ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
+            : 'Citizen';
+          possibleRoles = Math.random() < 0.5 
+            ? [fakeEvilRole, fakeRole]
+            : [fakeRole, fakeEvilRole];
+        } else {
+          // Normal investigation: show true role + one random other role
+          const otherRoles = allRoles.filter(r => r !== trueRole);
+          const fakeRole = otherRoles.length > 0 
+            ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
+            : 'Citizen';
+          possibleRoles = Math.random() < 0.5 
+            ? [trueRole, fakeRole]
+            : [fakeRole, trueRole];
+        }
         
         actor.nightAction.results.push(
           `investigate:${target.name} = ${possibleRoles.join(' / ')}`
@@ -432,6 +456,7 @@ async function resolveNightActions(game, players) {
         
         const modifiers = [];
         if (target.modifier === 'Shady') modifiers.push('Shady');
+        if (target.modifier === 'Innocent') modifiers.push('Innocent');
         if (hasEffect(target, 'framed')) modifiers.push('framed');
         
         console.log(
@@ -491,6 +516,15 @@ async function resolveNightActions(game, players) {
       }
 
       case 'infect': {
+        // Infected can only infect alive players
+        if (!target.alive) {
+          actor.nightAction.results.push(
+            `failed:Nemůžeš nakazit mrtvého hráče - ${target.name} je mrtvý`
+          );
+          console.log(`  🦠 [P${actionData.priority}] ${actor.name} cannot infect dead player ${target.name}`);
+          break;
+        }
+        
         if (!hasEffect(target, 'infected')) {
           addEffect(target, 'infected', actor._id, null, {});
           toSave.add(targetId);

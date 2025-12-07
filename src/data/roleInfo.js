@@ -245,6 +245,11 @@ export const MODIFIER_INFO = {
     label: 'Podezřelý',
     description: 'Při vyšetřování vypadá jako zlý, i když je dobrý'
   },
+  'Innocent': {
+    emoji: '😇',
+    label: 'Nevinný',
+    description: 'Při vyšetřování vypadá jako dobrý nebo neutrální, i když je zlý'
+  },
   'Paranoid': {
     emoji: '😱',
     label: 'Paranoidní',

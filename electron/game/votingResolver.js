@@ -238,17 +238,21 @@ async function resolveExecutionVoting(game, players, GameLog) {
 
   const votesAgainst = totalWeightedVotes - votesFor;
 
-  const majorityThreshold = Math.ceil(totalWeightedVotes / 2);
+  // Nadpoloviční většina = více než 50% všech hlasů
+  // Math.floor(totalWeightedVotes / 2) + 1 zajišťuje, že potřebujeme více než polovinu
+  // Např. pro 4 hlasy: Math.floor(4/2) + 1 = 3 (více než 2, tedy více než 50%)
+  // Např. pro 5 hlasů: Math.floor(5/2) + 1 = 3 (více než 2.5, tedy více než 50%)
+  const majorityThreshold = Math.floor(totalWeightedVotes / 2) + 1;
 
   console.log(`  📊 Voting stats:`);
   console.log(`     Total alive: ${totalAlive}`);
   console.log(`     Total weighted votes: ${totalWeightedVotes}`);
   console.log(`     Votes FOR execution: ${votesFor}`);
   console.log(`     Votes AGAINST (skip/abstain/other): ${votesAgainst}`);
-  console.log(`     Majority needed: ${majorityThreshold} (50% or more)`);
+  console.log(`     Majority needed: ${majorityThreshold} (more than 50%)`);
 
-  // ✅ KONTROLA: Hráč může být vyloučen pouze pokud má nadpoloviční většinu všech hlasů (50% nebo více)
-  // Pokud nemá většinu (alespoň 50%), neexekutuje se
+  // ✅ KONTROLA: Hráč může být vyloučen pouze pokud má nadpoloviční většinu všech hlasů (více než 50%)
+  // Pokud nemá většinu (více než 50%), neexekutuje se
   if (votesFor < majorityThreshold) {
     const target = players.find(p => p._id.toString() === topId);
     await GameLog.create({ 

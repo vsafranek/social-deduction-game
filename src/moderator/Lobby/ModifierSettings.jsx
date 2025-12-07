@@ -114,9 +114,9 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <span className="modifier-icon">
               <RoleIcon role="Shady" size={48} className="modifier-icon-svg" isModifier={true} />
             </span>
-            <span className="modifier-name">Shady</span>
+            <span className="modifier-name">Shady / Innocent</span>
           </div>
-          <p className="modifier-desc">Při vyšetřování vypadá jako zlý, i když je dobrý</p>
+          <p className="modifier-desc">Shady (dobrý tým): vypadá jako zlý při vyšetřování. Innocent (zlý tým): vypadá jako dobrý/neutrální při vyšetřování.</p>
           <div className="modifier-control">
             <label>Šance: <strong>{modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}%</strong></label>
             <input
