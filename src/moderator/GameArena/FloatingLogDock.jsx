@@ -65,7 +65,7 @@ function FloatingLogDock({ logs, players }) {
               <div className="empty-subtext">Události se zobrazí zde</div>
             </div>
           ) : (
-            logs.slice(-30).reverse().map((log, i) => {
+            logs.slice(-30).map((log, i) => {
               // Handle both string (legacy) and object (new) log formats
               const logMessage = typeof log === 'string' 
                 ? log 

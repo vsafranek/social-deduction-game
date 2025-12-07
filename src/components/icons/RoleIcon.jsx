@@ -8,9 +8,9 @@ import React, { useState, useEffect } from 'react';
 function generateIconPath(name) {
   if (!name) return null;
   // Převede název na lowercase a vytvoří cestu
-  // Např. "Doctor" -> "/icons/doctor.svg", "SerialKiller" -> "/icons/serialkiller.svg"
+  // Např. "Doctor" -> "/icons/roles/doctor.svg", "SerialKiller" -> "/icons/roles/serialkiller.svg"
   const iconName = name.toLowerCase().replace(/\s+/g, '');
-  return `/icons/${iconName}.svg`;
+  return `/icons/roles/${iconName}.svg`;
 }
 
 // Fallback emoji pro role bez SVG ikon

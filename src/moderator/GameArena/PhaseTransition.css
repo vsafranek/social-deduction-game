@@ -19,64 +19,51 @@
 .transition-bg {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(0,0,0,0.8), rgba(0,0,0,0.95));
+  background: radial-gradient(circle at center, rgba(10, 8, 15, 0.9), rgba(0, 0, 0, 0.98));
 }
 
 .light-burst {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, rgba(255,215,0,0.4), transparent 60%);
+  background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.3), transparent 60%);
   animation: burstExpand 2s ease-out;
+  mix-blend-mode: screen;
 }
 
 @keyframes burstExpand {
-  from {
-    transform: scale(0);
-    opacity: 1;
-  }
-  to {
-    transform: scale(3);
-    opacity: 0;
-  }
+  from { transform: scale(0); opacity: 1; }
+  to { transform: scale(3); opacity: 0; }
 }
 
-/* Nightfall particles (day → night) */
+/* Nightfall particles */
 .nightfall-particles {
   position: absolute;
   inset: 0;
   background: 
-    radial-gradient(1px 1px at 10% 20%, white, transparent),
-    radial-gradient(2px 2px at 80% 30%, white, transparent),
-    radial-gradient(1px 1px at 50% 10%, white, transparent),
-    radial-gradient(2px 2px at 30% 40%, white, transparent);
+    radial-gradient(1.5px 1.5px at 10% 20%, rgba(200, 200, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 80% 30%, rgba(200, 200, 255, 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 50% 10%, rgba(200, 200, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 30% 40%, rgba(200, 200, 255, 0.8), transparent);
   background-size: 200px 200px, 250px 250px, 180px 180px, 220px 220px;
   animation: fadeInStars 2s ease-in;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 @keyframes fadeInStars {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.5;
-  }
+  from { opacity: 0; transform: scale(1.1); }
+  to { opacity: 0.6; transform: scale(1); }
 }
 
 .darkness-veil {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent, rgba(0,20,40,0.6));
+  background: radial-gradient(ellipse at center, transparent, rgba(10, 5, 20, 0.8));
   animation: fadeInDark 2s ease-in;
 }
 
 @keyframes fadeInDark {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Content */
@@ -88,56 +75,58 @@
 }
 
 @keyframes scaleInText {
-  0% {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-  30% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0% { transform: scale(0.8); opacity: 0; filter: blur(10px); }
+  30% { transform: scale(1.05); opacity: 1; filter: blur(0); }
+  100% { transform: scale(1); opacity: 1; filter: blur(0); }
 }
 
 .transition-icon {
   font-size: 8rem;
   margin-bottom: 20px;
   animation: iconPulse 2s ease-out;
-  filter: drop-shadow(0 0 40px rgba(255,255,255,0.8));
+  filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.6));
 }
 
 @keyframes iconPulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
+  50% { transform: scale(1.15); }
 }
 
 .transition-text {
-  font-size: 4rem;
+  font-size: 5rem;
   font-weight: 900;
-  color: white;
-  text-shadow: 0 0 32px rgba(255,255,255,0.8);
-  letter-spacing: 8px;
+  color: #ffecd1;
+  text-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+  letter-spacing: 10px;
   margin-bottom: 10px;
+  font-family: 'MedievalSharp', serif;
+  text-transform: uppercase;
 }
 
 .transition-subtitle {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.8);
-  text-shadow: 0 0 16px rgba(255,255,255,0.5);
-  letter-spacing: 3px;
+  color: #c5a059;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  letter-spacing: 4px;
+  font-family: 'Cinzel', serif;
 }
 
 /* Phase specific colors */
 .phase-transition.day .transition-text {
   color: #ffd700;
-  text-shadow: 0 0 40px rgba(255,215,0,0.9);
+  text-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 2px 2px 4px rgba(0,0,0,0.8);
 }
 
 .phase-transition.night .transition-text {
-  color: #00d4ff;
-  text-shadow: 0 0 40px rgba(0,212,255,0.9);
+  color: #b388ff;
+  text-shadow: 0 0 40px rgba(124, 77, 255, 0.6), 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+.phase-transition.day .transition-icon {
+  filter: drop-shadow(0 0 40px rgba(255, 215, 0, 0.8));
+}
+
+.phase-transition.night .transition-icon {
+  filter: drop-shadow(0 0 40px rgba(124, 77, 255, 0.8));
 }

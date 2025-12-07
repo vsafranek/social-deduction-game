@@ -8,31 +8,31 @@ const WINNER_LABELS = {
   'good': { 
     label: 'Město vyhrává!', 
     emoji: '✨', 
-    gradient: 'linear-gradient(135deg, #10b981, #059669)',
+    gradient: 'linear-gradient(135deg, #2e7d32, #1b5e20)',
     description: 'Všichni zločinci byli eliminováni!'
   },
   'evil': { 
     label: 'Mafie vyhrává!', 
     emoji: '🔥', 
-    gradient: 'linear-gradient(135deg, #ef4444, #dc2626)',
+    gradient: 'linear-gradient(135deg, #c62828, #b71c1c)',
     description: 'Mafie převzala kontrolu!'
   },
   'solo': { 
     label: 'Sólové vítězství!', 
     emoji: '👑', 
-    gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    gradient: 'linear-gradient(135deg, #f57f17, #e65100)',
     description: 'Poslední přeživší!'
   },
   'custom': { 
     label: 'Speciální vítězství!', 
     emoji: '🌟', 
-    gradient: 'linear-gradient(135deg, #a855f7, #9333ea)',
+    gradient: 'linear-gradient(135deg, #6a1b9a, #4a148c)',
     description: 'Speciální win condition!'
   },
   'unknown': {
     label: 'Výsledek neznámý',
     emoji: '❔',
-    gradient: 'linear-gradient(135deg, #6b7280, #4b5563)',
+    gradient: 'linear-gradient(135deg, #455a64, #263238)',
     description: 'Čekáme na potvrzení vítěze.'
   }
 };
@@ -59,14 +59,14 @@ function GameEndScreen({ gameState, currentPlayer }) {
       winnerInfo = {
         label: 'Vítězství Šaška!',
         emoji: '🎭',
-        gradient: 'linear-gradient(135deg, #a855f7, #9333ea)',
+        gradient: 'linear-gradient(135deg, #7b1fa2, #4a148c)',
         description: 'Šašek byl vyhlasován a vyhrál!'
       };
     } else if (winnerPlayer?.role === 'Infected') {
       winnerInfo = {
         label: 'Vítězství Nakaženého!',
         emoji: '🦠',
-        gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+        gradient: 'linear-gradient(135deg, #512da8, #311b92)',
         description: 'Všichni hráči byli nakaženi!'
       };
     }
@@ -131,10 +131,12 @@ function GameEndScreen({ gameState, currentPlayer }) {
               borderRadius: '50%',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              background: 'radial-gradient(circle at 30% 30%, #3e2723, #1a1520)',
+              border: '1px solid rgba(197, 160, 89, 0.2)',
               fontSize: '20px',
-              color: '#fff',
+              color: '#c5a059',
               fontWeight: 'bold',
+              fontFamily: "'MedievalSharp', cursive",
               flexShrink: 0
             }}
           >
