@@ -1,12 +1,13 @@
 .role-config-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.85);
   z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(5px);
 }
 
 @keyframes fadeIn {
@@ -15,17 +16,34 @@
 }
 
 .role-config-modal {
-  background: linear-gradient(135deg, #16213e, #0f3460);
-  border: 2px solid #00d4ff;
-  border-radius: 15px;
+  background: linear-gradient(135deg, #1f1a24 0%, #2d2636 100%);
+  border: 2px solid #c5a059;
+  border-radius: 8px;
   width: 90vw;
   max-width: 1000px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 50px rgba(0,0,0,0.6);
+  box-shadow: 
+    0 20px 60px rgba(0,0,0,0.9),
+    0 0 0 1px #8b4513,
+    inset 0 0 30px rgba(0,0,0,0.7);
   animation: slideUp 0.3s ease-out;
   overflow: hidden;
+  position: relative;
+}
+
+.role-config-modal::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 @keyframes slideUp {
@@ -35,36 +53,47 @@
 
 .modal-header {
   padding: 20px 25px;
-  background: rgba(0,212,255,0.1);
-  border-bottom: 2px solid #00d4ff;
+  background: linear-gradient(to bottom, #2a2530, #1f1a24);
+  border-bottom: 2px solid #8b7355;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  position: relative;
+  z-index: 2;
 }
 
 .modal-header h2 {
   margin: 0;
-  color: #00d4ff;
-  font-size: 1.5rem;
+  color: #c5a059;
+  font-family: 'MedievalSharp', cursive;
+  font-size: 1.8rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
 }
 
 .btn-close-modal {
   width: 36px;
   height: 36px;
-  border: none;
-  background: rgba(231,76,60,0.2);
+  border: 1px solid #5d4037;
+  background: linear-gradient(to bottom, #3e2723, #2d1b15);
   color: #e74c3c;
   border-radius: 50%;
   font-size: 1.5rem;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
 
 .btn-close-modal:hover {
-  background: #e74c3c;
-  color: white;
+  background: linear-gradient(to bottom, #4e342e, #3e2723);
+  color: #ff6b6b;
   transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.4);
+  border-color: #e74c3c;
 }
 
 .modal-body {
@@ -73,11 +102,18 @@
   overflow-x: hidden;
   padding: 25px;
   box-sizing: border-box;
+  position: relative;
+  z-index: 2;
 }
 
-.modal-body::-webkit-scrollbar { width: 8px; }
-.modal-body::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-.modal-body::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 4px; }
+.modal-body::-webkit-scrollbar { width: 10px; }
+.modal-body::-webkit-scrollbar-track { background: #1a1625; }
+.modal-body::-webkit-scrollbar-thumb { 
+  background: #8b4513; 
+  border: 1px solid #5d4037;
+  border-radius: 5px; 
+}
+.modal-body::-webkit-scrollbar-thumb:hover { background: #a0522d; }
 
 .modal-section {
   margin-bottom: 30px;
@@ -87,167 +123,48 @@
 
 .modal-section h3 {
   margin: 0 0 15px;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-family: 'Cinzel', serif;
+  color: #ffd700;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
 }
 
 .team-header {
   margin: 25px 0 15px; 
-  font-size: 1.2rem; 
+  font-size: 1.4rem; 
   display: flex; 
   align-items: center; 
   gap: 8px;
-  border-bottom: 2px solid rgba(0,212,255,0.3); 
+  border-bottom: 2px solid; 
   padding-bottom: 8px;
   justify-content: space-between;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  font-family: 'MedievalSharp', serif;
+}
+
+.team-header small {
+  font-family: 'Lato', sans-serif;
+  font-size: 1rem;
+  opacity: 0.8;
+  color: #c5a059;
 }
 
 .team-header.good { 
-  color: #4caf50; 
-  border-color: rgba(76,175,80,0.3); 
+  color: #81c784; 
+  border-color: #2e7d32; 
 }
 
 .team-header.evil { 
-  color: #e74c3c; 
-  border-color: rgba(231,76,60,0.3); 
+  color: #e57373; 
+  border-color: #c62828; 
 }
 
 .team-header.neutral {
-  color: #9e9e9e;
-  border-color: rgba(158,158,158,0.3);
-}
-
-.expand-guaranteed-btn {
-  padding: 4px 10px;
-  background: rgba(255,215,0,0.1);
-  border: 1px solid rgba(255,215,0,0.4);
-  border-radius: 6px;
-  color: #ffd700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-left: auto;
-}
-
-.expand-guaranteed-btn:hover {
-  background: rgba(255,215,0,0.2);
-  border-color: rgba(255,215,0,0.6);
-}
-
-.guaranteed-roles-subsection {
-  margin-bottom: 15px;
-  padding: 12px;
-  background: rgba(255,215,0,0.05);
-  border: 1px solid rgba(255,215,0,0.3);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.guaranteed-role-item-small {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,215,0,0.2);
-  border-radius: 6px;
-}
-
-.guaranteed-role-name-small {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.guaranteed-role-controls-small {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.counter-btn-small {
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgba(255,215,0,0.5);
-  background: rgba(255,215,0,0.1);
-  color: #ffd700;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.counter-btn-small:hover:not(:disabled) {
-  background: rgba(255,215,0,0.2);
-  border-color: #ffd700;
-}
-
-.counter-btn-small:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.guaranteed-count-small {
-  min-width: 25px;
-  text-align: center;
-  color: #ffd700;
-  font-weight: bold;
-  font-size: 0.9rem;
-}
-
-/* Timer sliders */
-.timer-sliders {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  background: rgba(0,0,0,0.3);
-  padding: 20px;
-  border-radius: 10px;
-}
-
-.timer-slider-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.timer-slider-item label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 1rem;
-}
-
-.timer-slider-item label strong {
-  color: #ffd700;
-  font-size: 1.2rem;
-}
-
-.timer-slider-item input[type="range"] {
-  width: 100%;
-  height: 8px;
-  border-radius: 5px;
-  background: rgba(0,0,0,0.4);
-  outline: none;
-  cursor: pointer;
-  accent-color: #00d4ff;
-}
-
-.auto-save-hint {
-  text-align: center;
-  color: #4caf50;
-  font-size: 0.85rem;
-  margin-top: 5px;
+  color: #bdbdbd;
+  border-color: #616161;
 }
 
 /* Role grid */
@@ -261,9 +178,9 @@
 
 /* Role cards */
 .role-config-card {
-  background: rgba(0,0,0,0.3);
-  border: 2px solid rgba(0,212,255,0.3);
-  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(45, 38, 54, 0.9) 0%, rgba(30, 25, 35, 0.9) 100%);
+  border: 1px solid #5d4037;
+  border-radius: 6px;
   padding: 10px;
   transition: all 0.2s;
   cursor: pointer;
@@ -273,36 +190,36 @@
   min-width: 180px;
   max-width: 200px;
   overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
 }
 
 .role-config-card.active {
-  border-color: #00d4ff;
-  background: rgba(0,212,255,0.1);
+  border-color: #ffd700;
+  background: linear-gradient(to bottom right, rgba(197, 160, 89, 0.2), rgba(45, 38, 54, 0.9));
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
 }
 
 .role-config-card.inactive {
-  opacity: 0.5;
-  border-color: rgba(255,255,255,0.1);
+  opacity: 0.7;
+  border-color: #3e322e;
+  background: rgba(20, 18, 25, 0.6);
+  filter: grayscale(0.4);
 }
 
-.role-config-card.guaranteed {
-  border-color: #ffd700 !important;
-  background: rgba(255,215,0,0.15) !important;
-  box-shadow: 0 0 15px rgba(255,215,0,0.5), 0 0 25px rgba(255,215,0,0.2) !important;
-}
-
-.role-config-card.guaranteed.active {
-  border-color: #ffd700 !important;
-  background: rgba(255,215,0,0.2) !important;
-  box-shadow: 0 0 20px rgba(255,215,0,0.6), 0 0 30px rgba(255,215,0,0.3) !important;
+.role-config-card:hover {
+  transform: translateY(-2px);
+  border-color: #c5a059;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.6);
 }
 
 .role-config-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 10px;
   cursor: pointer;
+  border-bottom: 1px solid rgba(197, 160, 89, 0.2);
+  padding-bottom: 6px;
 }
 
 .role-emoji {
@@ -311,13 +228,15 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
 }
 
 .role-name {
   flex: 1;
   font-weight: 600;
-  color: #fff;
-  font-size: 0.85rem;
+  color: #ffecd1;
+  font-size: 0.95rem;
+  font-family: 'Cinzel', serif;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -326,8 +245,9 @@
 
 .role-toggle {
   font-size: 1.2rem;
-  color: #00d4ff;
+  color: #c5a059;
   font-weight: bold;
+  text-shadow: 0 0 5px rgba(197, 160, 89, 0.5);
 }
 
 .role-config-controls {
@@ -336,24 +256,36 @@
   gap: 6px;
 }
 
-.role-config-counter {
+.role-config-max-limit {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  justify-content: center;
+  width: 100%;
 }
 
-.role-config-counter label {
+.role-count-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(to bottom, #ffd700, #ff8f00);
+  color: #000;
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.7);
-  min-width: 70px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 10;
+  border: 1px solid #b8860b;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  font-family: 'Cinzel', serif;
 }
 
 .counter-btn {
   width: 26px;
   height: 26px;
-  border: 1px solid rgba(0,212,255,0.5);
-  background: rgba(0,212,255,0.1);
-  color: #00d4ff;
+  border: 1px solid #8b4513;
+  background: linear-gradient(to bottom, #3e2723, #2d1b15);
+  color: #c5a059;
   border-radius: 4px;
   cursor: pointer;
   font-size: 1.1rem;
@@ -361,134 +293,73 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  font-family: 'Cinzel', serif;
 }
 
 .counter-btn:hover:not(:disabled) {
-  background: rgba(0,212,255,0.3);
-  border-color: #00d4ff;
+  background: linear-gradient(to bottom, #4e342e, #3e2723);
+  border-color: #ffd700;
+  color: #ffd700;
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
 }
 
 .counter-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.4;
   cursor: not-allowed;
-}
-
-.count-input {
-  flex: 1;
-  width: 50px;
-  padding: 4px 8px;
-  border: 1px solid rgba(0,212,255,0.5);
-  background: rgba(0,0,0,0.3);
-  color: #fff;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-.count-input:focus {
-  outline: none;
-  border-color: #00d4ff;
-  background: rgba(0,0,0,0.5);
-}
-
-.role-config-max-limit {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  justify-content: center;
-}
-
-.role-count-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(255,215,0,0.9);
-  color: #000;
-  font-size: 0.75rem;
-  font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 10px;
-  z-index: 10;
-}
-
-.role-config-max-limit label {
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.7);
-  min-width: 70px;
-}
-
-.max-limit-input {
-  width: 40px;
-  padding: 4px 4px;
-  border: 1px solid rgba(255,215,0,0.5);
-  background: rgba(0,0,0,0.3);
-  color: #fff;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 0.85rem;
-}
-
-.max-limit-input:focus {
-  outline: none;
-  border-color: #ffd700;
-  background: rgba(0,0,0,0.5);
-}
-
-.max-limit-input::placeholder {
-  color: rgba(255,255,255,0.4);
-}
-
-.role-config-guaranteed {
-  display: flex;
-  align-items: center;
-}
-
-.role-config-guaranteed label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.8);
-}
-
-.role-config-guaranteed input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: #ffd700;
+  background: #1a1625;
+  border-color: #3e322e;
 }
 
 .role-config-summary {
-  background: rgba(0,212,255,0.1);
+  background: rgba(30, 25, 35, 0.8);
   padding: 15px;
-  border-radius: 10px;
+  border-radius: 6px;
   text-align: center;
   margin-top: 20px;
+  border: 1px solid #c5a059;
+  font-family: 'Lato', sans-serif;
+  color: #a0a0a0;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
 }
 
 .role-config-summary strong {
   color: #ffd700;
   font-size: 1.2rem;
+  font-family: 'Cinzel', serif;
+  margin: 0 5px;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
 }
+
+.role-config-summary small {
+  display: block;
+  margin-top: 5px;
+  opacity: 0.7;
+  color: #c5a059;
+}
+
+/* Button to open this modal (might be used elsewhere but defined here in old CSS) */
 .btn-open-role-config {
   width: 100%;
   padding: 18px;
   margin-top: 20px;
-  background: linear-gradient(135deg, #00d4ff, #0099cc);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  color: white;
-  font-size: 1.2rem;
+  background: linear-gradient(to bottom, #3e2723, #2d1b15);
+  border: 2px solid #c5a059;
+  border-radius: 6px;
+  color: #ffd700;
+  font-size: 1.3rem;
+  font-family: 'Cinzel', serif;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 
-    0 6px 20px rgba(0, 212, 255, 0.3),
-    0 0 30px rgba(0, 212, 255, 0.1);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    0 4px 10px rgba(0,0,0,0.5),
+    inset 0 0 10px rgba(197, 160, 89, 0.1);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
   position: relative;
   overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn-open-role-config::before {
@@ -500,7 +371,7 @@
   height: 100%;
   background: linear-gradient(90deg, 
     transparent 0%, 
-    rgba(255, 255, 255, 0.2) 50%, 
+    rgba(197, 160, 89, 0.2) 50%, 
     transparent 100%);
   transition: left 0.5s ease;
 }
@@ -510,9 +381,11 @@
 }
 
 .btn-open-role-config:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 
-    0 10px 30px rgba(0, 212, 255, 0.5),
-    0 0 40px rgba(0, 212, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.4);
+    0 8px 20px rgba(0,0,0,0.6),
+    0 0 15px rgba(197, 160, 89, 0.2);
+  background: linear-gradient(to bottom, #5d4037, #3e2723);
+  color: #fff;
+  border-color: #ffd700;
 }

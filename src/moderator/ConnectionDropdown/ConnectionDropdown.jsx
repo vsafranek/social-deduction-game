@@ -22,7 +22,7 @@ function ConnectionDropdown({ connectionInfo, onClose }) {
         
         <div className="connection-info">
           <div className="info-row">
-            <span className="info-label">Room Kód:</span>
+            <span className="info-label">Room Code:</span>
             <span className="info-value">{connectionInfo.roomCode}</span>
           </div>
           <div className="info-row">

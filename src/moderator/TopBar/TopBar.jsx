@@ -23,7 +23,7 @@ function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
   return (
     <div className="topbar">
       <div className="topbar-left">
-        <h1>🎮 Lobby - Waiting for Players</h1>
+        <h1> Lobby - Waiting for Players</h1>
       </div>
 
       <div className="topbar-right">
@@ -33,7 +33,6 @@ function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
             className="topbar-button test-stories-button"
             onClick={onTestStories}
             title="Play preview of all night stories"
-            style={{ marginRight: '8px', background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', border: '1px solid rgba(139, 92, 246, 0.5)' }}
           >
             🎬 Stories Test
           </button>

@@ -123,7 +123,7 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <div className="modifier-name-badge-wrapper">
               <span className="modifier-name">Shady</span>
               <div className="modifier-team-badges">
-                <span className="team-badge good">Dobrý</span>
+                <span className="team-badge good">Good</span>
               </div>
             </div>
           </div>
@@ -234,9 +234,9 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <div className="modifier-name-badge-wrapper">
               <span className="modifier-name">Amnesiac</span>
               <div className="modifier-team-badges">
-                <span className="team-badge good">Dobrý</span>
+                <span className="team-badge good">Good</span>
                 <span className="team-badge evil">Evil</span>
-                <span className="team-badge neutral">Neutrální</span>
+                <span className="team-badge neutral">Neutral</span>
               </div>
             </div>
           </div>
