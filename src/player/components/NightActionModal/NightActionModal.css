@@ -91,6 +91,42 @@
   text-align: center;
 }
 
+.back-button {
+  margin: 0 0 16px 0;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateX(-2px);
+}
+
+.no-players-message {
+  padding: 40px 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.no-players-message p {
+  margin: 0;
+  font-size: 14px;
+}
+
 .players-action-list {
   display: flex;
   flex-direction: column;
@@ -122,6 +158,19 @@
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.8);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.player-action-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.player-action-item:disabled:hover {
+  transform: none;
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.4);
 }
 
 .player-action-item.visited {
@@ -205,6 +254,21 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  padding: 2px 6px;
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Special badge for puppet selection */
+.player-action-info .selected-badge {
+  margin-top: 4px;
+}
+
+/* Highlight for puppet (when selected as puppet in step 1) */
+.player-action-item:disabled .selected-badge {
+  color: rgba(168, 85, 247, 1);
+  background: rgba(168, 85, 247, 0.2);
 }
 
 .check-icon {
@@ -451,6 +515,16 @@
 
   .investigation-text {
     font-size: 10px;
+  }
+
+  .back-button {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .action-instruction {
+    font-size: 13px;
+    line-height: 1.5;
   }
 }
 

@@ -199,7 +199,9 @@ async function resolveExecutionVoting(game, players, GameLog) {
     return { executed: null, reason: 'no_votes' };
   }
 
-  // Find player with most votes
+  // Find player with most votes (using weighted votes)
+  // Important: Tie detection uses weighted votes - if two candidates have same weighted votes, it's a tie
+  // Example: 2 players vote against mayor (2 weighted votes), mayor votes against one of them (2 weighted votes) = 2v2 tie, no execution
   let topId = null;
   let topVotes = 0;
   const tied = [];
@@ -215,18 +217,30 @@ async function resolveExecutionVoting(game, players, GameLog) {
     }
   }
 
-  // Check for tie
+  // ✅ Check for tie in weighted votes - if two or more candidates have same weighted votes, no execution
   if (tied.length > 1) {
     const tiedNames = tied.map(id => {
       const p = players.find(pl => pl._id.toString() === id);
       return p?.name || '?';
     });
+    
+    // Log which players voted for each tied candidate
+    const tieDetails = tied.map(candidateId => {
+      const voters = alive
+        .filter(p => p.voteFor && p.voteFor.toString() === candidateId)
+        .map(p => `${p.name}${p.voteWeight > 1 ? ` (${p.voteWeight} votes)` : ''}`)
+        .join(', ');
+      const candidate = players.find(p => p._id.toString() === candidateId);
+      return `${candidate?.name || '?'} (${topVotes} votes: ${voters})`;
+    }).join(' vs ');
+    
     await GameLog.create({ 
       gameId: game._id, 
-      message: `No execution (tie: ${tiedNames.join(', ')})` 
+      message: `No execution (tie: ${tiedNames.join(', ')} with ${topVotes} weighted votes each)` 
     });
-    console.log(`  ⚖️ Tie between: ${tiedNames.join(', ')}`);
-    return { executed: null, reason: 'tie', tied };
+    console.log(`  ⚖️ Tie between: ${tiedNames.join(', ')} (${topVotes} weighted votes each)`);
+    console.log(`     Details: ${tieDetails}`);
+    return { executed: null, reason: 'tie', tied, tiedVotes: topVotes };
   }
 
   let totalWeightedVotes = 0;
@@ -238,29 +252,40 @@ async function resolveExecutionVoting(game, players, GameLog) {
 
   const votesAgainst = totalWeightedVotes - votesFor;
 
-  // Nadpoloviční většina = více než 50% všech hlasů
-  // Math.floor(totalWeightedVotes / 2) + 1 zajišťuje, že potřebujeme více než polovinu
-  // Např. pro 4 hlasy: Math.floor(4/2) + 1 = 3 (více než 2, tedy více než 50%)
-  // Např. pro 5 hlasů: Math.floor(5/2) + 1 = 3 (více než 2.5, tedy více než 50%)
-  const majorityThreshold = Math.floor(totalWeightedVotes / 2) + 1;
+  // ✅ Většina se počítá z počtu živých hráčů, ne z celkového počtu vážených hlasů
+  // Pokud je např. 3 živí hráči, většina je 2 hráči (více než 50% ze 3)
+  // Starosta má 2 hlasy, ale počítá se jako 1 hráč při výpočtu většiny
+  // majorityThreshold = počet hlasujících HRÁČŮ (ne vážených hlasů), které je potřeba pro většinu
+  const majorityThreshold = Math.floor(totalAlive / 2) + 1;
+
+  // Počítáme kolik HRÁČŮ hlasovalo pro top kandidáta
+  // (ne kolik vážených hlasů - to už máme v topVotes)
+  let playersVotingForTop = 0;
+  for (const p of alive) {
+    if (p.voteFor && p.voteFor.toString() === topId) {
+      playersVotingForTop++;
+    }
+  }
 
   console.log(`  📊 Voting stats:`);
-  console.log(`     Total alive: ${totalAlive}`);
+  console.log(`     Total alive players: ${totalAlive}`);
   console.log(`     Total weighted votes: ${totalWeightedVotes}`);
-  console.log(`     Votes FOR execution: ${votesFor}`);
+  console.log(`     Votes FOR execution (weighted): ${votesFor}`);
+  console.log(`     Players voting FOR execution: ${playersVotingForTop}`);
   console.log(`     Votes AGAINST (skip/abstain/other): ${votesAgainst}`);
-  console.log(`     Majority needed: ${majorityThreshold} (more than 50%)`);
+  console.log(`     Majority needed: ${majorityThreshold} players (more than 50% of ${totalAlive} alive players)`);
 
-  // ✅ KONTROLA: Hráč může být vyloučen pouze pokud má nadpoloviční většinu všech hlasů (více než 50%)
-  // Pokud nemá většinu (více než 50%), neexekutuje se
-  if (votesFor < majorityThreshold) {
+  // ✅ KONTROLA: Hráč může být vyloučen pouze pokud má nadpoloviční většinu z počtu živých HRÁČŮ
+  // Např. 3 živí hráči → většina = 2 hráči (více než 50% ze 3)
+  // Starosta s 2 hlasy se počítá jako 1 hráč při výpočtu většiny
+  if (playersVotingForTop < majorityThreshold) {
     const target = players.find(p => p._id.toString() === topId);
     await GameLog.create({ 
       gameId: game._id, 
-      message: `No execution (insufficient votes: ${votesFor}/${totalWeightedVotes} for ${target?.name})` 
+      message: `No execution (insufficient votes: ${playersVotingForTop}/${totalAlive} players voted for ${target?.name}, need ${majorityThreshold})` 
     });
-    console.log(`  ❌ Insufficient votes: ${votesFor}/${totalWeightedVotes} (need ${majorityThreshold})`);
-    return { executed: null, reason: 'insufficient_votes', topCandidate: topId, votesFor };
+    console.log(`  ❌ Insufficient votes: ${playersVotingForTop}/${totalAlive} players (need ${majorityThreshold} players for majority)`);
+    return { executed: null, reason: 'insufficient_votes', topCandidate: topId, votesFor, playersVotingFor: playersVotingForTop };
   }
 
   // Má většinu → execute
@@ -309,9 +334,9 @@ async function resolveExecutionVoting(game, players, GameLog) {
     await target.save();
     await GameLog.create({ 
       gameId: game._id, 
-      message: `Executed: ${target.name} (${votesFor}/${totalWeightedVotes} weighted votes)` 
+      message: `Executed: ${target.name} (${playersVotingForTop}/${totalAlive} players, ${votesFor} weighted votes)` 
     });
-    console.log(`  ☠️ ${target.name} executed (${votesFor}/${totalWeightedVotes} weighted votes)`);
+    console.log(`  ☠️ ${target.name} executed (${playersVotingForTop}/${totalAlive} players, ${votesFor} weighted votes)`);
   }
 
   // Clear daily votes
@@ -326,7 +351,8 @@ async function resolveExecutionVoting(game, players, GameLog) {
     executedName: target?.name || null,
     votesFor, 
     votesAgainst, 
-    totalAlive 
+    totalAlive,
+    playersVotingFor: playersVotingForTop
   };
 }
 

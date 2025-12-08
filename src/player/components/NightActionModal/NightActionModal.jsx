@@ -13,9 +13,12 @@ function NightActionModal({
   isDualRole,
   usesRemaining,
   visitedPlayers = [],
-  investigationHistory = {}
+  investigationHistory = {},
+  requiresTwoTargets = false
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedPuppet, setSelectedPuppet] = useState(null); // Pro Čarodějnici - první výběr (loutka)
+  const [step, setStep] = useState('puppet'); // 'puppet' nebo 'target'
   
   // Pro Infected roli - zkontroluj, zda je hráč už navštíven
   const isPlayerVisited = (playerId) => {
@@ -33,10 +36,40 @@ function NightActionModal({
     });
   };
 
+  const handlePlayerSelect = (playerId) => {
+    if (requiresTwoTargets) {
+      if (step === 'puppet') {
+        setSelectedPuppet(playerId);
+        setSelectedPlayer(null);
+        setStep('target');
+      } else {
+        setSelectedPlayer(playerId);
+      }
+    } else {
+      setSelectedPlayer(playerId);
+    }
+  };
+
+  const handleBack = () => {
+    if (requiresTwoTargets && step === 'target') {
+      setStep('puppet');
+      setSelectedPuppet(null);
+      setSelectedPlayer(null);
+    }
+  };
+
   const handleConfirm = () => {
-    if (selectedPlayer) {
-      onAction(selectedPlayer, selectedMode);
-      onClose();
+    if (requiresTwoTargets) {
+      if (selectedPuppet && selectedPlayer) {
+        // Předáme oba ID - puppetId a targetId
+        onAction({ puppetId: selectedPuppet, targetId: selectedPlayer }, selectedMode);
+        onClose();
+      }
+    } else {
+      if (selectedPlayer) {
+        onAction(selectedPlayer, selectedMode);
+        onClose();
+      }
     }
   };
 
@@ -54,13 +87,23 @@ function NightActionModal({
 
         <div className="night-action-modal-content">
           <p className="action-instruction">
-            {currentActionInfo?.description}
+            {requiresTwoTargets && step === 'puppet' 
+              ? 'Nejprve vyber hráče, kterého ovládneš' 
+              : requiresTwoTargets && step === 'target'
+              ? `Vyber cíl, na kterého ${selectedPuppet ? players.find(p => p._id === selectedPuppet)?.name || 'loutka' : 'loutka'} použije svou schopnost`
+              : currentActionInfo?.description}
           </p>
 
           {isDualRole && selectedMode !== 'kill' && (
             <div className="uses-remaining-modal">
               ⚡ Speciální akce: {usesRemaining}x
             </div>
+          )}
+
+          {requiresTwoTargets && step === 'target' && (
+            <button className="back-button" onClick={handleBack}>
+              ← Zpět na výběr loutky
+            </button>
           )}
 
           {players.length === 0 && (
@@ -70,17 +113,28 @@ function NightActionModal({
           )}
 
           <div className="players-action-list">
-            {players.map(player => {
+            {players
+              .filter(player => {
+                // Pro druhý krok (target), vyloučíme vybraného puppeta
+                if (requiresTwoTargets && step === 'target' && player._id === selectedPuppet) {
+                  return false;
+                }
+                return true;
+              })
+              .map(player => {
               const visited = isPlayerVisited(player._id);
               // Normalize player._id to string for lookup
               const playerId = player._id?.toString?.() || player._id?.toString() || String(player._id);
               const investigation = investigationHistory[playerId];
+              const isPuppet = requiresTwoTargets && selectedPuppet === player._id;
+              const isSelected = selectedPlayer === player._id || isPuppet;
               
               return (
                 <button
                   key={player._id}
-                  className={`player-action-item ${selectedPlayer === player._id ? 'selected' : ''} ${visited ? 'visited' : ''} ${investigation ? 'investigated' : ''}`}
-                  onClick={() => setSelectedPlayer(player._id)}
+                  className={`player-action-item ${isSelected ? 'selected' : ''} ${visited ? 'visited' : ''} ${investigation ? 'investigated' : ''}`}
+                  onClick={() => handlePlayerSelect(player._id)}
+                  disabled={isPuppet}
                 >
                   <div className="player-action-avatar">
                     {player.avatar ? (
@@ -130,11 +184,14 @@ function NightActionModal({
                         <span className="investigation-text">{investigation.roles}</span>
                       </div>
                     )}
-                    {selectedPlayer === player._id && (
+                    {isPuppet && (
+                      <span className="selected-badge">Loutka</span>
+                    )}
+                    {selectedPlayer === player._id && !isPuppet && (
                       <span className="selected-badge">Vybráno</span>
                     )}
                   </div>
-                  {selectedPlayer === player._id && (
+                  {isSelected && (
                     <span className="check-icon">✓</span>
                   )}
                 </button>
@@ -153,9 +210,9 @@ function NightActionModal({
           <button 
             className={`confirm-action-button ${currentActionInfo?.color || 'blue'}`}
             onClick={handleConfirm}
-            disabled={!selectedPlayer}
+            disabled={requiresTwoTargets ? (!selectedPuppet || !selectedPlayer) : !selectedPlayer}
           >
-            Potvrdit akci
+            {requiresTwoTargets && step === 'puppet' ? 'Pokračovat →' : 'Potvrdit akci'}
           </button>
         </div>
       </div>

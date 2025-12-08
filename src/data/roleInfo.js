@@ -230,6 +230,20 @@ export const ROLE_INFO = {
     description: 'Vyhraj, pokud jsi vyhlasován. Hra končí okamžitě, když jsi vyhlasován.',
     actionVerb: 'Žádná',
     nightAction: null // No night action
+  },
+  'Witch': {
+    emoji: '🧙‍♀️',
+    team: 'neutral',
+    teamLabel: 'Čarodějnice',
+    description: 'Přežij do konce hry. Ovládáš hráče - donutíš ho použít jeho schopnost na tvůj vybraný cíl. Hraješ před všemi ostatními.',
+    actionVerb: 'Ovládnout',
+    nightAction: {
+      verb: 'Ovládni',
+      icon: '🧙‍♀️',
+      color: 'purple',
+      description: 'Nejprve vyber hráče, kterého ovládneš, pak vyber cíl, na kterého použije svou schopnost',
+      requiresTwoTargets: true
+    }
   }
 };
 

@@ -791,7 +791,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
 router.post('/:gameId/set-night-action', async (req, res) => {
   try {
     const { gameId } = req.params;
-    const { playerId, targetId, actionMode } = req.body;
+    const { playerId, targetId, actionMode, puppetId } = req.body;
     
     if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
     if (!ensureObjectId(playerId)) return res.status(400).json({ error: 'Invalid player id' });
@@ -806,8 +806,30 @@ router.post('/:gameId/set-night-action', async (req, res) => {
 
     const roleData = ROLES[player.role];
     
-    // Check if role has dual actions
-    if (roleData?.actionType === 'dual') {
+    // Check if role is Witch (requires puppetId)
+    if (player.role === 'Witch') {
+      if (!puppetId || !ensureObjectId(puppetId)) {
+        return res.status(400).json({ error: 'Witch requires puppetId' });
+      }
+      
+      const puppet = await Player.findById(puppetId);
+      if (!puppet || !puppet.alive) {
+        return res.status(400).json({ error: 'Puppet not found or dead' });
+      }
+      
+      // Puppet must have a night action (cannot be Citizen or Jester)
+      if (!puppet.role || puppet.role === 'Citizen' || puppet.role === 'Jester') {
+        return res.status(400).json({ error: 'Puppet must have a night action' });
+      }
+      
+      player.nightAction = {
+        targetId,
+        action: 'witch_control',
+        puppetId,
+        results: []
+      };
+    } else if (roleData?.actionType === 'dual') {
+      // Check if role has dual actions
       if (!actionMode) return res.status(400).json({ error: 'Action mode required for dual role' });
       
       // Check if special ability has uses left
@@ -839,7 +861,7 @@ router.post('/:gameId/set-night-action', async (req, res) => {
     }
 
     await player.save();
-    console.log(`✓ ${player.name} set action: ${player.nightAction.action} → ${targetId}`);
+    console.log(`✓ ${player.name} set action: ${player.nightAction.action} → ${targetId}${puppetId ? ` (puppet: ${puppetId})` : ''}`);
     
     res.json({ success: true });
   } catch (e) {

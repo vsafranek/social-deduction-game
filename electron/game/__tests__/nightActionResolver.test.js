@@ -1305,5 +1305,383 @@ describe('nightActionResolver', () => {
       expect(player2.save).toHaveBeenCalled();
     });
   });
+
+  describe('Witch Control', () => {
+    
+    test('should override puppet target when Witch controls a player', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3', // Controlled target
+          puppetId: '2', // Puppet to control
+          results: []
+        }
+      });
+      const puppet = createMockPlayer('2', 'Puppet', 'Cleaner', {
+        nightAction: {
+          action: 'kill',
+          targetId: '4', // Original target - should be overridden
+          results: []
+        }
+      });
+      const originalTarget = createMockPlayer('4', 'OriginalTarget', 'Citizen', {
+        alive: true
+      });
+      const controlledTarget = createMockPlayer('3', 'ControlledTarget', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, puppet, originalTarget, controlledTarget];
+
+      await resolveNightActions({}, players);
+
+      // Puppet's target should be overridden to controlledTarget
+      expect(puppet.nightAction.targetId.toString()).toBe('3');
+      expect(puppet.nightAction.action).toBe('kill');
+      expect(puppet.roleData.controlledByWitch).toBe(true);
+      expect(puppet.save).toHaveBeenCalled();
+      
+      // Controlled target should be killed
+      expect(controlledTarget.alive).toBe(false);
+      
+      // Original target should be safe
+      expect(originalTarget.alive).toBe(true);
+      
+      // Witch should get success message
+      expect(witch.nightAction.results).toContain(
+        expect.stringContaining('Ovladla jsi Puppet, aby použil svou schopnost na ControlledTarget')
+      );
+    });
+
+    test('should set default action for puppet if not set (dual role)', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const puppet = createMockPlayer('2', 'Puppet', 'Cleaner', {
+        nightAction: {
+          action: null, // No action set
+          targetId: null,
+          results: []
+        }
+      });
+      const controlledTarget = createMockPlayer('3', 'ControlledTarget', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, puppet, controlledTarget];
+
+      await resolveNightActions({}, players);
+
+      // Puppet's action should be set to 'kill' (default for dual roles)
+      expect(puppet.nightAction.action).toBe('kill');
+      expect(puppet.nightAction.targetId.toString()).toBe('3');
+      expect(controlledTarget.alive).toBe(false);
+    });
+
+    test('should fail when puppet is dead', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const deadPuppet = createMockPlayer('2', 'DeadPuppet', 'Cleaner', {
+        alive: false,
+        nightAction: {
+          action: 'kill',
+          targetId: '3',
+          results: []
+        }
+      });
+      const target = createMockPlayer('3', 'Target', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, deadPuppet, target];
+
+      await resolveNightActions({}, players);
+
+      expect(witch.nightAction.results).toContain(
+        expect.stringContaining('Loutka není naživu nebo neexistuje')
+      );
+      expect(deadPuppet.nightAction.targetId.toString()).toBe('3'); // Not changed
+    });
+
+    test('should fail when controlled target is dead', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const puppet = createMockPlayer('2', 'Puppet', 'Cleaner', {
+        nightAction: {
+          action: 'kill',
+          targetId: '4',
+          results: []
+        }
+      });
+      const deadTarget = createMockPlayer('3', 'DeadTarget', 'Citizen', {
+        alive: false
+      });
+      const players = [witch, puppet, deadTarget];
+
+      await resolveNightActions({}, players);
+
+      expect(witch.nightAction.results).toContain(
+        expect.stringContaining('Cíl není naživu nebo neexistuje')
+      );
+      expect(puppet.nightAction.targetId.toString()).toBe('4'); // Not changed
+    });
+
+    test('should fail when puppet has no night action (Citizen)', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const citizen = createMockPlayer('2', 'Citizen', 'Citizen', {
+        nightAction: {
+          action: null,
+          targetId: null,
+          results: []
+        }
+      });
+      const target = createMockPlayer('3', 'Target', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, citizen, target];
+
+      await resolveNightActions({}, players);
+
+      expect(witch.nightAction.results).toContain(
+        expect.stringContaining('Citizen nemá noční akci')
+      );
+    });
+
+    test('should fail when puppet has no night action (Jester)', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const jester = createMockPlayer('2', 'Jester', 'Jester', {
+        nightAction: {
+          action: null,
+          targetId: null,
+          results: []
+        }
+      });
+      const target = createMockPlayer('3', 'Target', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, jester, target];
+
+      await resolveNightActions({}, players);
+
+      expect(witch.nightAction.results).toContain(
+        expect.stringContaining('Jester nemá noční akci')
+      );
+    });
+
+    test('should execute puppet action before SerialKiller (priority -1 vs 0)', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '4',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const puppet = createMockPlayer('2', 'Puppet', 'Cleaner', {
+        nightAction: {
+          action: 'kill',
+          targetId: '5',
+          results: []
+        }
+      });
+      const serialKiller = createMockPlayer('3', 'SerialKiller', 'SerialKiller', {
+        nightAction: {
+          action: 'kill',
+          targetId: '4',
+          results: []
+        }
+      });
+      const controlledTarget = createMockPlayer('4', 'ControlledTarget', 'Citizen', {
+        alive: true
+      });
+      const originalTarget = createMockPlayer('5', 'OriginalTarget', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, puppet, serialKiller, controlledTarget, originalTarget];
+
+      await resolveNightActions({}, players);
+
+      // Puppet's target should be overridden to controlledTarget
+      expect(puppet.nightAction.targetId.toString()).toBe('4');
+      // Controlled target should be killed by puppet (before SerialKiller)
+      expect(controlledTarget.alive).toBe(false);
+      // Original target should be safe
+      expect(originalTarget.alive).toBe(true);
+    });
+
+    test('should store original target and action in puppet roleData', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const puppet = createMockPlayer('2', 'Puppet', 'Cleaner', {
+        nightAction: {
+          action: 'kill',
+          targetId: '4',
+          results: []
+        },
+        roleData: {}
+      });
+      const controlledTarget = createMockPlayer('3', 'ControlledTarget', 'Citizen', {
+        alive: true
+      });
+      const originalTarget = createMockPlayer('4', 'OriginalTarget', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, puppet, controlledTarget, originalTarget];
+
+      await resolveNightActions({}, players);
+
+      // Original target and action should be stored
+      expect(puppet.roleData.originalTargetId).toBeDefined();
+      expect(puppet.roleData.originalAction).toBe('kill');
+      expect(puppet.roleData.controlledByWitch).toBe(true);
+      expect(puppet.roleData.witchId).toBeDefined();
+    });
+
+    test('should handle Witch controlling multiple different puppets', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '4',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const puppet1 = createMockPlayer('2', 'Puppet1', 'Cleaner', {
+        nightAction: {
+          action: 'kill',
+          targetId: '5',
+          results: []
+        }
+      });
+      const puppet2 = createMockPlayer('6', 'Puppet2', 'Doctor', {
+        nightAction: {
+          action: 'protect',
+          targetId: '7',
+          results: []
+        }
+      });
+      const controlledTarget = createMockPlayer('4', 'ControlledTarget', 'Citizen', {
+        alive: true
+      });
+      const originalTarget1 = createMockPlayer('5', 'OriginalTarget1', 'Citizen', {
+        alive: true
+      });
+      const originalTarget2 = createMockPlayer('7', 'OriginalTarget2', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, puppet1, puppet2, controlledTarget, originalTarget1, originalTarget2];
+
+      await resolveNightActions({}, players);
+
+      // Only puppet1 should be controlled (witch only controls one per night)
+      expect(puppet1.nightAction.targetId.toString()).toBe('4');
+      expect(puppet2.nightAction.targetId.toString()).toBe('7'); // Not changed
+      
+      // Controlled target should be killed
+      expect(controlledTarget.alive).toBe(false);
+    });
+
+    test('should not skip witch_control action in Phase 1', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const puppet = createMockPlayer('2', 'Puppet', 'Cleaner', {
+        nightAction: {
+          action: 'kill',
+          targetId: '4',
+          results: []
+        }
+      });
+      const controlledTarget = createMockPlayer('3', 'ControlledTarget', 'Citizen', {
+        alive: true
+      });
+      const players = [witch, puppet, controlledTarget];
+
+      await resolveNightActions({}, players);
+
+      // Witch action should be handled in Phase 0, not Phase 1
+      // This test verifies that witch_control is not collected in Phase 1
+      // (indirectly tested by ensuring puppet action executes correctly)
+      expect(puppet.nightAction.targetId.toString()).toBe('3');
+      expect(controlledTarget.alive).toBe(false);
+    });
+
+    test('should update puppet in memory after saving', async () => {
+      const witch = createMockPlayer('1', 'Witch', 'Witch', {
+        nightAction: {
+          action: 'witch_control',
+          targetId: '3',
+          puppetId: '2',
+          results: []
+        }
+      });
+      const puppet = createMockPlayer('2', 'Puppet', 'Cleaner', {
+        nightAction: {
+          action: 'kill',
+          targetId: '4',
+          results: []
+        }
+      });
+      const controlledTarget = createMockPlayer('3', 'ControlledTarget', 'Citizen', {
+        alive: true
+      });
+      const attacker = createMockPlayer('5', 'Attacker', 'Cleaner', {
+        nightAction: {
+          action: 'kill',
+          targetId: '3',
+          results: []
+        }
+      });
+      const players = [witch, puppet, controlledTarget, attacker];
+
+      await resolveNightActions({}, players);
+
+      // Both puppet and attacker should target controlledTarget
+      // Puppet should execute first (controlled by witch), then attacker
+      // Both should kill the target
+      expect(puppet.nightAction.targetId.toString()).toBe('3');
+      expect(attacker.nightAction.targetId.toString()).toBe('3');
+      expect(controlledTarget.alive).toBe(false);
+    });
+  });
 });
 

@@ -93,18 +93,24 @@ export const gameApi = {
   // ==================
 
   /**
-   * Set night action (NEW - with dual-action support)
+   * Set night action (NEW - with dual-action support and Witch control)
    * @param {string} gameId - Game ID
    * @param {string} playerId - Player ID
    * @param {string} targetId - Target player ID
    * @param {string|null} actionMode - Action mode for dual roles (kill, clean_role, frame, etc.)
+   * @param {string|null} puppetId - Puppet player ID for Witch control
    */
-  async setNightAction(gameId, playerId, targetId, actionMode = null) {
+  async setNightAction(gameId, playerId, targetId, actionMode = null, puppetId = null) {
     const body = { playerId, targetId };
     
     // Add actionMode if provided (for dual-action roles)
     if (actionMode) {
       body.actionMode = actionMode;
+    }
+    
+    // Add puppetId if provided (for Witch control)
+    if (puppetId) {
+      body.puppetId = puppetId;
     }
 
     const res = await fetch(`${API_BASE}/game/${gameId}/set-night-action`, {

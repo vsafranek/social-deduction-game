@@ -31,6 +31,7 @@ const EMOJI_FALLBACK = {
   'SerialKiller': '🛡️',
   'Infected': '🦠',
   'Jester': '🎭',
+  'Witch': '🧙‍♀️',
 };
 
 // Fallback emoji pro modifikátory bez SVG ikon

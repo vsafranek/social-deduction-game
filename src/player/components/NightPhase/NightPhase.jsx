@@ -59,14 +59,14 @@ function NightPhase({ player, players, onAction }) {
   };
 
   // Handler pro potvrzení akce z modalu
-  const handleActionFromModal = (targetId, mode) => {
+  const handleActionFromModal = (targetData, mode) => {
     console.log('✅ Submitting action from modal:', { 
-      targetId, 
+      targetData, 
       mode, 
       role: player.role 
     });
     
-    onAction(targetId, mode);
+    onAction(targetData, mode);
     setActionDone(true);
     setShowActionModal(false);
   };
@@ -154,6 +154,10 @@ function NightPhase({ player, players, onAction }) {
       {showActionModal && (
         <NightActionModal
           players={(() => {
+            // Witch can target alive players (both puppet and target must be alive)
+            if (player.role === 'Witch') {
+              return players.filter(p => p._id !== player._id && p.alive);
+            }
             // Coroner can always target dead players
             if (player.role === 'Coroner') {
               return players.filter(p => p._id !== player._id && !p.alive);
@@ -177,6 +181,7 @@ function NightPhase({ player, players, onAction }) {
           usesRemaining={usesRemaining}
           visitedPlayers={player.role === 'Infected' ? (player.roleData?.visitedPlayers || []) : []}
           investigationHistory={investigationHistory}
+          requiresTwoTargets={actionInfo?.requiresTwoTargets || false}
         />
       )}
     </div>

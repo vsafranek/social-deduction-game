@@ -215,6 +215,21 @@ const ROLES = {
       soloWin: true,
       customRules: [] // Special win condition handled in votingResolver
     }
+  },
+  
+  'Witch': {
+    team: 'neutral',
+    description: 'Survive until the end. Controls a player - forces them to use their ability on your chosen target. Acts before SerialKiller.',
+    actionType: 'witch_control',
+    nightPriority: -1, // Before SerialKiller (0)
+    canUseEveryNight: true,
+    visitsTarget: false, // Doesn't visit, controls others
+    defaultAffiliations: ['neutral'],
+    defaultVictory: {
+      canWinWithTeams: ['good', 'evil'], // Wins with whoever survives
+      soloWin: false,
+      customRules: [] // Just needs to survive
+    }
   }
 };
 

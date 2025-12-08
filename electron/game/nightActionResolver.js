@@ -1,6 +1,7 @@
 // electron/game/nightActionResolver.js
 
 const { ROLES } = require('../models/Role');
+const Player = require('../models/Player');
 
 /**
  * Helper functions
@@ -129,6 +130,9 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
     case 'guard':
       return `success:Nastavil jsi stráž u ${targetName}`;
     
+    case 'witch_control':
+      return `success:Ovladla jsi hráče, aby cílil na ${targetName}`;
+    
     default:
       return `success:Akce provedena`;
   }
@@ -140,14 +144,28 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
 async function resolveNightActions(game, players) {
   console.log('🌙 [NightResolver] Starting night action resolution...');
   
+  // Create idMap and update players array reference
   const idMap = new Map(players.map(p => [p._id.toString(), p]));
+  
+  // Helper to update both idMap and players array
+  const updatePlayerInMemory = (player) => {
+    const playerIdStr = player._id.toString();
+    idMap.set(playerIdStr, player);
+    const index = players.findIndex(p => p._id.toString() === playerIdStr);
+    if (index !== -1) {
+      players[index] = player;
+    }
+  };
+  
+  // Initialize tracking sets and maps
   const blocked = new Set();
   const guarded = new Set();
   const allVisits = [];
   const drunkPlayers = new Set();
   const jailTargets = new Map(); 
   const hunterKills = new Map(); 
-  const janitorTargets = new Set(); 
+  const janitorTargets = new Set();
+  const toSave = new Set(); // Initialize toSave early - used in Phase 0 
 
   // ✅ Clear ALL temporary effects from previous night
   // NOTE: marked_for_cleaning should persist across nights until player dies
@@ -171,6 +189,117 @@ async function resolveNightActions(game, players) {
 
   clearExpiredEffects(players);
 
+  // PHASE 0: Handle Witch control - must happen BEFORE collecting other actions
+  // Witch controls other players by overriding their target
+  console.log('🧙‍♀️ [NightResolver] Phase 0: Witch control...');
+  const witchControls = [];
+  for (const actor of players) {
+    if (!actor.alive || actor.role !== 'Witch') continue;
+    
+    const action = actor.nightAction?.action;
+    const targetId = actor.nightAction?.targetId?.toString();
+    const puppetId = actor.nightAction?.puppetId?.toString();
+    
+    if (action !== 'witch_control' || !targetId || !puppetId) {
+      if (actor.role === 'Witch' && (!action || action !== 'witch_control')) {
+        console.log(`  ⚠️ ${actor.name} (Witch) has no valid control action`);
+      }
+      continue;
+    }
+
+    const puppet = idMap.get(puppetId);
+    const controlledTarget = idMap.get(targetId);
+    
+    if (!puppet || !puppet.alive) {
+      console.log(`  ⚠️ ${actor.name}: Puppet not found or dead`);
+      actor.nightAction.results.push('failed:Loutka není naživu nebo neexistuje');
+      continue;
+    }
+    
+    if (!controlledTarget || !controlledTarget.alive) {
+      console.log(`  ⚠️ ${actor.name}: Controlled target not found or dead`);
+      actor.nightAction.results.push('failed:Cíl není naživu nebo neexistuje');
+      continue;
+    }
+    
+    // Puppet must have a night action
+    if (!puppet.role || puppet.role === 'Citizen' || puppet.role === 'Jester') {
+      console.log(`  ⚠️ ${actor.name}: Puppet (${puppet.name}) has no night action`);
+      actor.nightAction.results.push(`failed:${puppet.name} nemá noční akci`);
+      continue;
+    }
+    
+    const puppetRoleData = ROLES[puppet.role];
+    if (!puppetRoleData || !puppetRoleData.actionType || puppetRoleData.actionType === 'none') {
+      console.log(`  ⚠️ ${actor.name}: Puppet (${puppet.name}) has no valid night action`);
+      actor.nightAction.results.push(`failed:${puppet.name} nemá platnou noční akci`);
+      continue;
+    }
+    
+    // Store witch control info
+    witchControls.push({
+      witchId: actor._id.toString(),
+      puppetId,
+      controlledTargetId: targetId,
+      witchName: actor.name,
+      puppetName: puppet.name,
+      controlledTargetName: controlledTarget.name
+    });
+    
+    console.log(`  🧙‍♀️ ${actor.name} controlling ${puppet.name} to target ${controlledTarget.name}`);
+    
+    // Override puppet's action target
+    // Save original target for results
+    if (!puppet.roleData) puppet.roleData = {};
+    puppet.roleData.originalTargetId = puppet.nightAction?.targetId || null;
+    puppet.roleData.originalAction = puppet.nightAction?.action || null;
+    puppet.roleData.controlledByWitch = true;
+    puppet.roleData.witchId = actor._id;
+    
+    // Set puppet's action to controlled target
+    if (!puppet.nightAction) {
+      puppet.nightAction = { targetId: null, action: null, results: [] };
+    }
+    
+    // Determine puppet's action type based on their role
+    // If puppet already has an action set, use it (for dual roles)
+    // Otherwise, determine action from role definition
+    let puppetAction = puppet.nightAction.action;
+    
+    if (!puppetAction) {
+      // Puppet hasn't set their action yet - determine from role
+      const puppetRoleData = ROLES[puppet.role];
+      if (puppetRoleData?.actionType === 'dual') {
+        // For dual roles, default to 'kill' (the always-available action)
+        puppetAction = 'kill';
+      } else {
+        // Use the role's action type
+        puppetAction = puppetRoleData?.actionType || null;
+      }
+    }
+    
+    // Override puppet's action target AND ensure action is set
+    puppet.nightAction.targetId = controlledTarget._id;
+    puppet.nightAction.action = puppetAction;
+    
+    // Mark puppet as modified
+    puppet.markModified('nightAction');
+    puppet.markModified('roleData');
+    toSave.add(puppetId);
+    
+    // Save puppet immediately to ensure changes persist
+    await puppet.save();
+    
+    // Update both idMap and players array with modified puppet
+    updatePlayerInMemory(puppet);
+    
+    console.log(`  🧙‍♀️ ${puppet.name} action overridden: ${puppetAction} → ${controlledTarget.name} (saved)`);
+    console.log(`    Puppet nightAction:`, JSON.stringify(puppet.nightAction, null, 2));
+    
+    // Witch only gets success message - she doesn't see puppet's action results
+    actor.nightAction.results.push(`success:Ovladla jsi ${puppet.name}, aby použil svou schopnost na ${controlledTarget.name}`);
+  }
+
   // PHASE 1: Collect and validate all actions
   console.log('📋 [NightResolver] Phase 1: Collecting actions...');
   const actionsToResolve = [];
@@ -192,7 +321,7 @@ async function resolveNightActions(game, players) {
     // Most actions require alive target, but some actions need to validate dead targets themselves
     // autopsy and clean_role can target dead players
     // investigate, consig_investigate, and infect need to validate dead targets and provide user feedback
-    if (action !== 'autopsy' && action !== 'clean_role' && action !== 'investigate' && action !== 'consig_investigate' && action !== 'infect' && !target.alive) {
+    if (action !== 'autopsy' && action !== 'clean_role' && action !== 'investigate' && action !== 'consig_investigate' && action !== 'infect' && action !== 'witch_control' && !target.alive) {
       console.log(`  ⚠️ ${actor.name}: Target must be alive for action ${action}`);
       continue;
     }
@@ -207,13 +336,19 @@ async function resolveNightActions(game, players) {
       priority = 4; // Higher priority than Investigator (5)
     }
 
+    // Skip witch_control actions from being resolved normally (already handled in Phase 0)
+    if (action === 'witch_control') {
+      continue;
+    }
+
     actionsToResolve.push({
       actorId: actor._id.toString(),
       targetId,
       action,
       priority,
       actorName: actor.name,
-      targetName: target.name
+      targetName: target.name,
+      controlledByWitch: actor.roleData?.controlledByWitch || false
     });
   }
 
@@ -228,7 +363,7 @@ async function resolveNightActions(game, players) {
   // PHASE 2: Process actions in priority order
   console.log('⚡ [NightResolver] Phase 2: Processing actions by priority...');
   const visitsByTarget = new Map();
-  const toSave = new Set();
+  // toSave is already initialized above
 
   for (const actionData of actionsToResolve) {
     const { actorId, targetId, action } = actionData;
@@ -994,6 +1129,20 @@ async function resolveNightActions(game, players) {
     toSave.add(p._id.toString());
   }
 
+  // PHASE 6: Give controlled puppets their results (as if they chose the target themselves)
+  console.log('🧙‍♀️ [NightResolver] Phase 6: Witch control results for puppets...');
+  for (const control of witchControls) {
+    const puppet = idMap.get(control.puppetId);
+    if (!puppet || !puppet.alive) continue;
+    
+    // Puppet should get normal results for their action on the controlled target
+    // Results are already generated in Phase 2, but we need to ensure puppet sees them correctly
+    // The puppet's results should show as if they chose the target themselves
+    // (Results are already in puppet.nightAction.results from Phase 2)
+    
+    console.log(`  🧙‍♀️ ${control.witchName} controlled ${control.puppetName} - puppet got normal results`);
+  }
+
   // Give Doctors feedback
   console.log('💉 [NightResolver] Phase 5b: Doctor feedback...');
   for (const [doctorId, targetId] of doctorProtections.entries()) {
@@ -1081,6 +1230,11 @@ async function resolveNightActions(game, players) {
     
     if (!p.nightAction) {
       p.nightAction = { targetId: null, action: null, results: [] };
+    }
+    
+    // Skip default message for Witch - she already has her success message
+    if (p.role === 'Witch' && p.nightAction.results.length > 0) {
+      continue;
     }
     
     if (p.nightAction.results.length === 0) {

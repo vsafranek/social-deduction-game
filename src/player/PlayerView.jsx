@@ -151,12 +151,17 @@ function PlayerView() {
     }
   };
 
-  // ✅ UPDATED: Support actionMode parameter for dual-action roles
-  const handleNightAction = async (targetId, actionMode = null) => {
+  // ✅ UPDATED: Support actionMode parameter for dual-action roles and Witch control
+  const handleNightAction = async (targetData, actionMode = null) => {
     try {
-      console.log('🌙 Night action:', { playerId, targetId, actionMode });
+      console.log('🌙 Night action:', { playerId, targetData, actionMode });
       
-      await gameApi.setNightAction(gameId, playerId, targetId, actionMode);
+      // Pokud je targetData objekt s puppetId a targetId (Witch), použij ho
+      // Jinak je to normální targetId
+      const targetId = targetData?.targetId || targetData;
+      const puppetId = targetData?.puppetId || null;
+      
+      await gameApi.setNightAction(gameId, playerId, targetId, actionMode, puppetId);
       await fetchGameState();
     } catch (error) {
       console.error('Chyba při noční akci:', error);
