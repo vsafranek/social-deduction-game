@@ -6,9 +6,20 @@ function CenterCircle({ phase, round, aliveCount, countdownSec }) {
     <div className="center-circle">
       <div className="center-info">
         <div className="phase-display">
-          {phase === 'night' && '🌙'}
-          {phase === 'day' && '☀️'}
-          {phase === 'end' && '🏁'}
+          {phase === 'night' && (
+            <img 
+              src="/icons/general/moon.svg" 
+              alt="Night" 
+              className="phase-icon"
+            />
+          )}
+          {phase === 'day' && (
+            <img 
+              src="/icons/general/day.svg" 
+              alt="Day" 
+              className="phase-icon"
+            />
+          )}
         </div>
         <div className="round-display">Kolo {round}</div>
         <div className="alive-count">{aliveCount} živých</div>

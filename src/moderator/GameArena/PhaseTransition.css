@@ -85,6 +85,17 @@
   margin-bottom: 20px;
   animation: iconPulse 2s ease-out;
   filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.6));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.transition-icon-img {
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  animation: iconPulse 2s ease-out;
+  filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.6));
 }
 
 @keyframes iconPulse {
@@ -127,6 +138,14 @@
   filter: drop-shadow(0 0 40px rgba(255, 215, 0, 0.8));
 }
 
+.phase-transition.day .transition-icon-img {
+  filter: drop-shadow(0 0 40px rgba(255, 215, 0, 0.8));
+}
+
 .phase-transition.night .transition-icon {
+  filter: drop-shadow(0 0 40px rgba(124, 77, 255, 0.8));
+}
+
+.phase-transition.night .transition-icon-img {
   filter: drop-shadow(0 0 40px rgba(124, 77, 255, 0.8));
 }

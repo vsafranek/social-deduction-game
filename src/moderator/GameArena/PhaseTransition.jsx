@@ -23,7 +23,19 @@ function PhaseTransition({ from, to, hiding }) {
       
       <div className="transition-content">
         <div className="transition-icon">
-          {to === 'day' ? '☀️' : '🌙'}
+          {to === 'day' ? (
+            <img 
+              src="/icons/general/day.svg" 
+              alt="Day" 
+              className="transition-icon-img"
+            />
+          ) : (
+            <img 
+              src="/icons/general/moon.svg" 
+              alt="Night" 
+              className="transition-icon-img"
+            />
+          )}
         </div>
         <div className="transition-text">
           {to === 'day' ? 'DAY BREAKS' : 'NIGHT FALLS'}

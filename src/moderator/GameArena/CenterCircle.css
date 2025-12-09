@@ -26,10 +26,31 @@
 
 .phase-display { 
   font-size: 4rem; 
-  animation: pulse 3s ease-in-out infinite; 
+  animation: pulse 4s ease-in-out infinite; 
   filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4));
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-@keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.05);opacity:.9} }
+
+.phase-icon {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4));
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse { 
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.95;
+  }
+}
 
 .round-display { 
   font-size: 1.8rem; 
