@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 const Game = require('../models/Game');
 const Player = require('../models/Player');
@@ -95,30 +97,65 @@ router.post('/create', async (req, res) => {
   }
 });
 
+// Helper function to get all available avatar files from filesystem
+function getAllAvailableAvatars() {
+  const avatars = [];
+  
+  // Get avatars ONLY from /avatars/ folder (public/avatars/)
+  const avatarsDir = path.join(__dirname, '../../public/avatars');
+  
+  if (fs.existsSync(avatarsDir)) {
+    const files = fs.readdirSync(avatarsDir);
+    
+    files.forEach(file => {
+      // Only include files that DON'T have "details" or "detail" in the name and are images
+      const fileNameLower = file.toLowerCase();
+      const hasDetail = fileNameLower.includes('detail');
+      
+      if (!hasDetail && /\.(png|jpg|jpeg|svg)$/i.test(file)) {
+        avatars.push(`/avatars/${file}`);
+      }
+    });
+  }
+  
+  return avatars;
+}
+
 // Helper function to assign unique avatar with retry logic to prevent race conditions
+// Selects a random free avatar from available avatars
 async function assignUniqueAvatar(gameId, maxRetries = 5) {
-  const MAX_AVATARS = 50; // Máme avatary 1.png až 50.png
+  // Get all available avatars from filesystem
+  const allAvatars = getAllAvailableAvatars();
+  
+  if (allAvatars.length === 0) {
+    console.warn('⚠️ No avatars found in filesystem, returning null');
+    return null;
+  }
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     // Vždy znovu načti aktuální stav hráčů, aby se zabránilo race condition
     const existingPlayers = await Player.find({ gameId });
     const usedAvatars = new Set(existingPlayers.map(p => p.avatar).filter(Boolean));
     
-    // Najdi první dostupný avatar
-    for (let i = 1; i <= MAX_AVATARS; i++) {
-      const avatarPath = `/avatars/${i}.png`;
-      if (!usedAvatars.has(avatarPath)) {
-        // Ověř, že avatar stále není používán (double-check)
-        const stillAvailable = await Player.findOne({ 
-          gameId, 
-          avatar: avatarPath 
-        });
-        
-        if (!stillAvailable) {
-          return avatarPath;
-        }
-        // Pokud je už používán, pokračuj v hledání
+    // Najdi volné avatary
+    const freeAvatars = allAvatars.filter(avatar => !usedAvatars.has(avatar));
+    
+    if (freeAvatars.length > 0) {
+      // Vyber náhodný volný avatar
+      const randomIndex = Math.floor(Math.random() * freeAvatars.length);
+      const selectedAvatar = freeAvatars[randomIndex];
+      
+      // Double-check že avatar stále není používán (race condition protection)
+      const stillAvailable = await Player.findOne({ 
+        gameId, 
+        avatar: selectedAvatar 
+      });
+      
+      if (!stillAvailable) {
+        console.log(`✅ Assigned random avatar: ${selectedAvatar}`);
+        return selectedAvatar;
       }
+      // Pokud je už používán, pokračuj v dalším pokusu
     }
     
     // Pokud jsou všechny použité a není to poslední pokus, počkej chvíli a zkus znovu
@@ -129,9 +166,10 @@ async function assignUniqueAvatar(gameId, maxRetries = 5) {
     }
   }
   
-  // Fallback: pokud všechny pokusy selhaly, vrať náhodný
-  const randomAvatar = Math.floor(Math.random() * MAX_AVATARS) + 1;
-  return `/avatars/${randomAvatar}.png`;
+  // Fallback: pokud všechny pokusy selhaly, vrať náhodný z dostupných (může být duplicitní)
+  const randomIndex = Math.floor(Math.random() * allAvatars.length);
+  console.warn(`⚠️ All avatars in use, returning random: ${allAvatars[randomIndex]}`);
+  return allAvatars[randomIndex];
 }
 
 // Join by room code
@@ -143,11 +181,19 @@ router.post('/join', async (req, res) => {
 
     let player = await Player.findOne({ gameId: game._id, sessionId });
     if (!player) {
-      // Přiřaď unikátní avatar
+      // Nový hráč - přiřaď unikátní náhodný avatar
       const avatar = await assignUniqueAvatar(game._id);
       player = new Player({ gameId: game._id, sessionId, name, role: null, avatar });
       await player.save();
       await GameLog.create({ gameId: game._id, message: `${name} joined.` });
+    } else {
+      // Existující hráč - pokud nemá avatar, přiřaď mu náhodný volný
+      if (!player.avatar || !player.avatar.trim()) {
+        const avatar = await assignUniqueAvatar(game._id);
+        player.avatar = avatar;
+        await player.save();
+        console.log(`✅ Assigned avatar to existing player ${player.name}: ${avatar}`);
+      }
     }
 
     res.json({ success: true, gameId: game._id, playerId: player._id });
@@ -866,6 +912,90 @@ router.post('/:gameId/set-night-action', async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     console.error('set-night-action error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update player avatar (lobby only)
+router.patch('/:gameId/player/:playerId/avatar', async (req, res) => {
+  try {
+    const { gameId, playerId } = req.params;
+    const { avatar } = req.body || {};
+    
+    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
+    if (!ensureObjectId(playerId)) return res.status(400).json({ error: 'Invalid player id' });
+    
+    if (!avatar || typeof avatar !== 'string') {
+      return res.status(400).json({ error: 'Avatar path is required' });
+    }
+    
+    const game = await Game.findById(gameId);
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+    
+    // Only allow changing avatar in lobby phase
+    if (game.phase !== 'lobby') {
+      return res.status(400).json({ error: 'Can only change avatar in lobby phase' });
+    }
+    
+    const player = await Player.findOne({ _id: playerId, gameId });
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+    
+    // Check if avatar is already used by another player
+    const existingPlayer = await Player.findOne({ 
+      gameId, 
+      avatar,
+      _id: { $ne: playerId } // Exclude current player
+    });
+    
+    if (existingPlayer) {
+      return res.status(400).json({ error: 'This avatar is already used by another player' });
+    }
+    
+    // Update avatar
+    player.avatar = avatar;
+    await player.save();
+    
+    res.json({ success: true, avatar: player.avatar });
+  } catch (e) {
+    console.error('update avatar error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get list of available avatars (without "details" or "detail" in name)
+// Only from /avatars/ folder - role icons are NOT used as avatars
+router.get('/avatars/available', async (req, res) => {
+  try {
+    const { gameId } = req.query;
+    
+    // Get all avatar paths from filesystem
+    const allAvatarPaths = getAllAvailableAvatars();
+    
+    // Get used avatars if gameId is provided
+    let usedAvatars = new Set();
+    if (gameId && ensureObjectId(gameId)) {
+      const existingPlayers = await Player.find({ gameId });
+      usedAvatars = new Set(existingPlayers.map(p => p.avatar).filter(Boolean));
+    }
+    
+    // Convert to response format with availability info
+    const avatars = allAvatarPaths.map(avatarPath => {
+      const fileName = path.basename(avatarPath);
+      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+      const isUsed = usedAvatars.has(avatarPath);
+      
+      return {
+        path: avatarPath,
+        name: nameWithoutExt,
+        type: 'generic',
+        available: !isUsed
+      };
+    });
+    
+    console.log(`🎨 Total avatars found: ${avatars.length} (${avatars.filter(a => a.available).length} available)`);
+    res.json({ success: true, avatars });
+  } catch (e) {
+    console.error('❌ get available avatars error:', e);
     res.status(500).json({ error: e.message });
   }
 });

@@ -220,9 +220,12 @@ function PlayerView() {
       gameState={gameState}
       currentPlayer={currentPlayer}
       playerName={currentPlayer.name} // ✅ Explicitly pass player name
+      playerId={playerId}
+      gameId={gameId}
       onNightAction={handleNightAction}
       onVote={handleVote}
       error={error}
+      onRefresh={fetchGameState}
     />
   );
 }

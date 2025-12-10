@@ -51,22 +51,24 @@ function PlayersList({
           type="button"
         >
           <div className="player-avatar">
-            {player.avatar ? (
+            {player.avatar && player.avatar.trim() ? (
               <img 
                 src={player.avatar} 
                 alt={player.name}
                 className="avatar-img"
                 onError={(e) => {
                   e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
+                  if (e.target.nextSibling) {
+                    e.target.nextSibling.style.display = 'flex';
+                  }
                 }}
               />
             ) : null}
             <div 
               className="avatar-fallback"
-              style={{ display: player.avatar ? 'none' : 'flex' }}
+              style={{ display: (player.avatar && player.avatar.trim()) ? 'none' : 'flex' }}
             >
-              {player.alive ? '✅' : '💀'}
+              {player.name.charAt(0).toUpperCase()}
             </div>
           </div>
           <div className="player-info">

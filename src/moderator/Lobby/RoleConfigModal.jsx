@@ -49,7 +49,7 @@ function RoleConfigModal({
                 <div key={role} className={`role-config-card ${randomPoolRoles[role] ? 'active' : 'inactive'}`}>
                   <div className="role-config-header" onClick={() => toggleRoleInPool(role)}>
                     <span className="role-emoji">
-                      <RoleIcon role={role} size={40} className="role-icon" />
+                      <RoleIcon role={role} size={40} className="role-icon" useDetails={true} />
                     </span>
                     <span className="role-name">{role}</span>
                     <span className="role-toggle">{randomPoolRoles[role] ? '✓' : '✕'}</span>
@@ -102,7 +102,7 @@ function RoleConfigModal({
                 <div key={role} className={`role-config-card ${randomPoolRoles[role] ? 'active' : 'inactive'}`}>
                   <div className="role-config-header" onClick={() => toggleRoleInPool(role)}>
                     <span className="role-emoji">
-                      <RoleIcon role={role} size={40} className="role-icon" />
+                      <RoleIcon role={role} size={40} className="role-icon" useDetails={true} />
                     </span>
                     <span className="role-name">{role}</span>
                     <span className="role-toggle">{randomPoolRoles[role] ? '✓' : '✕'}</span>
@@ -156,7 +156,7 @@ function RoleConfigModal({
                   <div key={role} className={`role-config-card ${randomPoolRoles[role] ? 'active' : 'inactive'}`}>
                     <div className="role-config-header" onClick={() => toggleRoleInPool(role)}>
                       <span className="role-emoji">
-                        <RoleIcon role={role} size={40} className="role-icon" />
+                        <RoleIcon role={role} size={40} className="role-icon" useDetails={true} />
                       </span>
                       <span className="role-name">{role}</span>
                       <span className="role-toggle">{randomPoolRoles[role] ? '✓' : '✕'}</span>

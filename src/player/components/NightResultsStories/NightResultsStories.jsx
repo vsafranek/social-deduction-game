@@ -344,7 +344,7 @@ function NightResultsStories({ results = [], onComplete }) {
                   const roleTeam = ROLE_INFO[role]?.team || 'neutral';
                   return (
                     <div key={roleIdx} className={`investigation-role-story-item team-${roleTeam}`}>
-                      <RoleIcon role={role} size={48} />
+                      <RoleIcon role={role} size={48} useDetails={true} />
                       <span className="role-name-story">{role}</span>
                     </div>
                   );

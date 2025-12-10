@@ -194,6 +194,44 @@ export const gameApi = {
     }
     
     return res.json();
+  },
+
+  /**
+   * Update player avatar (lobby only)
+   */
+  async updatePlayerAvatar(gameId, playerId, avatar) {
+    const res = await fetch(`${API_BASE}/game/${gameId}/player/${playerId}/avatar`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatar })
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to update avatar');
+    }
+    
+    return res.json();
+  },
+
+  /**
+   * Get list of available avatars
+   * @param {string} gameId - Optional gameId to filter out already-used avatars
+   */
+  async getAvailableAvatars(gameId = null) {
+    const url = new URL(`${API_BASE}/game/avatars/available`);
+    if (gameId) {
+      url.searchParams.set('gameId', gameId);
+    }
+    
+    const res = await fetch(url.toString());
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to get available avatars');
+    }
+    
+    return res.json();
   }
 };
 

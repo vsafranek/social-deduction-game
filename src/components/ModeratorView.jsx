@@ -470,7 +470,7 @@ function ModeratorView() {
                           <span className="player-name">{player.name}</span>
                           {assignedRoles[player._id] && (
                             <span className={`assigned-role ${getRoleTeam(assignedRoles[player._id])}`}>
-                              <RoleIcon role={assignedRoles[player._id]} size={28} className="role-icon-inline" /> {assignedRoles[player._id]}
+                              <RoleIcon role={assignedRoles[player._id]} size={28} className="role-icon-inline" useDetails={true} /> {assignedRoles[player._id]}
                             </span>
                           )}
                         </div>
@@ -601,7 +601,7 @@ function ModeratorView() {
                             onClick={() => toggleRoleInPool(role)}
                           >
                             <span className="role-emoji">
-                              <RoleIcon role={role} size={40} className="role-icon" />
+                              <RoleIcon role={role} size={40} className="role-icon" useDetails={true} />
                             </span>
                             <span className="role-name">{role}</span>
                             <span className="role-toggle">
@@ -649,7 +649,7 @@ function ModeratorView() {
                             onClick={() => toggleRoleInPool(role)}
                           >
                             <span className="role-emoji">
-                              <RoleIcon role={role} size={40} className="role-icon" />
+                              <RoleIcon role={role} size={40} className="role-icon" useDetails={true} />
                             </span>
                             <span className="role-name">{role}</span>
                             <span className="role-toggle">

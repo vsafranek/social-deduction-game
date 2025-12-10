@@ -1043,7 +1043,9 @@ describe('nightActionResolver', () => {
 
       expect(infected.roleData.visitedPlayers).toBeDefined();
       expect(Array.isArray(infected.roleData.visitedPlayers)).toBe(true);
-      expect(infected.roleData.visitedPlayers).toContain('2');
+      // visitedPlayers contains _id objects, so check using toString()
+      const visitedIds = infected.roleData.visitedPlayers.map(id => id?.toString()).filter(Boolean);
+      expect(visitedIds).toContain('2');
       expect(infected.markModified).toHaveBeenCalledWith('roleData');
     });
 
@@ -1347,9 +1349,10 @@ describe('nightActionResolver', () => {
       expect(originalTarget.alive).toBe(true);
       
       // Witch should get success message
-      expect(witch.nightAction.results).toContain(
-        expect.stringContaining('Ovladla jsi Puppet, aby použil svou schopnost na ControlledTarget')
+      const hasSuccessMessage = witch.nightAction.results.some(result =>
+        typeof result === 'string' && result.includes('Ovladla jsi Puppet, aby použil svou schopnost na ControlledTarget')
       );
+      expect(hasSuccessMessage).toBe(true);
     });
 
     test('should set default action for puppet if not set (dual role)', async () => {
@@ -1405,9 +1408,10 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, players);
 
-      expect(witch.nightAction.results).toContain(
-        expect.stringContaining('Loutka není naživu nebo neexistuje')
+      const hasFailureMessage = witch.nightAction.results.some(result =>
+        typeof result === 'string' && result.includes('Loutka není naživu nebo neexistuje')
       );
+      expect(hasFailureMessage).toBe(true);
       expect(deadPuppet.nightAction.targetId.toString()).toBe('3'); // Not changed
     });
 
@@ -1434,9 +1438,10 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, players);
 
-      expect(witch.nightAction.results).toContain(
-        expect.stringContaining('Cíl není naživu nebo neexistuje')
+      const hasFailureMessage = witch.nightAction.results.some(result =>
+        typeof result === 'string' && result.includes('Cíl není naživu nebo neexistuje')
       );
+      expect(hasFailureMessage).toBe(true);
       expect(puppet.nightAction.targetId.toString()).toBe('4'); // Not changed
     });
 
@@ -1463,9 +1468,10 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, players);
 
-      expect(witch.nightAction.results).toContain(
-        expect.stringContaining('Citizen nemá noční akci')
+      const hasFailureMessage = witch.nightAction.results.some(result =>
+        typeof result === 'string' && result.includes('Citizen nemá noční akci')
       );
+      expect(hasFailureMessage).toBe(true);
     });
 
     test('should fail when puppet has no night action (Jester)', async () => {
@@ -1491,9 +1497,10 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, players);
 
-      expect(witch.nightAction.results).toContain(
-        expect.stringContaining('Jester nemá noční akci')
+      const hasFailureMessage = witch.nightAction.results.some(result =>
+        typeof result === 'string' && result.includes('Jester nemá noční akci')
       );
+      expect(hasFailureMessage).toBe(true);
     });
 
     test('should execute puppet action before SerialKiller (priority -1 vs 0)', async () => {

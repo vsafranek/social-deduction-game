@@ -20,6 +20,9 @@ function CenterCircle({ phase, round, aliveCount, countdownSec }) {
               className="phase-icon"
             />
           )}
+          {phase === 'end' && (
+            <div className="phase-icon-end">🏆</div>
+          )}
         </div>
         <div className="round-display">Kolo {round}</div>
         <div className="alive-count">{aliveCount} živých</div>

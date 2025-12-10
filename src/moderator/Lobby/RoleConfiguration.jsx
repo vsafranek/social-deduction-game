@@ -323,7 +323,7 @@ function RoleConfiguration({
                         return (
                           <div key={role} className="guaranteed-role-item-modal">
                             <span className="guaranteed-role-name-modal">
-                              <RoleIcon role={role} size={28} className="role-icon-inline" />
+                              <RoleIcon role={role} size={28} className="role-icon-inline" useDetails={true} />
                               {role}
                               <small style={{ marginLeft: '8px', opacity: 0.7 }}>(max: {maxLimitText})</small>
                             </span>

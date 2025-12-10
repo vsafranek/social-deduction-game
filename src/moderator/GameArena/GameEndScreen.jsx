@@ -96,12 +96,29 @@ function GameEndScreen({ gameState, currentPlayer }) {
     return currentPlayer && playerId.toString() === currentPlayer._id.toString();
   };
 
+  // Get details version path of avatar
+  const getDetailAvatarPath = (avatarPath) => {
+    if (!avatarPath) return null;
+    
+    // Extract filename and extension
+    // avatarPath is like "/avatars/meercat.jpg"
+    const pathParts = avatarPath.split('/');
+    const filename = pathParts[pathParts.length - 1];
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/i, '');
+    const originalExt = filename.match(/\.[^/.]+$/i)?.[0] || '';
+    
+    // Construct detail path: /avatars/meercat_detail.jpg
+    return `/avatars/${nameWithoutExt}_detail${originalExt}`;
+  };
+
   const renderPlayerCard = (player, showTeamLabel = true) => {
     const roleInfo = getRoleInfo(player.role);
     const modifierInfo = getModifierInfo(player.modifier);
     const isPlayerWinner = isWinner(player._id);
     const isCurrent = isCurrentPlayer(player._id);
     const isDead = !player.alive;
+    const hasAvatar = player.avatar && player.avatar.trim();
+    const detailAvatarPath = hasAvatar ? getDetailAvatarPath(player.avatar) : null;
 
     return (
       <div 
@@ -109,15 +126,50 @@ function GameEndScreen({ gameState, currentPlayer }) {
         className={`player-card ${isPlayerWinner ? 'winner' : 'loser'} ${isCurrent ? 'self' : ''} ${isDead ? 'dead' : ''}`}
       >
         <div className="player-card-header">
-          {player.avatar ? (
+          {hasAvatar ? (
             <img 
-              src={player.avatar} 
+              src={detailAvatarPath || player.avatar} 
               alt={player.name}
               className="player-card-avatar"
               onError={(e) => {
-                e.target.style.display = 'none';
-                if (e.target.nextSibling) {
-                  e.target.nextSibling.style.display = 'flex';
+                const img = e.target;
+                const currentSrc = img.src;
+                
+                // Track attempts using data attribute to prevent infinite loops
+                const currentAttempts = parseInt(img.dataset.errorAttempts || '0', 10);
+                const attempts = currentAttempts + 1;
+                img.dataset.errorAttempts = attempts.toString();
+                
+                // Prevent infinite loops - max 3 attempts
+                if (attempts >= 4) {
+                  img.style.display = 'none';
+                  if (img.nextSibling) {
+                    img.nextSibling.style.display = 'flex';
+                  }
+                  return;
+                }
+                
+                if (currentSrc.includes('_detail')) {
+                  // We're trying a detail variant
+                  const pathParts = currentSrc.split('_detail');
+                  const basePath = pathParts[0];
+                  const ext = pathParts[1];
+                  
+                  // Try alternate case only on first attempt
+                  if (attempts === 1 && ext === ext.toLowerCase() && ext !== ext.toUpperCase()) {
+                    img.src = `${basePath}_detail${ext.toUpperCase()}`;
+                  } else if (attempts === 1 && ext === ext.toUpperCase() && ext !== ext.toLowerCase()) {
+                    img.src = `${basePath}_detail${ext.toLowerCase()}`;
+                  } else {
+                    // All detail variants failed, use normal avatar
+                    img.src = player.avatar;
+                  }
+                } else {
+                  // Normal avatar also failed, show fallback
+                  img.style.display = 'none';
+                  if (img.nextSibling) {
+                    img.nextSibling.style.display = 'flex';
+                  }
                 }
               }}
             />
@@ -125,7 +177,7 @@ function GameEndScreen({ gameState, currentPlayer }) {
           <div 
             className="player-card-avatar-fallback"
             style={{ 
-              display: player.avatar ? 'none' : 'flex',
+              display: hasAvatar ? 'none' : 'flex',
               width: '48px',
               height: '48px',
               borderRadius: '50%',
@@ -143,7 +195,7 @@ function GameEndScreen({ gameState, currentPlayer }) {
             {player.name.charAt(0).toUpperCase()}
           </div>
           <span className="role-emoji">
-            <RoleIcon role={player.role} size={48} className="role-icon" />
+            <RoleIcon role={player.role} size={48} className="role-icon" useDetails={true} />
           </span>
           
           <div className="player-info">

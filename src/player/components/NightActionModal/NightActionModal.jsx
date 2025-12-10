@@ -176,7 +176,7 @@ function NightActionModal({
                             const roleTeam = ROLE_INFO[role.trim()]?.team || 'neutral';
                             return (
                               <span key={idx} className={`role-icon-inline team-${roleTeam}`}>
-                                <RoleIcon role={role.trim()} size={16} />
+                                <RoleIcon role={role.trim()} size={16} useDetails={true} />
                               </span>
                             );
                           })}

@@ -33,6 +33,15 @@
   justify-content: center;
 }
 
+.phase-icon-end {
+  font-size: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+}
+
 .phase-icon {
   width: 80px;
   height: 80px;

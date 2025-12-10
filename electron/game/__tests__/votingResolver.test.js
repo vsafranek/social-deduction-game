@@ -650,7 +650,7 @@ describe('votingResolver', () => {
 
       expect(result).toHaveProperty('jesterWin');
       expect(result.jesterWin).toBe(true);
-      expect(result.executed).toBe('1');
+      expect(result.executed?.toString()).toBe('1');
       expect(result.executedName).toBe('Jester');
       expect(jester.alive).toBe(false);
       expect(jester.save).toHaveBeenCalled();
@@ -703,7 +703,7 @@ describe('votingResolver', () => {
       const result = await resolveDayVoting(game, players, mockGameLog);
 
       expect(result.jesterWin).toBeUndefined();
-      expect(result.executed).toBe('1');
+      expect(result.executed?.toString()).toBe('1');
       expect(target.alive).toBe(false);
     });
 
@@ -778,18 +778,15 @@ describe('votingResolver', () => {
         voteFor: null, // Mayor doesn't vote
         voteWeight: 2
       });
-      const target = createMockPlayer('2', 'Target', 'Citizen', {
-        alive: true
-      });
-      const voter1 = createMockPlayer('3', 'Voter1', 'Citizen', {
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
         voteFor: '1',
         voteWeight: 1
       });
-      const voter2 = createMockPlayer('4', 'Voter2', 'Citizen', {
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
         voteFor: '1',
         voteWeight: 1
       });
-      const players = [mayor, target, voter1, voter2];
+      const players = [mayor, voter1, voter2];
 
       const result = await resolveDayVoting(game, players, mockGameLog);
 
@@ -797,13 +794,8 @@ describe('votingResolver', () => {
       expect(result.executed).toBeDefined();
       expect(result.executedName).toBe('Mayor');
       expect(result.playersVotingFor).toBe(2);
-      expect(result.totalAlive).toBe(4); // But actually 4 alive players
-      // Majority threshold for 4 players is 3, but we have 2 players voting
-      // Actually wait, let me check the logic again - it should be 2/4 = insufficient
-      // But user said 2/3 should execute - let me check the scenario
-      // Actually the user scenario: 4 players total, 1 dead = 3 alive
-      // So if 2 vote against 1, it's 2/3 = majority
-      // But in this test we have 4 alive players
+      expect(result.totalAlive).toBe(3);
+      // Majority threshold for 3 players is 2, so 2 players voting = majority
     });
 
     test('should execute target when 2 players (non-mayor) vote for target in 3 player game', async () => {

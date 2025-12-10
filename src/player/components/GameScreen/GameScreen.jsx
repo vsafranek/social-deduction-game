@@ -1,29 +1,61 @@
 // src/player/components/GameScreen/GameScreen.jsx
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import RoleCard from '../RoleCard/RoleCard';
 import NightPhase from '../NightPhase/NightPhase';
 import DayPhase from '../DayPhase/DayPhase';
 import NightResultsStories from '../NightResultsStories/NightResultsStories';
 import NightResults from '../NightResults/NightResults';
 import VotingModal from '../VotingModal/VotingModal';
+import AvatarModal from '../AvatarSelector/AvatarModal';
+import { gameApi } from '../../../api/gameApi';
 import './GameScreen.css';
 
 function GameScreen({
   playerName,
   gameState,
   playerId,
+  gameId,
   currentPlayer,
   onNightAction,
   onVote,
   error,
-  onErrorDismiss
+  onErrorDismiss,
+  onRefresh
 }) {
   const [showStories, setShowStories] = useState(false);
   const [storiesShown, setStoriesShown] = useState(false);
   const [previousPhase, setPreviousPhase] = useState(null);
   const [showVotingModal, setShowVotingModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [availableAvatars, setAvailableAvatars] = useState([]);
+  const [modalKey, setModalKey] = useState(0);
   
   const phase = gameState?.game?.phase;
+
+  // Load available avatars for modal
+  useEffect(() => {
+    if (phase === 'lobby' && gameId && playerId) {
+      const loadAvatars = async () => {
+        try {
+          // Pass gameId to server-side filtering to avoid race conditions
+          const result = await gameApi.getAvailableAvatars(gameId);
+          if (result.success && result.avatars) {
+            const formattedAvatars = result.avatars.map(avatar => ({
+              avatarPath: avatar.path,
+              displayName: avatar.name,
+              type: avatar.type || 'generic',
+              emoji: '👤',
+              available: avatar.available !== false // Use server-side availability info
+            }));
+            setAvailableAvatars(formattedAvatars);
+          }
+        } catch (err) {
+          console.error('Error loading avatars:', err);
+        }
+      };
+      loadAvatars();
+    }
+  }, [phase, gameId, playerId]);
 
   const aliveCount = useMemo(
     () => gameState?.players?.filter(p => p.alive).length || 0,
@@ -67,6 +99,27 @@ function GameScreen({
   const handleVoteSubmit = async (targetId) => {
     await onVote(targetId);
     setShowVotingModal(false);
+  };
+
+  // Use server-side filtered avatars (no client-side filtering needed)
+  // Server already filters out used avatars when gameId is provided
+  const displayAvatars = availableAvatars.filter(avatar => avatar.available !== false);
+
+  const handleOpenAvatarModal = () => {
+    setModalKey(prev => prev + 1);
+    setShowAvatarModal(true);
+  };
+
+  const handleAvatarSelect = async (avatarPath) => {
+    try {
+      await gameApi.updatePlayerAvatar(gameId, playerId, avatarPath);
+      setShowAvatarModal(false);
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (err) {
+      console.error('Error updating avatar:', err);
+    }
   };
 
   // Zjisti, jestli už hlasoval
@@ -176,7 +229,12 @@ function GameScreen({
       </header>
 
       <main className="game-main">
-        <RoleCard player={currentPlayer} gameState={gameState} />
+        <RoleCard 
+          player={currentPlayer} 
+          gameState={gameState}
+          phase={phase}
+          onAvatarClick={phase === 'lobby' && gameId && playerId ? handleOpenAvatarModal : undefined}
+        />
 
         {/* Výsledky po stories */}
         {phase === 'day' && hasNightResults && !showStories && (
@@ -213,6 +271,17 @@ function GameScreen({
           onVote={handleVoteSubmit}
           onClose={() => setShowVotingModal(false)}
           isMayorElection={gameState?.game?.round === 1 && !gameState?.game?.mayor}
+        />
+      )}
+
+      {/* Avatar Modal */}
+      {showAvatarModal && phase === 'lobby' && displayAvatars.length > 0 && (
+        <AvatarModal
+          key={`avatar-modal-${modalKey}`}
+          avatars={displayAvatars}
+          currentAvatar={currentPlayer.avatar}
+          onSelect={handleAvatarSelect}
+          onClose={() => setShowAvatarModal(false)}
         />
       )}
 
