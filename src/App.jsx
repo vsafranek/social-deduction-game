@@ -4,12 +4,15 @@ import GameStartLoadingScreen from './moderator/GameArena/GameStartLoadingScreen
 import MainMenu from './components/MainMenu/MainMenu';
 import ModeratorView from './moderator/ModeratorView';
 import PlayerView from './player/PlayerView';
+import ConfirmDialog from './components/ConfirmDialog/ConfirmDialog';
 import './App.css';
+
+const GAME_NAME = 'Social Deduction Game';
 
 function CreatingGameView({ onReturnToMenu, onSettings }) {
   const [gameReady, setGameReady] = useState(false);
   const [showLoading, setShowLoading] = useState(true);
-  const gameReadyRef = React.useRef(false);
+  const gameReadyRef = useRef(false);
   
   const handleGameReady = () => {
     if (!gameReadyRef.current) {
@@ -26,7 +29,7 @@ function CreatingGameView({ onReturnToMenu, onSettings }) {
     <div className="App">
       {showLoading && (
         <GameStartLoadingScreen 
-          gameName="Social Deduction Game"
+          gameName={GAME_NAME}
           onComplete={handleLoadingComplete}
           onGameReady={gameReady}
         />
@@ -44,23 +47,20 @@ function CreatingGameView({ onReturnToMenu, onSettings }) {
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState('menu'); // 'menu', 'moderator', 'player', 'creating-game'
-  const [mode, setMode] = useState(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   useEffect(() => {
     // Check URL parameters for direct mode access (for player view)
     const params = new URLSearchParams(window.location.search);
     const modeParam = params.get('mode');
     
-    if (modeParam === 'player' || modeParam === null) {
+    if (modeParam === 'player') {
       // Player view - skip menu and loading screen
-      setMode('player');
       setCurrentView('player');
       setIsLoading(false);
-    } else if (modeParam === 'moderator') {
-      // Moderator mode - show loading screen, then menu
-      setMode('moderator');
-      // Loading will be handled by AppLoadingScreen
     }
+    // For null or 'moderator' mode param, show loading screen then menu
+    // Loading will be handled by AppLoadingScreen
   }, []);
 
   const handleLoadingComplete = () => {
@@ -73,66 +73,95 @@ function App() {
 
   const handleJoinGame = () => {
     // Placeholder - will be implemented later
-    alert('Funkce připojení k hře bude brzy dostupná');
+    alert('Join game feature will be available soon');
   };
 
   const handleSettings = () => {
     // Placeholder - will be implemented later
-    alert('Nastavení bude brzy dostupné');
+    alert('Settings will be available soon');
   };
 
   const handleExit = () => {
-    if (window.confirm('Opravdu chceš ukončit aplikaci?')) {
-      // In Electron, close the window
-      if (window.electronAPI) {
-        window.electronAPI.closeApp();
-      } else {
-        // In browser, just show message
-        alert('Aplikaci lze ukončit zavřením okna nebo záložky.');
-      }
+    setShowExitConfirm(true);
+  };
+
+  const handleExitConfirm = () => {
+    setShowExitConfirm(false);
+    // In Electron, close the window
+    if (window.electronAPI) {
+      window.electronAPI.closeApp();
+    } else {
+      // In browser, close the tab/window
+      window.close();
     }
+  };
+
+  const handleExitCancel = () => {
+    setShowExitConfirm(false);
   };
 
   const handleReturnToMenu = () => {
     setCurrentView('menu');
   };
 
-  if (isLoading) {
-    return <AppLoadingScreen onComplete={handleLoadingComplete} />;
-  }
+  // Render content based on current view
+  const renderContent = () => {
+    if (isLoading) {
+      return <AppLoadingScreen onComplete={handleLoadingComplete} />;
+    }
 
-  // Player view bypasses menu
-  if (currentView === 'player' || mode === 'player') {
-    return (
-      <div className="App">
-        <PlayerView />
-      </div>
-    );
-  }
+    // Player view bypasses menu
+    if (currentView === 'player') {
+      return (
+        <div className="App">
+          <PlayerView />
+        </div>
+      );
+    }
 
-  // Main menu
-  if (currentView === 'menu') {
-    return (
-      <div className="App">
-        <MainMenu 
-          onCreateGame={handleCreateGame}
-          onJoinGame={handleJoinGame}
+    // Main menu
+    if (currentView === 'menu') {
+      return (
+        <div className="App">
+          <MainMenu 
+            onCreateGame={handleCreateGame}
+            onJoinGame={handleJoinGame}
+            onSettings={handleSettings}
+            onExit={handleExit}
+          />
+        </div>
+      );
+    }
+
+    // Creating game loading screen - also handles moderator view after loading
+    if (currentView === 'creating-game' || currentView === 'moderator') {
+      return (
+        <CreatingGameView 
+          onReturnToMenu={handleReturnToMenu}
           onSettings={handleSettings}
-          onExit={handleExit}
         />
-      </div>
-    );
-  }
+      );
+    }
 
-  // Creating game loading screen - also handles moderator view after loading
-  if (currentView === 'creating-game' || currentView === 'moderator') {
-    return <CreatingGameView 
-      onReturnToMenu={handleReturnToMenu}
-      onSettings={handleSettings}
-    />;
-  }
+    // Fallback (should not render)
+    return <div>Unknown view state</div>;
+  };
 
-  return null;
+  return (
+    <>
+      {renderContent()}
+      {showExitConfirm && (
+        <ConfirmDialog
+          title="Exit Game"
+          message="Are you sure you want to exit the game?"
+          onConfirm={handleExitConfirm}
+          onCancel={handleExitCancel}
+          confirmText="Exit"
+          cancelText="Cancel"
+        />
+      )}
+    </>
+  );
 }
 
 export default App;
