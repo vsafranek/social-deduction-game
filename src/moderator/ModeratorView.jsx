@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { gameApi } from '../api/gameApi';
 import TopBar from './TopBar/TopBar';
 import ConnectionDropdown from './ConnectionDropdown/ConnectionDropdown';
 import LobbyLayout from './Lobby/LobbyLayout';
 import GameArena from './GameArena/GameArena';
+import GameStartLoadingScreen from './GameArena/GameStartLoadingScreen';
 import DevMultiPlayerTool from './DevMultiPlayerTool/DevMultiPlayerTool';
 import NightResultsStories from '../player/components/NightResultsStories/NightResultsStories';
 import './ModeratorView.css';
@@ -30,7 +31,7 @@ const TEST_STORIES_DATA = [
   'hunter_guilt:Zabil jsi nevinného'
 ];
 
-function ModeratorView() {
+function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, onSettings }) {
   const [gameId, setGameId] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [connectionInfo, setConnectionInfo] = useState(null);
@@ -39,6 +40,9 @@ function ModeratorView() {
   const [showConnectionBox, setShowConnectionBox] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [showTestStories, setShowTestStories] = useState(false);
+  const [showGameStartLoading, setShowGameStartLoading] = useState(false);
+  const previousPhaseRef = useRef(null);
+  const gameReadyNotifiedRef = useRef(false);
 
   useEffect(() => {
     initializeGame();
@@ -52,8 +56,41 @@ function ModeratorView() {
     }
   }, [gameId]);
 
+  // Track phase changes to show loading screen when transitioning from lobby to game
+  useEffect(() => {
+    if (gameState?.game) {
+      const currentPhase = gameState.game.phase;
+      const previousPhase = previousPhaseRef.current;
+
+      // Initialize previousPhase on first load
+      if (previousPhase === null) {
+        previousPhaseRef.current = currentPhase;
+        return;
+      }
+
+      // If transitioning from lobby to night/day, show loading screen
+      if (previousPhase === 'lobby' && (currentPhase === 'night' || currentPhase === 'day')) {
+        setShowGameStartLoading(true);
+      }
+
+      previousPhaseRef.current = currentPhase;
+    }
+  }, [gameState?.game?.phase]);
+
+  // If game is ready and parent is showing loading screen, notify it to hide
+  // This must be before any conditional returns to follow Rules of Hooks
+  useEffect(() => {
+    if (!loading && gameState && !showLoadingScreen && onGameReady && !gameReadyNotifiedRef.current) {
+      // Notify parent immediately that game is ready (only once)
+      // The loading screen will handle the timing of when to hide
+      gameReadyNotifiedRef.current = true;
+      onGameReady();
+    }
+  }, [loading, gameState, showLoadingScreen, onGameReady]);
+
   const initializeGame = async () => {
     try {
+      setLoading(true);
       const healthResponse = await fetch('/api/health');
       if (!healthResponse.ok) {
         throw new Error(`Health check failed: ${healthResponse.status}`);
@@ -73,7 +110,13 @@ function ModeratorView() {
         roomCode: result.roomCode,
         url: `http://${ip}:${port}?room=${result.roomCode}`
       });
+      
+      // Wait a moment for game to be created, then fetch state
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await fetchGameState();
       setLoading(false);
+      
+      // Don't notify parent here - let useEffect handle it after state is set
     } catch (error) {
       console.error('❌ Chyba při vytváření hry:', error);
       setError(error.message);
@@ -142,16 +185,38 @@ function ModeratorView() {
     );
   }
 
+  // Handle loading state
+  // If parent is showing loading screen, don't render anything (parent handles display)
+  // If parent is not showing loading screen and we're still loading, show our loading bar
   if (loading || !gameState) {
+    // If parent is showing loading screen, render nothing
+    if (!showLoadingScreen) {
+      return null;
+    }
+    // If parent is NOT showing loading screen, show our own loading bar
     return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Vytvářím hru...</p>
+      <div className="moderator-loading-container">
+        <div className="moderator-loading-bar-container">
+          <div className="moderator-loading-bar" />
+        </div>
+        <p className="moderator-loading-text">Načítání...</p>
       </div>
     );
   }
+  
+  // Game is loaded, show content
 
   const isInLobby = gameState?.game?.phase === 'lobby';
+
+  // Show game start loading screen
+  if (showGameStartLoading) {
+    return (
+      <GameStartLoadingScreen 
+        gameName={gameState?.game?.name}
+        onComplete={() => setShowGameStartLoading(false)}
+      />
+    );
+  }
 
   return (
     <div className="moderator-view">
@@ -162,6 +227,8 @@ function ModeratorView() {
           onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
           onDevToggle={setShowDevPanel}
           onTestStories={IS_DEVELOPMENT ? () => setShowTestStories(true) : undefined}
+          onReturnToMenu={onReturnToMenu}
+          onSettings={onSettings}
         />
       )}
 

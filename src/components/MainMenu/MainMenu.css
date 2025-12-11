@@ -1,0 +1,245 @@
+/* src/components/MainMenu/MainMenu.css */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=MedievalSharp&family=Lato:wght@400;700&display=swap');
+
+.main-menu {
+  width: 100%;
+  height: 100vh;
+  /* Night version background image from GameArena */
+  background-color: #0a0a1a; /* Night fallback color */
+  background-image: url('/backgrounds/night_1.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  position: relative;
+  animation: fadeIn 0.5s ease-in;
+  overflow: hidden;
+  font-family: 'Lato', sans-serif;
+  color: #e0e0e0;
+}
+
+
+/* Atmospheric light effect (Moonlight) - same as lobby */
+.main-menu::after {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255, 200, 100, 0.05) 0%, transparent 70%);
+  border-radius: 50%;
+  top: -150px;
+  left: 20%;
+  animation: floatLight 15s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(40px);
+}
+
+@keyframes floatLight {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(50px, 30px) scale(1.1);
+    opacity: 0.6;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.menu-header {
+  position: relative;
+  margin-top: 32vh;
+  text-align: center;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.menu-title {
+  font-size: 4vw;
+  font-weight: 700;
+  color: #c5a059;
+  text-shadow: 2px 2px 0px #000;
+  font-family: 'MedievalSharp', serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 10px 0;
+}
+
+.menu-subtitle {
+  font-size: 1.2vw;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Cinzel', serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.menu-content {
+  position: absolute;
+  bottom: 40px;
+  left: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: auto;
+  min-width: 300px;
+  z-index: 1;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.menu-button {
+  width: 100%;
+  padding: 24px 50px;
+  font-size: 24px;
+  font-weight: 600;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 2px solid;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.menu-button:disabled {
+  background: #2c2c2c;
+  border-color: #444;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.menu-button-primary {
+  background: linear-gradient(180deg, #4a4e69 0%, #3a3447 100%);
+  border-color: #6b5b7b;
+  color: #c5a059;
+  box-shadow: 
+    0 3px 0 #2a2430,
+    0 4px 8px rgba(0,0,0,0.5);
+}
+
+.menu-button-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5a5479 0%, #4a4e69 100%);
+  border-color: #c5a059;
+  color: #ffd700;
+  box-shadow: 
+    0 5px 0 #2a2430,
+    0 6px 12px rgba(0,0,0,0.6);
+  transform: translateY(-2px);
+}
+
+.menu-button-primary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 
+    0 1px 0 #2a2430,
+    0 2px 4px rgba(0,0,0,0.4);
+}
+
+.menu-button-secondary {
+  background: linear-gradient(180deg, #4a4e69 0%, #3a3447 100%);
+  border-color: #6b5b7b;
+  color: #c5a059;
+  box-shadow: 
+    0 3px 0 #2a2430,
+    0 4px 8px rgba(0,0,0,0.5);
+}
+
+.menu-button-secondary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5a5479 0%, #4a4e69 100%);
+  border-color: #c5a059;
+  color: #ffd700;
+  box-shadow: 
+    0 5px 0 #2a2430,
+    0 6px 12px rgba(0,0,0,0.6);
+  transform: translateY(-2px);
+}
+
+.menu-button-danger {
+  background: linear-gradient(180deg, #4a4e69 0%, #3a3447 100%);
+  border-color: #6b5b7b;
+  color: #c5a059;
+  box-shadow: 
+    0 3px 0 #2a2430,
+    0 4px 8px rgba(0,0,0,0.5);
+}
+
+.menu-button-danger:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5a5479 0%, #4a4e69 100%);
+  border-color: #c5a059;
+  color: #ffd700;
+  box-shadow: 
+    0 5px 0 #2a2430,
+    0 6px 12px rgba(0,0,0,0.6);
+  transform: translateY(-2px);
+}
+
+.button-text {
+  flex: 1;
+  text-align: center;
+  font-family: 'Lato', sans-serif;
+  font-weight: 600;
+}
+
+.button-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: rgba(255, 215, 0, 0.9);
+  color: rgba(10, 8, 15, 0.95);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .menu-header {
+    margin-top: 15vh;
+    padding: 0 20px;
+  }
+  
+  .menu-title {
+    font-size: 8vw;
+    letter-spacing: 2px;
+  }
+  
+  .menu-subtitle {
+    font-size: 3vw;
+  }
+  
+  .menu-content {
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    min-width: auto;
+  }
+  
+  .menu-button {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}

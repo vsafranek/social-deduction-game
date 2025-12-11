@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import './TopBar.css';
 
-function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
+function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories, onReturnToMenu, onSettings }) {
   const [isDevPanelOpen, setIsDevPanelOpen] = useState(false);
   
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -60,6 +60,29 @@ function TopBar({ gameState, onConnectionClick, onDevToggle, onTestStories }) {
             title="Open dev panel (for testing)"
           >
             🛠️ Dev Panel
+          </button>
+        )}
+
+        
+
+        {/* Return to menu button */}
+        {onReturnToMenu && (
+          <button 
+            className="topbar-button"
+            onClick={onReturnToMenu}
+            title="Return to main menu"
+          >
+            Menu
+          </button>
+        )}
+        {/* Settings button */}
+        {onSettings && (
+          <button 
+            className="topbar-button settings-button"
+            onClick={onSettings}
+            title="Settings"
+          >
+            ⚙️
           </button>
         )}
       </div>

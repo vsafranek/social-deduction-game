@@ -128,6 +128,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    backgroundColor: '#0a080f', // Tmavá barva pozadí (stejná jako v AppLoadingScreen)
+    show: false, // Okno se nezobrazí dokud není připravené
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -137,6 +139,17 @@ function createWindow() {
   });
 
   mainWindow.loadURL(`http://localhost:${PORT}?mode=moderator`);
+  
+  // Zobrazit okno až když je obsah připravený
+  mainWindow.once('ready-to-show', () => {
+    console.log('✅ Window content ready, showing window...');
+    mainWindow.show();
+    // Fokus na okno
+    if (mainWindow) {
+      mainWindow.focus();
+    }
+  });
+  
   if (isDev) {
     mainWindow.webContents.openDevTools();
   }
@@ -155,6 +168,8 @@ function createPlayerWindow(playerName, roomCode, sessionId) {
   const playerWindow = new BrowserWindow({
     width: 500,
     height: 800,
+    backgroundColor: '#0a080f', // Tmavá barva pozadí
+    show: false, // Okno se nezobrazí dokud není připravené
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -166,6 +181,15 @@ function createPlayerWindow(playerName, roomCode, sessionId) {
   // ✅ Přidej sessionId do URL
   const playerUrl = `http://localhost:${PORT}?mode=player&room=${roomCode}&playerName=${encodeURIComponent(playerName)}&sessionId=${sessionId}`;
   playerWindow.loadURL(playerUrl);
+
+  // Zobrazit okno až když je obsah připravený
+  playerWindow.once('ready-to-show', () => {
+    console.log(`✅ Player window content ready: ${playerName}`);
+    playerWindow.show();
+    if (playerWindow) {
+      playerWindow.focus();
+    }
+  });
 
   playerWindow.on('closed', () => {
     delete playerWindows[playerName];
@@ -199,6 +223,13 @@ ipcMain.handle('close-all-player-windows', () => {
     }
   });
   playerWindows = {};
+  return { success: true };
+});
+
+ipcMain.handle('close-app', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.close();
+  }
   return { success: true };
 });
 

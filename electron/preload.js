@@ -7,5 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closePlayerWindow: (playerName) => 
     ipcRenderer.invoke('close-player-window', playerName),
   closeAllPlayerWindows: () => 
-    ipcRenderer.invoke('close-all-player-windows')
+    ipcRenderer.invoke('close-all-player-windows'),
+  closeApp: () => 
+    ipcRenderer.invoke('close-app')
 });

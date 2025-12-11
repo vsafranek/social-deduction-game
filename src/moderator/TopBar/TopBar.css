@@ -126,6 +126,15 @@
   color: #fff;
 }
 
+.settings-button {
+  padding: 8px 12px;
+  font-size: 18px;
+}
+
+.settings-button:hover {
+  transform: scale(1.1);
+}
+
 @media (max-width: 768px) {
   .topbar {
     flex-direction: column;

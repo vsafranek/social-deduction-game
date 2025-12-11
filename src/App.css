@@ -18,11 +18,18 @@ body {
 
 .App {
   min-height: 100vh;
-  padding: 20px;
+  padding: 0;
 }
 
 /* Remove padding for moderator view - full screen */
 .App:has(.moderator-view) {
+  padding: 0;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Remove padding for main menu - full screen */
+.App:has(.main-menu) {
   padding: 0;
   min-height: 100vh;
   overflow: hidden;
