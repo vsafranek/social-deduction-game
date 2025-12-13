@@ -74,3 +74,4 @@ function MainMenu({ onCreateGame, onJoinGame, onSettings, onExit }) {
 
 export default MainMenu;
 
+
