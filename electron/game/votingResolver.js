@@ -339,8 +339,8 @@ async function resolveExecutionVoting(game, players, GameLog) {
     console.log(`  ☠️ ${target.name} executed (${playersVotingForTop}/${totalAlive} players, ${votesFor} weighted votes)`);
 
     // ✅ Sweetheart death effect
-    if (target.role === 'Sweetheart') {
-      const candidates = players.filter(p => p.alive && p.modifier !== 'Drunk' && p._id.toString() !== target._id.toString());
+    if (target.modifier === 'Sweetheart') {
+      const candidates = players.filter(p => p.alive && p.modifier !== 'Drunk' && p.modifier !== 'Sweetheart' && p._id.toString() !== target._id.toString());
       if (candidates.length > 0) {
         const victim = candidates[Math.floor(Math.random() * candidates.length)];
         victim.modifier = 'Drunk';

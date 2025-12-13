@@ -22,7 +22,8 @@ const createMockPlayer = (id, name, role, options = {}) => {
     alive = true,
     voteFor = null,
     hasVoted = false,
-    voteWeight = 1
+    voteWeight = 1,
+    modifier = null
   } = options;
 
   // Create voteFor as object with toString if provided, to match mongoose behavior
@@ -39,7 +40,8 @@ const createMockPlayer = (id, name, role, options = {}) => {
     alive,
     voteFor: voteForObj,
     hasVoted,
-    voteWeight
+    voteWeight,
+    modifier
   };
 
   // Set save method after player is created
@@ -1013,6 +1015,262 @@ describe('votingResolver', () => {
       expect(result.executed).toBeDefined();
       expect(result.playersVotingFor).toBe(3);
       expect(target.alive).toBe(false);
+    });
+  });
+
+  describe('Sweetheart Passive Ability', () => {
+    test('should make random player Drunk when Sweetheart is executed', async () => {
+      const game = createMockGame('game1');
+      game.round = 2; // Not first day
+      game.mayor = null;
+      game.save = jest.fn().mockResolvedValue(game);
+
+      const sweetheart = createMockPlayer('1', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter3 = createMockPlayer('4', 'Voter3', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter4 = createMockPlayer('7', 'Voter4', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const candidate1 = createMockPlayer('5', 'Candidate1', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+      const candidate2 = createMockPlayer('6', 'Candidate2', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+
+      const players = [sweetheart, voter1, voter2, voter3, voter4, candidate1, candidate2];
+
+      const result = await resolveDayVoting(game, players, mockGameLog);
+
+      expect(result.executed).toBeDefined();
+      expect(sweetheart.alive).toBe(false);
+      // One of the valid candidates (voters or candidates) should become Drunk
+      const validCandidates = [voter1, voter2, voter3, voter4, candidate1, candidate2];
+      const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
+      expect(drunkCount).toBe(1);
+      expect(mockGameLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Sweetheart died... someone became Drunk!')
+        })
+      );
+    });
+
+    test('should not make Drunk player become Drunk again when Sweetheart is executed', async () => {
+      const game = createMockGame('game1');
+      game.round = 2;
+      game.mayor = null;
+      game.save = jest.fn().mockResolvedValue(game);
+
+      const sweetheart = createMockPlayer('1', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter3 = createMockPlayer('4', 'Voter3', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter4 = createMockPlayer('7', 'Voter4', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const alreadyDrunk = createMockPlayer('5', 'AlreadyDrunk', 'Citizen', {
+        alive: true,
+        modifier: 'Drunk'
+      });
+      const candidate = createMockPlayer('6', 'Candidate', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+
+      const players = [sweetheart, voter1, voter2, voter3, voter4, alreadyDrunk, candidate];
+
+      await resolveDayVoting(game, players, mockGameLog);
+
+      expect(sweetheart.alive).toBe(false);
+      expect(alreadyDrunk.modifier).toBe('Drunk'); // Should remain Drunk
+      // One of the valid candidates (voters or candidate) should become Drunk
+      const validCandidates = [voter1, voter2, voter3, voter4, candidate];
+      const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
+      expect(drunkCount).toBe(1);
+    });
+
+    test('should not make another Sweetheart become Drunk when Sweetheart is executed', async () => {
+      const game = createMockGame('game1');
+      game.round = 2;
+      game.mayor = null;
+      game.save = jest.fn().mockResolvedValue(game);
+
+      const sweetheart1 = createMockPlayer('1', 'Sweetheart1', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter3 = createMockPlayer('4', 'Voter3', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter4 = createMockPlayer('7', 'Voter4', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const sweetheart2 = createMockPlayer('5', 'Sweetheart2', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const candidate = createMockPlayer('6', 'Candidate', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+
+      const players = [sweetheart1, voter1, voter2, voter3, voter4, sweetheart2, candidate];
+
+      await resolveDayVoting(game, players, mockGameLog);
+
+      expect(sweetheart1.alive).toBe(false);
+      expect(sweetheart2.modifier).toBe('Sweetheart'); // Should remain Sweetheart
+      // One of the valid candidates (voters or candidate) should become Drunk
+      const validCandidates = [voter1, voter2, voter3, voter4, candidate];
+      const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
+      expect(drunkCount).toBe(1);
+    });
+
+    test('should not trigger Sweetheart effect if no valid candidates exist', async () => {
+      const game = createMockGame('game1');
+      game.round = 2;
+      game.mayor = null;
+      game.save = jest.fn().mockResolvedValue(game);
+
+      const sweetheart = createMockPlayer('1', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter3 = createMockPlayer('4', 'Voter3', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const allDrunk = createMockPlayer('5', 'AllDrunk', 'Citizen', {
+        alive: true,
+        modifier: 'Drunk'
+      });
+
+      const players = [sweetheart, voter1, voter2, voter3, allDrunk];
+
+      await resolveDayVoting(game, players, mockGameLog);
+
+      expect(sweetheart.alive).toBe(false);
+      expect(allDrunk.modifier).toBe('Drunk'); // Should remain unchanged
+    });
+
+    test('should not trigger Sweetheart effect if only dead players remain', async () => {
+      const game = createMockGame('game1');
+      game.round = 2;
+      game.mayor = null;
+
+      const sweetheart = createMockPlayer('1', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const dead = createMockPlayer('4', 'Dead', 'Citizen', {
+        alive: false,
+        modifier: null
+      });
+
+      const players = [sweetheart, voter1, voter2, dead];
+
+      await resolveDayVoting(game, players, mockGameLog);
+
+      expect(sweetheart.alive).toBe(false);
+      expect(dead.modifier).toBeNull(); // Dead player should not be affected
+    });
+
+    test('should trigger Sweetheart effect only once per execution', async () => {
+      const game = createMockGame('game1');
+      game.round = 2;
+      game.mayor = null;
+      game.save = jest.fn().mockResolvedValue(game);
+
+      const sweetheart = createMockPlayer('1', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const voter1 = createMockPlayer('2', 'Voter1', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter2 = createMockPlayer('3', 'Voter2', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const voter3 = createMockPlayer('4', 'Voter3', 'Citizen', {
+        voteFor: '1',
+        voteWeight: 1
+      });
+      const candidate = createMockPlayer('5', 'Candidate', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+
+      const players = [sweetheart, voter1, voter2, voter3, candidate];
+
+      await resolveDayVoting(game, players, mockGameLog);
+
+      expect(sweetheart.alive).toBe(false);
+      // One of the valid candidates (voters or candidate) should become Drunk
+      const validCandidates = [voter1, voter2, voter3, candidate];
+      const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
+      expect(drunkCount).toBe(1);
+      // Verify GameLog was created for Sweetheart death
+      const sweetheartLogCall = mockGameLog.create.mock.calls.find(call => 
+        call[0].message && call[0].message.includes('Sweetheart died')
+      );
+      expect(sweetheartLogCall).toBeDefined();
     });
   });
 });

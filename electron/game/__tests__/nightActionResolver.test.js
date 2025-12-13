@@ -256,6 +256,64 @@ describe('nightActionResolver', () => {
       const fakeMessage = drunk.nightAction.results.find(r => r.includes('Chráníš'));
       expect(fakeMessage).toBeDefined();
     });
+
+    test('should prevent drunk player from investigating', async () => {
+      const drunk = createMockPlayer('1', 'Drunk', 'Investigator', {
+        modifier: 'Drunk',
+        nightAction: { targetId: '2', action: 'investigate', results: [] }
+      });
+      const target = createMockPlayer('2', 'Target', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({}, [drunk, target]);
+
+      // Drunk should get fake investigation message
+      const fakeMessage = drunk.nightAction.results.find(r => r.includes('investigate:') || r.includes('Vyšetřil'));
+      expect(fakeMessage).toBeDefined();
+    });
+
+    test('should prevent drunk player from blocking', async () => {
+      const drunk = createMockPlayer('1', 'Drunk', 'Jailer', {
+        modifier: 'Drunk',
+        nightAction: { targetId: '2', action: 'block', results: [] }
+      });
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
+        alive: true,
+        nightAction: { targetId: '3', action: 'kill', results: [] }
+      });
+      const victim = createMockPlayer('3', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({}, [drunk, target, victim]);
+
+      // Target should still be able to act (not blocked)
+      expect(victim.alive).toBe(false);
+      
+      // Drunk should get fake message
+      const fakeMessage = drunk.nightAction.results.find(r => r.includes('Uzamkl') || r.includes('block'));
+      expect(fakeMessage).toBeDefined();
+    });
+
+    test('should prevent drunk player from watching', async () => {
+      const drunk = createMockPlayer('1', 'Drunk', 'Lookout', {
+        modifier: 'Drunk',
+        nightAction: { targetId: '2', action: 'watch', results: [] }
+      });
+      const target = createMockPlayer('2', 'Target', 'Citizen', {
+        alive: true
+      });
+      const visitor = createMockPlayer('3', 'Visitor', 'Cleaner', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+
+      await resolveNightActions({}, [drunk, target, visitor]);
+
+      // Drunk should get fake watch message
+      const fakeMessage = drunk.nightAction.results.find(r => r.includes('watch:') || r.includes('U'));
+      expect(fakeMessage).toBeDefined();
+    });
   });
 
   describe('Blocked Effects', () => {
@@ -343,6 +401,48 @@ describe('nightActionResolver', () => {
       // Should have format "Citizen / EvilRole" or "EvilRole / Citizen"
       expect(investigateResult).toMatch(/Citizen\s*\/\s*\w+|\w+\s*\/\s*Citizen/);
     });
+
+    test('should show Shady as true role + evil role even when framed', async () => {
+      const accuser = createMockPlayer('0', 'Accuser', 'Accuser', {
+        roleData: { usesRemaining: 2 },
+        nightAction: { targetId: '2', action: 'frame', results: [] }
+      });
+      const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
+        nightAction: { targetId: '2', action: 'investigate', results: [] }
+      });
+      const shady = createMockPlayer('2', 'Shady', 'Citizen', {
+        modifier: 'Shady',
+        alive: true
+      });
+
+      await resolveNightActions({}, [accuser, investigator, shady]);
+
+      const investigateResult = investigator.nightAction.results.find(r => r.startsWith('investigate:'));
+      expect(investigateResult).toBeDefined();
+      // Shady modifier should override frame - should show true role + evil role
+      expect(investigateResult).toContain('Citizen');
+      const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
+      const showsEvil = evilRoles.some(role => investigateResult.includes(role));
+      expect(showsEvil).toBe(true);
+    });
+
+    test('should not affect Coroner autopsy results', async () => {
+      const coroner = createMockPlayer('1', 'Coroner', 'Coroner', {
+        nightAction: { targetId: '2', action: 'autopsy', results: [] }
+      });
+      const shady = createMockPlayer('2', 'Shady', 'Citizen', {
+        modifier: 'Shady',
+        alive: false,
+        roleHidden: false
+      });
+
+      await resolveNightActions({ round: 1 }, [coroner, shady]);
+
+      const autopsyResult = coroner.nightAction.results.find(r => r.startsWith('autopsy:'));
+      expect(autopsyResult).toBeDefined();
+      // Coroner should see true role, Shady modifier doesn't affect autopsy
+      expect(autopsyResult).toContain('Citizen');
+    });
   });
 
   describe('Innocent Modifier', () => {
@@ -368,6 +468,51 @@ describe('nightActionResolver', () => {
       expect(showsGoodOrNeutral).toBe(true);
       // Should NOT show the true evil role (Cleaner)
       expect(investigateResult).not.toContain('Cleaner');
+    });
+
+    test('should show Innocent as good or neutral even when framed', async () => {
+      const accuser = createMockPlayer('0', 'Accuser', 'Accuser', {
+        roleData: { usesRemaining: 2 },
+        nightAction: { targetId: '2', action: 'frame', results: [] }
+      });
+      const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
+        nightAction: { targetId: '2', action: 'investigate', results: [] }
+      });
+      const innocent = createMockPlayer('2', 'Innocent', 'Cleaner', {
+        modifier: 'Innocent',
+        alive: true
+      });
+
+      await resolveNightActions({}, [accuser, investigator, innocent]);
+
+      const investigateResult = investigator.nightAction.results.find(r => r.startsWith('investigate:'));
+      expect(investigateResult).toBeDefined();
+      // Innocent modifier should override frame - should show good/neutral role
+      const goodOrNeutralRoles = Object.keys(ROLES).filter(r => 
+        ROLES[r].team === 'good' || ROLES[r].team === 'neutral'
+      );
+      const showsGoodOrNeutral = goodOrNeutralRoles.some(role => investigateResult.includes(role));
+      expect(showsGoodOrNeutral).toBe(true);
+      // Should NOT show the true evil role (Cleaner)
+      expect(investigateResult).not.toContain('Cleaner');
+    });
+
+    test('should not affect Coroner autopsy results', async () => {
+      const coroner = createMockPlayer('1', 'Coroner', 'Coroner', {
+        nightAction: { targetId: '2', action: 'autopsy', results: [] }
+      });
+      const innocent = createMockPlayer('2', 'Innocent', 'Cleaner', {
+        modifier: 'Innocent',
+        alive: false,
+        roleHidden: false
+      });
+
+      await resolveNightActions({ round: 1 }, [coroner, innocent]);
+
+      const autopsyResult = coroner.nightAction.results.find(r => r.startsWith('autopsy:'));
+      expect(autopsyResult).toBeDefined();
+      // Coroner should see true role, Innocent modifier doesn't affect autopsy
+      expect(autopsyResult).toContain('Cleaner');
     });
   });
 
@@ -576,6 +721,57 @@ describe('nightActionResolver', () => {
         expect(visitedResult).toMatch(/^visited:/);
       }
     });
+
+    test('should add fake visitors to existing real visitors for Paranoid player', async () => {
+      const paranoid = createMockPlayer('1', 'Paranoid', 'Citizen', {
+        modifier: 'Paranoid',
+        alive: true
+      });
+      const realVisitor = createMockPlayer('2', 'RealVisitor', 'Cleaner', {
+        nightAction: { targetId: '1', action: 'kill', results: [] }
+      });
+      const other = createMockPlayer('3', 'Other', 'Citizen', {
+        alive: true
+      });
+
+      // Mock Math.random to return < 0.5 (50% chance)
+      const originalRandom = Math.random;
+      Math.random = jest.fn(() => 0.3);
+
+      await resolveNightActions({}, [paranoid, realVisitor, other]);
+
+      Math.random = originalRandom;
+
+      const visitedResult = paranoid.nightAction.results.find(r => r.startsWith('visited:'));
+      expect(visitedResult).toBeDefined();
+      // Should have both real visitor and fake visitor
+      expect(visitedResult).toContain('RealVisitor');
+      // Should also have a fake visitor (not RealVisitor)
+      const visitors = visitedResult.replace('visited:', '').split(', ').map(v => v.trim());
+      expect(visitors.length).toBeGreaterThan(1);
+    });
+
+    test('should not add fake visitors if random chance fails', async () => {
+      const paranoid = createMockPlayer('1', 'Paranoid', 'Citizen', {
+        modifier: 'Paranoid',
+        alive: true
+      });
+      const other = createMockPlayer('2', 'Other', 'Citizen', {
+        alive: true
+      });
+
+      // Mock Math.random to return >= 0.5 (50% chance fails)
+      const originalRandom = Math.random;
+      Math.random = jest.fn(() => 0.7);
+
+      await resolveNightActions({}, [paranoid, other]);
+
+      Math.random = originalRandom;
+
+      const visitedResult = paranoid.nightAction.results.find(r => r.startsWith('visited:'));
+      // Should not have fake visitors if random chance fails (and no real visitors)
+      expect(visitedResult).toBeUndefined();
+    });
   });
 
   describe('Insomniac Modifier', () => {
@@ -595,6 +791,82 @@ describe('nightActionResolver', () => {
       const visitedResult = insomniac.nightAction.results.find(r => r.startsWith('visited:'));
       expect(visitedResult).toBeDefined();
       expect(visitedResult).toContain('Visitor');
+    });
+
+    test('should not show blocked visitors to Insomniac', async () => {
+      const insomniac = createMockPlayer('1', 'Insomniac', 'Citizen', {
+        modifier: 'Insomniac',
+        alive: true
+      });
+      const jailer = createMockPlayer('2', 'Jailer', 'Jailer', {
+        nightAction: { targetId: '3', action: 'block', results: [] }
+      });
+      const blockedVisitor = createMockPlayer('3', 'BlockedVisitor', 'Cleaner', {
+        nightAction: { targetId: '1', action: 'kill', results: [] }
+      });
+
+      await resolveNightActions({}, [insomniac, jailer, blockedVisitor]);
+
+      const visitedResult = insomniac.nightAction.results.find(r => r.startsWith('visited:'));
+      // Blocked visitor should not be shown to Insomniac
+      if (visitedResult) {
+        expect(visitedResult).not.toContain('BlockedVisitor');
+      }
+    });
+
+    test('should not show drunk visitors to Insomniac', async () => {
+      const insomniac = createMockPlayer('1', 'Insomniac', 'Citizen', {
+        modifier: 'Insomniac',
+        alive: true
+      });
+      const drunkVisitor = createMockPlayer('2', 'DrunkVisitor', 'Cleaner', {
+        modifier: 'Drunk',
+        nightAction: { targetId: '1', action: 'kill', results: [] }
+      });
+
+      await resolveNightActions({}, [insomniac, drunkVisitor]);
+
+      const visitedResult = insomniac.nightAction.results.find(r => r.startsWith('visited:'));
+      // Drunk visitor should not be shown to Insomniac
+      if (visitedResult) {
+        expect(visitedResult).not.toContain('DrunkVisitor');
+      }
+    });
+
+    test('should show multiple real visitors to Insomniac', async () => {
+      const insomniac = createMockPlayer('1', 'Insomniac', 'Citizen', {
+        modifier: 'Insomniac',
+        alive: true
+      });
+      const visitor1 = createMockPlayer('2', 'Visitor1', 'Cleaner', {
+        nightAction: { targetId: '1', action: 'kill', results: [] }
+      });
+      const visitor2 = createMockPlayer('3', 'Visitor2', 'Doctor', {
+        nightAction: { targetId: '1', action: 'protect', results: [] }
+      });
+
+      await resolveNightActions({}, [insomniac, visitor1, visitor2]);
+
+      const visitedResult = insomniac.nightAction.results.find(r => r.startsWith('visited:'));
+      expect(visitedResult).toBeDefined();
+      expect(visitedResult).toContain('Visitor1');
+      expect(visitedResult).toContain('Visitor2');
+    });
+
+    test('should not show visitors if Insomniac has no visitors', async () => {
+      const insomniac = createMockPlayer('1', 'Insomniac', 'Citizen', {
+        modifier: 'Insomniac',
+        alive: true
+      });
+      const other = createMockPlayer('2', 'Other', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({}, [insomniac, other]);
+
+      const visitedResult = insomniac.nightAction.results.find(r => r.startsWith('visited:'));
+      // Should not have visited message if no visitors
+      expect(visitedResult).toBeUndefined();
     });
   });
 
@@ -1688,6 +1960,156 @@ describe('nightActionResolver', () => {
       expect(puppet.nightAction.targetId.toString()).toBe('3');
       expect(attacker.nightAction.targetId.toString()).toBe('3');
       expect(controlledTarget.alive).toBe(false);
+    });
+  });
+
+  describe('Sweetheart Passive Ability', () => {
+    test('should make random player Drunk when Sweetheart dies at night', async () => {
+      const killer = createMockPlayer('1', 'Killer', 'Cleaner', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const sweetheart = createMockPlayer('2', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const candidate1 = createMockPlayer('3', 'Candidate1', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+      const candidate2 = createMockPlayer('4', 'Candidate2', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+
+      const players = [killer, sweetheart, candidate1, candidate2];
+      await resolveNightActions({}, players);
+
+      expect(sweetheart.alive).toBe(false);
+      // One of the candidates should become Drunk
+      // Note: Sweetheart effect happens after death, so we check all alive players
+      const aliveCandidates = players.filter(p => p.alive && p._id.toString() !== '2');
+      const drunkCount = aliveCandidates.filter(p => p.modifier === 'Drunk').length;
+      expect(drunkCount).toBe(1);
+    });
+
+    test('should not make Drunk player become Drunk again when Sweetheart dies', async () => {
+      const killer = createMockPlayer('1', 'Killer', 'Cleaner', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const sweetheart = createMockPlayer('2', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const alreadyDrunk = createMockPlayer('3', 'AlreadyDrunk', 'Citizen', {
+        alive: true,
+        modifier: 'Drunk'
+      });
+      const candidate = createMockPlayer('4', 'Candidate', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+
+      const players = [killer, sweetheart, alreadyDrunk, candidate];
+      await resolveNightActions({}, players);
+
+      expect(sweetheart.alive).toBe(false);
+      expect(alreadyDrunk.modifier).toBe('Drunk'); // Should remain Drunk
+      // One of the valid candidates (killer or candidate) should become Drunk
+      const validCandidates = [killer, candidate];
+      const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
+      expect(drunkCount).toBe(1);
+    });
+
+    test('should not make another Sweetheart become Drunk when Sweetheart dies', async () => {
+      const killer = createMockPlayer('1', 'Killer', 'Cleaner', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const sweetheart1 = createMockPlayer('2', 'Sweetheart1', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const sweetheart2 = createMockPlayer('3', 'Sweetheart2', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const candidate = createMockPlayer('4', 'Candidate', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+
+      const players = [killer, sweetheart1, sweetheart2, candidate];
+      await resolveNightActions({}, players);
+
+      expect(sweetheart1.alive).toBe(false);
+      expect(sweetheart2.modifier).toBe('Sweetheart'); // Should remain Sweetheart
+      // One of the valid candidates (killer or candidate) should become Drunk
+      const validCandidates = [killer, candidate];
+      const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
+      expect(drunkCount).toBe(1);
+    });
+
+    test('should not trigger Sweetheart effect if no valid candidates exist', async () => {
+      const killer = createMockPlayer('1', 'Killer', 'Cleaner', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const sweetheart = createMockPlayer('2', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const allDrunk = createMockPlayer('3', 'AllDrunk', 'Citizen', {
+        alive: true,
+        modifier: 'Drunk'
+      });
+
+      await resolveNightActions({}, [killer, sweetheart, allDrunk]);
+
+      expect(sweetheart.alive).toBe(false);
+      expect(allDrunk.modifier).toBe('Drunk'); // Should remain unchanged
+    });
+
+    test('should not trigger Sweetheart effect if only dead players remain', async () => {
+      const killer = createMockPlayer('1', 'Killer', 'Cleaner', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const sweetheart = createMockPlayer('2', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const dead = createMockPlayer('3', 'Dead', 'Citizen', {
+        alive: false,
+        modifier: null
+      });
+
+      await resolveNightActions({}, [killer, sweetheart, dead]);
+
+      expect(sweetheart.alive).toBe(false);
+      expect(dead.modifier).toBeNull(); // Dead player should not be affected
+    });
+
+    test('should trigger Sweetheart effect when Sweetheart is killed by multiple killers', async () => {
+      const killer1 = createMockPlayer('1', 'Killer1', 'Cleaner', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const killer2 = createMockPlayer('3', 'Killer2', 'SerialKiller', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const sweetheart = createMockPlayer('2', 'Sweetheart', 'Citizen', {
+        alive: true,
+        modifier: 'Sweetheart'
+      });
+      const candidate = createMockPlayer('4', 'Candidate', 'Citizen', {
+        alive: true,
+        modifier: null
+      });
+
+      const players = [killer1, killer2, sweetheart, candidate];
+      await resolveNightActions({}, players);
+
+      expect(sweetheart.alive).toBe(false);
+      // One of the valid candidates (killer1, killer2, or candidate) should become Drunk
+      const validCandidates = [killer1, killer2, candidate];
+      const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
+      expect(drunkCount).toBe(1);
     });
   });
 });

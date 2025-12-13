@@ -1087,6 +1087,9 @@ async function resolveNightActions(game, players) {
     }
   }
 
+  // Track processed Sweethearts to avoid duplicate effects
+  const processedSweethearts = new Set();
+
   // Resolve kills
   for (const p of players) {
     if (!p.alive) continue;
@@ -1110,12 +1113,14 @@ async function resolveNightActions(game, players) {
       toSave.add(p._id.toString());
       console.log(`  ☠️ ${p.name} was killed`);
 
-      // ✅ Sweetheart death effect
-      if (p.modifier === 'Sweetheart') {
+      // ✅ Sweetheart death effect (only process once per Sweetheart)
+      if (p.modifier === 'Sweetheart' && !processedSweethearts.has(p._id.toString())) {
+        processedSweethearts.add(p._id.toString());
         const candidates = players.filter(pl => pl.alive && pl.modifier !== 'Drunk' && pl.modifier !== 'Sweetheart' && pl._id.toString() !== p._id.toString());
         if (candidates.length > 0) {
           const victim = candidates[Math.floor(Math.random() * candidates.length)];
           victim.modifier = 'Drunk';
+          toSave.add(victim._id.toString());
           console.log(`  🍺 Sweetheart ${p.name} died... ${victim.name} became Drunk!`);
         }
       }
