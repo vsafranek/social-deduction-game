@@ -16,16 +16,19 @@
 }
 
 .voting-modal {
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  background: linear-gradient(180deg, rgba(45, 38, 54, 0.95) 0%, rgba(30, 25, 35, 0.95) 100%);
   border-radius: 16px;
   width: 100%;
   max-width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.3s ease;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid #4a4e69;
+  backdrop-filter: blur(5px);
 }
 
 .voting-modal-header {
@@ -33,14 +36,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid #4a4e69;
+  background: linear-gradient(180deg, rgba(45, 38, 54, 0.9) 0%, rgba(30, 25, 35, 0.9) 100%);
 }
 
 .voting-modal-header h2 {
   margin: 0;
   font-size: 22px;
-  font-weight: 800;
-  color: #fff;
+  font-weight: 700;
+  font-family: 'MedievalSharp', serif;
+  color: #c5a059;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  letter-spacing: 1px;
 }
 
 .close-button {
@@ -72,6 +79,7 @@
 .voting-instruction {
   margin: 0 0 16px 0;
   font-size: 14px;
+  font-family: 'Lato', sans-serif;
   color: rgba(255, 255, 255, 0.7);
   text-align: center;
 }
@@ -87,26 +95,34 @@
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  background: rgba(20, 18, 25, 0.85);
+  border: 2px solid #4a4e69;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   color: inherit;
   text-align: left;
   width: 100%;
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
 .player-vote-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.5);
   transform: translateX(4px);
+  box-shadow: 
+    0 6px 15px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
 .player-vote-item.selected {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.8);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  box-shadow: 
+    0 0 0 3px rgba(239, 68, 68, 0.1),
+    0 6px 15px rgba(0, 0, 0, 0.5);
 }
 
 .skip-vote-item {
@@ -131,11 +147,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(197, 160, 89, 0.4);
   border-radius: 50%;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .player-vote-avatar .vote-avatar-img {
@@ -164,14 +182,17 @@
 .player-vote-name {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  font-family: 'Cinzel', serif;
+  color: #c5a059;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .selected-badge {
   font-size: 11px;
+  font-family: 'Cinzel', serif;
   color: rgba(239, 68, 68, 1);
   font-weight: 600;
   text-transform: uppercase;
@@ -189,7 +210,8 @@
   display: flex;
   gap: 12px;
   padding: 20px 24px;
-  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  border-top: 2px solid #4a4e69;
+  background: rgba(15, 12, 20, 0.95);
 }
 
 .cancel-vote-button,
@@ -200,21 +222,26 @@
   border-radius: 10px;
   font-size: 15px;
   font-weight: 700;
+  font-family: 'Cinzel', serif;
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
 }
 
 .cancel-vote-button {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, #3d3447 0%, #2a2430 100%);
+  color: #c5a059;
+  border: 1px solid #6b5b7b;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.4);
 }
 
 .cancel-vote-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: linear-gradient(180deg, #4d4259 0%, #3a3242 100%);
+  border-color: #c5a059;
+  color: #ffd700;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
 }
 
 .confirm-vote-button {
@@ -243,8 +270,12 @@
 }
 
 .voting-modal-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 212, 255, 0.4);
   border-radius: 3px;
+}
+
+.voting-modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.6);
 }
 
 /* Animations */

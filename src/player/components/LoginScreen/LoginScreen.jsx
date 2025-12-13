@@ -21,7 +21,7 @@ function LoginScreen({
     <div className="login-screen">
       <div className="login-container">
         <div className="login-header">
-          <h1>🎮 Sociální Dedukce</h1>
+          <h1>Sociální Dedukce</h1>
           <p>Připoj se ke hře</p>
         </div>
 
@@ -46,7 +46,6 @@ function LoginScreen({
             <input
               id="player-name"
               type="text"
-              placeholder="Jak se jmenuješ?"
               value={playerName}
               onChange={(e) => onPlayerNameChange(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -71,9 +70,6 @@ function LoginScreen({
           </div>
         )}
 
-        <div className="login-tips">
-          <p>💡 Ujisti se, že jsi na stejné WiFi síti jako moderátor</p>
-        </div>
       </div>
     </div>
   );
