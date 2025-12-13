@@ -21,7 +21,7 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
           });
         }
       };
-      
+
       // Počkáme na render a pak nastavíme pozici
       requestAnimationFrame(() => {
         updatePosition();
@@ -52,14 +52,14 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
         <div className="header-title-wrapper">
           <h2>🎲 Passive Modifiers</h2>
           <div className="info-icon-wrapper">
-            <span 
+            <span
               ref={iconRef}
               className="info-icon"
               onMouseEnter={handleIconMouseEnter}
               onMouseLeave={handleIconMouseLeave}
             >?</span>
             {isTooltipVisible && createPortal(
-              <div 
+              <div
                 ref={tooltipRef}
                 className="info-tooltip"
                 style={{
@@ -103,8 +103,8 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <input
               type="range" min="0" max="100" step="5"
               value={modifierConfig.drunkChance || modifierConfig.opilýChance || 0}
-              onChange={(e) => setModifierConfig(prev => ({ 
-                ...prev, 
+              onChange={(e) => setModifierConfig(prev => ({
+                ...prev,
                 drunkChance: parseInt(e.target.value),
                 opilýChance: parseInt(e.target.value) // Pro kompatibilitu
               }))}
@@ -133,8 +133,8 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
             <input
               type="range" min="0" max="100" step="5"
               value={modifierConfig.shadyChance || modifierConfig.recluseChance || modifierConfig.poustevníkChance || 0}
-              onChange={(e) => setModifierConfig(prev => ({ 
-                ...prev, 
+              onChange={(e) => setModifierConfig(prev => ({
+                ...prev,
                 shadyChance: parseInt(e.target.value),
                 recluseChance: parseInt(e.target.value), // Pro kompatibilitu
                 poustevníkChance: parseInt(e.target.value) // Pro kompatibilitu
@@ -226,46 +226,47 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
           </div>
         </div>
 
+
+
         <div className="modifier-card">
           <div className="modifier-header">
             <span className="modifier-icon">
-              <RoleIcon role="Amnesiac" size={48} className="modifier-icon-svg" isModifier={true} />
+              <RoleIcon role="Sweetheart" size={48} className="modifier-icon-svg" isModifier={true} />
             </span>
             <div className="modifier-name-badge-wrapper">
-              <span className="modifier-name">Amnesiac</span>
+              <span className="modifier-name">Sweetheart</span>
               <div className="modifier-team-badges">
                 <span className="team-badge good">Good</span>
-                <span className="team-badge evil">Evil</span>
-                <span className="team-badge neutral">Neutral</span>
               </div>
             </div>
           </div>
-          <p className="modifier-desc">Does not know their role, but can perform actions normally</p>
+          <p className="modifier-desc">When you die, a random player becomes Drunk</p>
           <div className="modifier-control">
-            <label>Chance: <strong>{modifierConfig.amnesiacChance || 0}%</strong></label>
+            <label>Chance: <strong>{modifierConfig.sweetheartChance || 0}%</strong></label>
             <input
               type="range" min="0" max="100" step="5"
-              value={modifierConfig.amnesiacChance || 0}
-              onChange={(e) => setModifierConfig(prev => ({ ...prev, amnesiacChance: parseInt(e.target.value) }))}
+              value={modifierConfig.sweetheartChance || 0}
+              onChange={(e) => setModifierConfig(prev => ({ ...prev, sweetheartChance: parseInt(e.target.value) }))}
             />
             <div className="modifier-estimate">
-              ≈ {Math.round((playersCount || 0) * ((modifierConfig.amnesiacChance || 0) / 100))} players
+              ≈ {Math.round((playersCount || 0) * ((modifierConfig.sweetheartChance || 0) / 100))} players
             </div>
           </div>
         </div>
+
       </div>
 
       {onStartGame && (
         <div className="column-footer">
-          <button 
-            className="btn-start-game" 
+          <button
+            className="btn-start-game"
             onClick={onStartGame}
             disabled={!canStart}
           >
             {!canStart
-              ? (playersCount < 3 
-                  ? `⏳ Minimum 3 players (${playersCount || 0}/3)`
-                  : `⚠️ Roles don't match (${totalRolesForValidation || 0} roles / ${playersCount || 0} players)`)
+              ? (playersCount < 3
+                ? `⏳ Minimum 3 players (${playersCount || 0}/3)`
+                : `⚠️ Roles don't match (${totalRolesForValidation || 0} roles / ${playersCount || 0} players)`)
               : '🚀 Start Game'
             }
           </button>

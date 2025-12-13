@@ -29,7 +29,7 @@ function GameScreen({
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [availableAvatars, setAvailableAvatars] = useState([]);
   const [modalKey, setModalKey] = useState(0);
-  
+
   const phase = gameState?.game?.phase;
 
   // Load available avatars for modal
@@ -67,19 +67,19 @@ function GameScreen({
     [gameState]
   );
 
-  const hasNightResults = currentPlayer?.nightResults && 
-                         currentPlayer.nightResults.length > 0;
+  const hasNightResults = currentPlayer?.nightResults &&
+    currentPlayer.nightResults.length > 0;
 
   // Zobraz stories při přechodu z noci
   useEffect(() => {
-    const transitionedFromNight = previousPhase === 'night' && 
-                                  (phase === 'day' || phase === 'end');
-    
+    const transitionedFromNight = previousPhase === 'night' &&
+      (phase === 'day' || phase === 'end');
+
     if (transitionedFromNight && hasNightResults && !storiesShown) {
       setShowStories(true);
       setStoriesShown(true);
     }
-    
+
     if (previousPhase === 'day' && phase === 'night') {
       setStoriesShown(false);
       setShowStories(false);
@@ -132,7 +132,7 @@ function GameScreen({
   // Zobraz stories přes vše
   if (showStories && hasNightResults) {
     return (
-      <NightResultsStories 
+      <NightResultsStories
         results={currentPlayer.nightResults}
         onComplete={handleStoriesComplete}
       />
@@ -145,16 +145,16 @@ function GameScreen({
     const winnerIds = (gameState?.game?.winnerPlayerIds || []).map(id => id?.toString?.() ?? id);
     const currentId = currentPlayer?._id?.toString();
     const playerWon = currentId ? winnerIds.includes(currentId) : false;
-    
+
     // Check if custom winner (Jester or Infected)
     const isCustomWin = winner === 'custom';
     const customWinner = isCustomWin ? gameState.players.find(p => winnerIds.includes(p._id?.toString?.() ?? p._id)) : null;
     const isJesterWin = isCustomWin && customWinner?.role === 'Jester';
     const isInfectedWin = isCustomWin && customWinner?.role === 'Infected';
-    
+
     let personalResult;
     let victoryMessage;
-    
+
     if (isJesterWin && customWinner) {
       if (playerWon) {
         personalResult = 'Vyhrál jsi! 🎭';
@@ -175,23 +175,23 @@ function GameScreen({
       personalResult = playerWon ? 'Vyhrál jsi! 🎉' : 'Prohrál jsi.';
       victoryMessage = null;
     }
-    
+
     return (
       <div className="game-screen phase-end">
         <div className="end-screen">
           <h1>Hra skončila!</h1>
           <h2>{personalResult}</h2>
           {victoryMessage && (
-            <p className="victory-message" style={{ 
-              marginTop: '8px', 
-              fontSize: '16px', 
+            <p className="victory-message" style={{
+              marginTop: '8px',
+              fontSize: '16px',
               color: '#a855f7',
               fontWeight: '600'
             }}>
               {victoryMessage}
             </p>
           )}
-          <p className="player-role">Role: {currentPlayer.modifier === 'Amnesiac' ? 'Neznámá' : currentPlayer.role}</p>
+          <p className="player-role">Role: {currentPlayer.role}</p>
           <p className="player-status">
             {currentPlayer.alive ? '✅ Přežil jsi' : '💀 Zemřel jsi'}
           </p>
@@ -211,12 +211,12 @@ function GameScreen({
             {phase === 'night' && '🌙 Noc'}
           </div>
         </div>
-        
+
         <div className="header-right">
           <div className="alive-indicators">
             {gameState.players.map(p => (
-              <span 
-                key={p._id} 
+              <span
+                key={p._id}
                 className={`player-dot ${p.alive ? 'alive' : 'dead'}`}
                 title={p.name}
               >
@@ -229,8 +229,8 @@ function GameScreen({
       </header>
 
       <main className="game-main">
-        <RoleCard 
-          player={currentPlayer} 
+        <RoleCard
+          player={currentPlayer}
           gameState={gameState}
           phase={phase}
           onAvatarClick={phase === 'lobby' && gameId && playerId ? handleOpenAvatarModal : undefined}
@@ -238,8 +238,8 @@ function GameScreen({
 
         {/* Výsledky po stories */}
         {phase === 'day' && hasNightResults && !showStories && (
-          <NightResults 
-            player={currentPlayer} 
+          <NightResults
+            player={currentPlayer}
             results={currentPlayer.nightResults}
           />
         )}

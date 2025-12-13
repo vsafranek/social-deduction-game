@@ -12,13 +12,13 @@ function generateIconPath(name, useDetails = false) {
   // Převede název na lowercase a vytvoří cestu
   // Např. "Doctor" -> "/icons/roles/doctor.svg" nebo "/icons/roles/doctor_details.png"
   const iconName = name.toLowerCase().replace(/\s+/g, '');
-  
+
   // Pokud máme použít "details" verzi, zkus nejdřív PNG s "_details", pak SVG
   if (useDetails) {
     // Zkus nejdřív PNG s "_details"
     return `/icons/roles/${iconName}_details.png`;
   }
-  
+
   // Normální ikona - nejdřív SVG, pak PNG
   return `/icons/roles/${iconName}.svg`;
 }
@@ -51,6 +51,7 @@ const MODIFIER_EMOJI_FALLBACK = {
   'Innocent': '😇',
   'Paranoid': '😱',
   'Insomniac': '😵',
+  'Sweetheart': '💖',
 };
 
 /**
@@ -65,7 +66,7 @@ const MODIFIER_EMOJI_FALLBACK = {
 export default function RoleIcon({ role, size = 24, className = '', alt, isModifier = false, useDetails = false }) {
   const [imageError, setImageError] = useState(false);
   const [currentPathIndex, setCurrentPathIndex] = useState(0);
-  
+
   // Automaticky generuj cestu k ikoně na základě názvu
   // Pro ikonu role použij "details" verzi, pokud existuje
   const paths = [];
@@ -79,9 +80,9 @@ export default function RoleIcon({ role, size = 24, className = '', alt, isModif
       paths.push(`/icons/roles/${role.toLowerCase().replace(/\s+/g, '')}.svg`);
     }
   }
-  
+
   const currentPath = paths[currentPathIndex] || null;
-  
+
   // Získej emoji fallback
   const emoji = isModifier
     ? (MODIFIER_EMOJI_FALLBACK[role] || '❓')
@@ -108,7 +109,7 @@ export default function RoleIcon({ role, size = 24, className = '', alt, isModif
   // Pokud nemáme cestu nebo došlo k chybě načítání, použij emoji
   if (!currentPath || imageError) {
     return (
-      <span 
+      <span
         className={`role-icon-emoji ${className}`}
         style={{ fontSize: `${size}px`, display: 'inline-block', lineHeight: 1 }}
         aria-label={alt || role}

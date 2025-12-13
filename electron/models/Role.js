@@ -4,7 +4,7 @@ const ROLES = {
   // ==================
   // TOWN (Good)
   // ==================
-  
+
   'Doctor': {
     team: 'good',
     description: 'Protects one player each night from death',
@@ -15,7 +15,7 @@ const ROLES = {
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
+
   'Jailer': {
     team: 'good',
     description: 'Locks a player each night; the target cannot act',
@@ -26,7 +26,7 @@ const ROLES = {
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
+
   'Investigator': {
     team: 'good',
     description: 'Learns two possible roles of the target each night (one is correct). Can only investigate alive players.',
@@ -37,7 +37,7 @@ const ROLES = {
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
+
   'Coroner': {
     team: 'good',
     description: 'Can examine a dead player to learn their exact role. Cannot examine cleaned roles.',
@@ -48,7 +48,7 @@ const ROLES = {
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
+
   'Lookout': {
     team: 'good',
     description: 'Watches a house and sees who visited the target',
@@ -59,7 +59,7 @@ const ROLES = {
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
+
   'Guardian': {
     team: 'good',
     description: 'Guards a player; visitors are revealed and their action fails',
@@ -70,7 +70,7 @@ const ROLES = {
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
+
   'Tracker': {
     team: 'good',
     description: 'Follows the target and learns whom they visited',
@@ -81,7 +81,7 @@ const ROLES = {
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
+
   'Hunter': {
     team: 'good',
     description: 'Can kill at night - if kills an innocent, dies from guilt',
@@ -92,7 +92,7 @@ const ROLES = {
     defaultAffiliations: ['good'],
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
-  
+
   'Citizen': {
     team: 'good',
     description: 'No special ability',
@@ -104,10 +104,12 @@ const ROLES = {
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
 
+
+
   // ==================
   // MAFIA (Evil)
   // ==================
-  
+
   'Cleaner': {
     team: 'evil',
     description: 'Can kill OR mark players for cleaning. Marked alive players show fake investigation results. Dead marked players have hidden roles (3 uses per game)',
@@ -119,13 +121,13 @@ const ROLES = {
     hasLimitedUses: true,
     maxUses: 3,
     defaultAffiliations: ['evil'],
-    defaultVictory: { 
-      canWinWithTeams: ['evil'], 
-      soloWin: false, 
+    defaultVictory: {
+      canWinWithTeams: ['evil'],
+      soloWin: false,
       customRules: [] // ✅ Removed - uses victoryEvaluator logic
     }
   },
-  
+
   'Accuser': {
     team: 'evil',
     description: 'Can kill OR frame a player to appear as evil during investigation (3 uses per game)',
@@ -137,9 +139,9 @@ const ROLES = {
     hasLimitedUses: true,
     maxUses: 3,
     defaultAffiliations: ['evil'],
-    defaultVictory: { 
-      canWinWithTeams: ['evil'], 
-      soloWin: false, 
+    defaultVictory: {
+      canWinWithTeams: ['evil'],
+      soloWin: false,
       customRules: [] // ✅ Removed - uses victoryEvaluator logic
     }
   },
@@ -155,9 +157,9 @@ const ROLES = {
     hasLimitedUses: true,
     maxUses: 3,
     defaultAffiliations: ['evil'],
-    defaultVictory: { 
-      canWinWithTeams: ['evil'], 
-      soloWin: false, 
+    defaultVictory: {
+      canWinWithTeams: ['evil'],
+      soloWin: false,
       customRules: [] // ✅ Removed - uses victoryEvaluator logic
     }
   },
@@ -165,7 +167,7 @@ const ROLES = {
   // ==================
   // NEUTRAL
   // ==================
-  
+
   'SerialKiller': {
     team: 'neutral',
     description: 'Serial killer - aims to survive alone',
@@ -174,17 +176,17 @@ const ROLES = {
     canUseEveryNight: true,
     visitsTarget: true,
     defaultAffiliations: ['neutral', 'solo'],
-    defaultVictory: { 
-      canWinWithTeams: [], 
-      soloWin: true, 
+    defaultVictory: {
+      canWinWithTeams: [],
+      soloWin: true,
       customRules: [
         { type: 'aliveExactly', team: 'neutral', count: 1 },
         { type: 'aliveExactly', team: 'good', count: 0 },
         { type: 'aliveExactly', team: 'evil', count: 0 }
-      ] 
+      ]
     }
   },
-  
+
   'Infected': {
     team: 'neutral',
     description: 'Visits players at night to infect them; wins when all others are infected',
@@ -201,7 +203,7 @@ const ROLES = {
       ]
     }
   },
-  
+
   'Jester': {
     team: 'neutral',
     description: 'Wins if executed by vote. Game ends immediately when Jester is executed.',
@@ -216,7 +218,7 @@ const ROLES = {
       customRules: [] // Special win condition handled in votingResolver
     }
   },
-  
+
   'Witch': {
     team: 'neutral',
     description: 'Survive until the end. Controls a player - forces them to use their ability on your chosen target. Acts before SerialKiller.',
@@ -239,48 +241,42 @@ const MODIFIERS = {
     description: 'He stays home and gets fake event results',
     effect: 'random_fail',
     showToPlayer: false,
-    allowedTeams: ['good', 'neutral'] 
+    allowedTeams: ['good', 'neutral']
   },
-  
+
   'Shady': {
     emoji: '🏚️',
     description: 'Appears as evil to investigations even if good',
     effect: 'appears_evil',
     showToPlayer: false,
-    allowedTeams: ['good'] 
+    allowedTeams: ['good']
   },
-  
+
   'Innocent': {
     emoji: '😇',
     description: 'Appears as good or neutral to investigations even if evil',
     effect: 'appears_good',
     showToPlayer: false,
-    allowedTeams: ['evil'] 
+    allowedTeams: ['evil']
   },
-  
+
   'Paranoid': {
     emoji: '😱',
     description: 'Sees fake visitors who were not actually there',
     effect: 'paranoid',
     showToPlayer: false,
-     allowedTeams: ['good', 'neutral'] 
+    allowedTeams: ['good', 'neutral']
   },
-  
+
   'Insomniac': {
     emoji: '😵',
     description: 'Sees everyone who visits them',
     effect: 'see_visitors',
     showToPlayer: false,
-    allowedTeams: ['good', 'neutral'] 
+    allowedTeams: ['good', 'neutral']
   },
-  
-  'Amnesiac': {
-    emoji: '🧠',
-    description: 'Does not know their role, but can perform actions normally',
-    effect: 'hide_role',
-    showToPlayer: false,
-    allowedTeams: ['good', 'evil', 'neutral']
-  }
+
+
 };
 
 module.exports = { ROLES, MODIFIERS };

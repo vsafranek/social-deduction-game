@@ -77,19 +77,19 @@ router.post('/create', async (req, res) => {
   try {
     const roomCode = (Math.floor(1000 + Math.random() * 9000)).toString();
     const { ip, port } = req.body || {};
-    
-    const game = new Game({ 
-      roomCode, 
-      ip, 
+
+    const game = new Game({
+      roomCode,
+      ip,
       port,
-      phase: 'lobby',  
+      phase: 'lobby',
       round: 0,
-      timerState: { phaseEndsAt: null }  
+      timerState: { phaseEndsAt: null }
     });
-    
+
     await game.save();
     await GameLog.create({ gameId: game._id, message: `Game created. Room: ${roomCode}` });
-    
+
     res.json({ success: true, gameId: game._id, roomCode });
   } catch (e) {
     console.error('create error:', e);
@@ -100,24 +100,24 @@ router.post('/create', async (req, res) => {
 // Helper function to get all available avatar files from filesystem
 function getAllAvailableAvatars() {
   const avatars = [];
-  
+
   // Get avatars ONLY from /avatars/ folder (public/avatars/)
   const avatarsDir = path.join(__dirname, '../../public/avatars');
-  
+
   if (fs.existsSync(avatarsDir)) {
     const files = fs.readdirSync(avatarsDir);
-    
+
     files.forEach(file => {
       // Only include files that DON'T have "details" or "detail" in the name and are images
       const fileNameLower = file.toLowerCase();
       const hasDetail = fileNameLower.includes('detail');
-      
+
       if (!hasDetail && /\.(png|jpg|jpeg|svg)$/i.test(file)) {
         avatars.push(`/avatars/${file}`);
       }
     });
   }
-  
+
   return avatars;
 }
 
@@ -126,38 +126,38 @@ function getAllAvailableAvatars() {
 async function assignUniqueAvatar(gameId, maxRetries = 5) {
   // Get all available avatars from filesystem
   const allAvatars = getAllAvailableAvatars();
-  
+
   if (allAvatars.length === 0) {
     console.warn('⚠️ No avatars found in filesystem, returning null');
     return null;
   }
-  
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     // Vždy znovu načti aktuální stav hráčů, aby se zabránilo race condition
     const existingPlayers = await Player.find({ gameId });
     const usedAvatars = new Set(existingPlayers.map(p => p.avatar).filter(Boolean));
-    
+
     // Najdi volné avatary
     const freeAvatars = allAvatars.filter(avatar => !usedAvatars.has(avatar));
-    
+
     if (freeAvatars.length > 0) {
       // Vyber náhodný volný avatar
       const randomIndex = Math.floor(Math.random() * freeAvatars.length);
       const selectedAvatar = freeAvatars[randomIndex];
-      
+
       // Double-check že avatar stále není používán (race condition protection)
-      const stillAvailable = await Player.findOne({ 
-        gameId, 
-        avatar: selectedAvatar 
+      const stillAvailable = await Player.findOne({
+        gameId,
+        avatar: selectedAvatar
       });
-      
+
       if (!stillAvailable) {
         console.log(`✅ Assigned random avatar: ${selectedAvatar}`);
         return selectedAvatar;
       }
       // Pokud je už používán, pokračuj v dalším pokusu
     }
-    
+
     // Pokud jsou všechny použité a není to poslední pokus, počkej chvíli a zkus znovu
     if (attempt < maxRetries - 1) {
       // Krátká pauza před dalším pokusem (umožní dokončit souběžné save operace)
@@ -165,7 +165,7 @@ async function assignUniqueAvatar(gameId, maxRetries = 5) {
       continue;
     }
   }
-  
+
   // Fallback: pokud všechny pokusy selhaly, vrať náhodný z dostupných (může být duplicitní)
   const randomIndex = Math.floor(Math.random() * allAvatars.length);
   console.warn(`⚠️ All avatars in use, returning random: ${allAvatars[randomIndex]}`);
@@ -322,14 +322,14 @@ router.post('/:gameId/vote', async (req, res) => {
     // Zkontroluj, zda všichni živí odhlasovali
     const alivePlayers = await Player.find({ gameId, alive: true });
     const allVoted = alivePlayers.every(p => p.hasVoted);
-    
+
     // Zkontroluj, zda všichni hlasovali skip (null)
     const allSkipped = allVoted && alivePlayers.every(p => !p.voteFor);
 
     if (allVoted && game.timerState?.phaseEndsAt) {
       const now = Date.now();
       const currentEnds = new Date(game.timerState.phaseEndsAt).getTime();
-      
+
       if (allSkipped) {
         // Pokud všichni hlasovali skip, přeskoč čas (ukonči den okamžitě)
         game.timerState.phaseEndsAt = new Date(now + 3 * 1000); // 3 sekundy na přechod
@@ -363,7 +363,7 @@ router.post('/:gameId/start-config', async (req, res) => {
   try {
     const { gameId } = req.params;
     const { assignments, modifiers, timers } = req.body || {};
-    
+
     if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
 
     const game = await Game.findById(gameId);
@@ -409,10 +409,10 @@ router.post('/:gameId/start-config', async (req, res) => {
     for (const p of updatedPlayers) {
       const def = ROLES[p.role];
       p.affiliations = def?.defaultAffiliations || ['good'];
-      p.victoryConditions = def?.defaultVictory || { 
-        canWinWithTeams: ['good'], 
-        soloWin: false, 
-        customRules: [] 
+      p.victoryConditions = def?.defaultVictory || {
+        canWinWithTeams: ['good'],
+        soloWin: false,
+        customRules: []
       };
       await p.save();
     }
@@ -420,7 +420,7 @@ router.post('/:gameId/start-config', async (req, res) => {
     // Initialize roleData for limited-use roles and dual roles
     for (const p of updatedPlayers) {
       const roleData = ROLES[p.role];
-      
+
       // Pro dual role s hasLimitedUses - inicializuj usesRemaining pro sekundární akce
       if (roleData?.actionType === 'dual' && roleData?.hasLimitedUses) {
         if (!p.roleData) p.roleData = {};
@@ -437,14 +437,16 @@ router.post('/:gameId/start-config', async (req, res) => {
 
     // ✅ Modifiers s allowedTeams kontrolou
     console.log('🎭 Assigning modifiers...');
-    
+
     // Normalize chances
     const drunkChance = normalizeChance(modifiers?.drunkChance ?? modifiers?.opilýChance, 0.2);
     const shadyChance = normalizeChance(modifiers?.shadyChance ?? modifiers?.recluseChance ?? modifiers?.poustevníkChance, 0.15);
     const innocentChance = normalizeChance(modifiers?.innocentChance, 0.15);
     const paranoidChance = normalizeChance(modifiers?.paranoidChance, 0.1);
+
     const insomniacChance = normalizeChance(modifiers?.insomniacChance, 0.1);
-    const amnesiacChance = normalizeChance(modifiers?.amnesiacChance, 0);
+    const sweetheartChance = normalizeChance(modifiers?.sweetheartChance, 0.1);
+
 
     // ✅ Check if MODIFIERS exists
     if (!MODIFIERS) {
@@ -454,47 +456,49 @@ router.post('/:gameId/start-config', async (req, res) => {
       for (const p of updatedPlayers) {
         const roleData = ROLES[p.role];
         const roleTeam = roleData?.team || 'good';
-        
+
         // Get all valid modifiers for this team
         const validModifiers = [];
-        
+
         // ✅ Check each modifier with proper fallback
         if (MODIFIERS.Drunk && Array.isArray(MODIFIERS.Drunk.allowedTeams)) {
           if (MODIFIERS.Drunk.allowedTeams.includes(roleTeam)) {
             validModifiers.push({ name: 'Drunk', chance: drunkChance });
           }
         }
-        
+
         if (MODIFIERS.Shady && Array.isArray(MODIFIERS.Shady.allowedTeams)) {
           if (MODIFIERS.Shady.allowedTeams.includes(roleTeam)) {
             validModifiers.push({ name: 'Shady', chance: shadyChance });
           }
         }
-        
+
         // Innocent uses its own chance, for evil team
         if (MODIFIERS.Innocent && Array.isArray(MODIFIERS.Innocent.allowedTeams)) {
           if (MODIFIERS.Innocent.allowedTeams.includes(roleTeam)) {
             validModifiers.push({ name: 'Innocent', chance: innocentChance });
           }
         }
-        
+
         if (MODIFIERS.Paranoid && Array.isArray(MODIFIERS.Paranoid.allowedTeams)) {
           if (MODIFIERS.Paranoid.allowedTeams.includes(roleTeam)) {
             validModifiers.push({ name: 'Paranoid', chance: paranoidChance });
           }
         }
-        
+
         if (MODIFIERS.Insomniac && Array.isArray(MODIFIERS.Insomniac.allowedTeams)) {
           if (MODIFIERS.Insomniac.allowedTeams.includes(roleTeam)) {
             validModifiers.push({ name: 'Insomniac', chance: insomniacChance });
           }
         }
-        
-        if (MODIFIERS.Amnesiac && Array.isArray(MODIFIERS.Amnesiac.allowedTeams)) {
-          if (MODIFIERS.Amnesiac.allowedTeams.includes(roleTeam)) {
-            validModifiers.push({ name: 'Amnesiac', chance: amnesiacChance });
+
+        if (MODIFIERS.Sweetheart && Array.isArray(MODIFIERS.Sweetheart.allowedTeams)) {
+          if (MODIFIERS.Sweetheart.allowedTeams.includes(roleTeam)) {
+            validModifiers.push({ name: 'Sweetheart', chance: sweetheartChance });
           }
         }
+
+
 
         // Roll for modifier (first match wins)
         p.modifier = null;
@@ -566,7 +570,7 @@ router.post('/:gameId/end-night', async (req, res) => {
     game.phase = 'day';
     game.timerState.phaseEndsAt = endInMs(daySec);
     await game.save();
-    
+
     // ✅ RESET hlasování pro nový den
     console.log('🧹 Resetting votes for new day...');
     for (const p of players) {
@@ -575,7 +579,7 @@ router.post('/:gameId/end-night', async (req, res) => {
       await p.save();
     }
     console.log('✅ Votes reset complete');
-    
+
     await GameLog.create({ gameId, message: `Round ${game.round} - DAY (⏱ ${daySec}s)` });
 
     res.json({ success: true });
@@ -697,13 +701,13 @@ router.post('/:gameId/end-phase', async (req, res) => {
     if (currentPhase === 'day') {
       // Day → Night: process voting + RESET night actions
       console.log('📋 Processing day voting...');
-      
+
       let players = await Player.find({ gameId });
       const votingResult = await resolveDayVoting(game, players, GameLog);
-      
+
       // Reload players after voting
       players = await Player.find({ gameId });
-      
+
       // ✅ Check if Jester won (was executed)
       if (votingResult && votingResult.jesterWin === true) {
         console.log('🎭 Jester win detected in end-phase!');
@@ -722,7 +726,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
           winners: jester ? [jester._id] : []
         });
       }
-      
+
       // ✅ RESET nočních akcí pro novou noc
       console.log('🧹 Resetting night actions for new night...');
       for (const p of players) {
@@ -734,7 +738,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
         await p.save();
       }
       console.log('✅ Night actions reset complete');
-      
+
       // Check victory
       const win = evaluateVictory(players);
       if (win) {
@@ -766,13 +770,13 @@ router.post('/:gameId/end-phase', async (req, res) => {
     } else if (currentPhase === 'night') {
       // Night → Day: process night actions
       console.log('🌙 Processing night actions...');
-      
+
       let players = await Player.find({ gameId });
       await resolveNightActions(game, players);
-      
+
       // Reload players after night resolution
       players = await Player.find({ gameId });
-      
+
       // Check victory
       const win = evaluateVictory(players);
       if (win) {
@@ -797,7 +801,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
         phaseEndsAt: new Date(Date.now() + daySec * 1000)
       };
       await game.save();
-      
+
       // ✅ RESET hlasování pro nový den
       console.log('🧹 Resetting votes for new day...');
       for (const p of players) {
@@ -806,7 +810,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
         await p.save();
       }
       console.log('✅ Votes reset complete');
-      
+
       await GameLog.create({ gameId, message: `Round ${game.round} - DAY (⏱ ${daySec}s)` });
       console.log(`✅ [END-PHASE] Night → Day (Round ${game.round})`);
     }
@@ -817,7 +821,7 @@ router.post('/:gameId/end-phase', async (req, res) => {
     });
 
     console.log(`✅ [END-PHASE] Phase changed: ${currentPhase} → ${game.phase}`);
-    
+
     res.json({
       success: true,
       phase: game.phase,
@@ -838,7 +842,7 @@ router.post('/:gameId/set-night-action', async (req, res) => {
   try {
     const { gameId } = req.params;
     const { playerId, targetId, actionMode, puppetId } = req.body;
-    
+
     if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
     if (!ensureObjectId(playerId)) return res.status(400).json({ error: 'Invalid player id' });
     if (!ensureObjectId(targetId)) return res.status(400).json({ error: 'Invalid target id' });
@@ -851,23 +855,23 @@ router.post('/:gameId/set-night-action', async (req, res) => {
     if (!player || !player.alive) return res.status(400).json({ error: 'Player not found or dead' });
 
     const roleData = ROLES[player.role];
-    
+
     // Check if role is Witch (requires puppetId)
     if (player.role === 'Witch') {
       if (!puppetId || !ensureObjectId(puppetId)) {
         return res.status(400).json({ error: 'Witch requires puppetId' });
       }
-      
+
       const puppet = await Player.findById(puppetId);
       if (!puppet || !puppet.alive) {
         return res.status(400).json({ error: 'Puppet not found or dead' });
       }
-      
+
       // Puppet must have a night action (cannot be Citizen or Jester)
       if (!puppet.role || puppet.role === 'Citizen' || puppet.role === 'Jester') {
         return res.status(400).json({ error: 'Puppet must have a night action' });
       }
-      
+
       player.nightAction = {
         targetId,
         action: 'witch_control',
@@ -877,7 +881,7 @@ router.post('/:gameId/set-night-action', async (req, res) => {
     } else if (roleData?.actionType === 'dual') {
       // Check if role has dual actions
       if (!actionMode) return res.status(400).json({ error: 'Action mode required for dual role' });
-      
+
       // Check if special ability has uses left
       if (actionMode !== 'kill') {
         if (!player.roleData) player.roleData = {};
@@ -886,12 +890,12 @@ router.post('/:gameId/set-night-action', async (req, res) => {
           player.roleData.usesRemaining = roleData.maxUses || 3;
         }
         const usesLeft = player.roleData.usesRemaining;
-        
+
         if (usesLeft <= 0) {
           return res.status(400).json({ error: 'No special ability uses remaining' });
         }
       }
-      
+
       player.nightAction = {
         targetId,
         action: actionMode, // 'kill', 'clean_role', 'frame', 'consig_investigate'
@@ -908,7 +912,7 @@ router.post('/:gameId/set-night-action', async (req, res) => {
 
     await player.save();
     console.log(`✓ ${player.name} set action: ${player.nightAction.action} → ${targetId}${puppetId ? ` (puppet: ${puppetId})` : ''}`);
-    
+
     res.json({ success: true });
   } catch (e) {
     console.error('set-night-action error:', e);
@@ -921,40 +925,40 @@ router.patch('/:gameId/player/:playerId/avatar', async (req, res) => {
   try {
     const { gameId, playerId } = req.params;
     const { avatar } = req.body || {};
-    
+
     if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
     if (!ensureObjectId(playerId)) return res.status(400).json({ error: 'Invalid player id' });
-    
+
     if (!avatar || typeof avatar !== 'string') {
       return res.status(400).json({ error: 'Avatar path is required' });
     }
-    
+
     const game = await Game.findById(gameId);
     if (!game) return res.status(404).json({ error: 'Game not found' });
-    
+
     // Only allow changing avatar in lobby phase
     if (game.phase !== 'lobby') {
       return res.status(400).json({ error: 'Can only change avatar in lobby phase' });
     }
-    
+
     const player = await Player.findOne({ _id: playerId, gameId });
     if (!player) return res.status(404).json({ error: 'Player not found' });
-    
+
     // Check if avatar is already used by another player
-    const existingPlayer = await Player.findOne({ 
-      gameId, 
+    const existingPlayer = await Player.findOne({
+      gameId,
       avatar,
       _id: { $ne: playerId } // Exclude current player
     });
-    
+
     if (existingPlayer) {
       return res.status(400).json({ error: 'This avatar is already used by another player' });
     }
-    
+
     // Update avatar
     player.avatar = avatar;
     await player.save();
-    
+
     res.json({ success: true, avatar: player.avatar });
   } catch (e) {
     console.error('update avatar error:', e);
@@ -967,23 +971,23 @@ router.patch('/:gameId/player/:playerId/avatar', async (req, res) => {
 router.get('/avatars/available', async (req, res) => {
   try {
     const { gameId } = req.query;
-    
+
     // Get all avatar paths from filesystem
     const allAvatarPaths = getAllAvailableAvatars();
-    
+
     // Get used avatars if gameId is provided
     let usedAvatars = new Set();
     if (gameId && ensureObjectId(gameId)) {
       const existingPlayers = await Player.find({ gameId });
       usedAvatars = new Set(existingPlayers.map(p => p.avatar).filter(Boolean));
     }
-    
+
     // Convert to response format with availability info
     const avatars = allAvatarPaths.map(avatarPath => {
       const fileName = path.basename(avatarPath);
       const nameWithoutExt = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
       const isUsed = usedAvatars.has(avatarPath);
-      
+
       return {
         path: avatarPath,
         name: nameWithoutExt,
@@ -991,7 +995,7 @@ router.get('/avatars/available', async (req, res) => {
         available: !isUsed
       };
     });
-    
+
     console.log(`🎨 Total avatars found: ${avatars.length} (${avatars.filter(a => a.available).length} available)`);
     res.json({ success: true, avatars });
   } catch (e) {

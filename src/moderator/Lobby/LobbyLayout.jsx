@@ -77,6 +77,7 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
     innocentChance: 15,
     paranoidChance: 10,
     insomniacChance: 10,
+    sweetheartChance: 10,
     amnesiacChance: 0
   });
 
@@ -152,7 +153,7 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
     // 1) Přidej garantované role
     const guaranteedToAssign = [...guaranteedRoles];
     const playersForGuaranteed = [...players].slice(0, guaranteedToAssign.length);
-    
+
     // Přiřaď garantované role
     for (let i = 0; i < guaranteedToAssign.length && i < playersForGuaranteed.length; i++) {
       const role = guaranteedToAssign[i];
@@ -168,7 +169,7 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
         const currentCount = roleCounts[role] || 0;
         const maxLimit = roleMaxLimits[role];
         const availableSlots = maxLimit === null ? count : Math.max(0, maxLimit - currentCount);
-        
+
         for (let i = 0; i < Math.min(count, availableSlots); i++) {
           pool.push(role);
         }
@@ -194,12 +195,12 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
         const teamLimit = teamLimits[team];
         const roleLimit = roleMaxLimits[candidate];
         const currentRoleCount = roleCounts[candidate] || 0;
-        
+
         // Zkontroluj limity
         // teamLimit === 0 znamená žádné role z tohoto týmu, teamLimit > 0 znamená pevný limit
         const withinTeamLimit = teamLimit > 0 && countByTeam[team] < teamLimit;
         const withinRoleLimit = roleLimit === null || currentRoleCount < roleLimit;
-        
+
         if (withinTeamLimit && withinRoleLimit) {
           chosen = candidate;
           shuffledPool.splice(i, 1);

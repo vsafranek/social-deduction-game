@@ -8,7 +8,7 @@ const Player = require('../models/Player');
  */
 function hasEffect(player, effectType) {
   const now = new Date();
-  return (player.effects || []).some(e => 
+  return (player.effects || []).some(e =>
     e.type === effectType && (!e.expiresAt || e.expiresAt > now)
   );
 }
@@ -25,10 +25,10 @@ function addEffect(player, type, sourceId = null, expiresAt = null, meta = {}) {
 }
 
 function getRandomPlayerNames(players, excludeId, count = 1) {
-  const candidates = players.filter(p => 
+  const candidates = players.filter(p =>
     p.alive && p._id.toString() !== excludeId
   );
-  
+
   const shuffled = candidates.sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count).map(p => p.name);
 }
@@ -56,13 +56,13 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
   const goodRoles = allRoles.filter(r => ROLES[r].team === 'good');
   const evilRoles = allRoles.filter(r => ROLES[r].team === 'evil');
   const neutralRoles = allRoles.filter(r => ROLES[r].team === 'neutral');
-  
+
   // Helper to get random role from array
   const getRandomRole = (roleArray) => {
     if (roleArray.length === 0) return 'Citizen';
     return roleArray[Math.floor(Math.random() * roleArray.length)];
   };
-  
+
   // Helper to get random player names
   const getRandomPlayerNames = (count = 1) => {
     const alivePlayers = players.filter(p => p.alive && p.name !== targetName);
@@ -70,14 +70,14 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
     const shuffled = [...alivePlayers].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, count).map(p => p.name);
   };
-  
+
   switch (action) {
     case 'protect':
       return `success:Chráníš ${targetName}`;
-    
+
     case 'block':
       return `success:Uzamkl jsi ${targetName}`;
-    
+
     case 'investigate': {
       // Random two roles (one good, one evil/neutral)
       const role1 = getRandomRole(goodRoles);
@@ -85,13 +85,13 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
       const roles = Math.random() < 0.5 ? [role1, role2] : [role2, role1];
       return `investigate:${targetName} = ${roles.join(' / ')}`;
     }
-    
+
     case 'autopsy': {
       // Random role
       const randomRole = getRandomRole(allRoles);
       return `autopsy:${targetName} = ${randomRole}`;
     }
-    
+
     case 'watch': {
       // Random 0-3 visitors
       const visitorCount = Math.floor(Math.random() * 4);
@@ -104,7 +104,7 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
       }
       return `watch:${visitors.join(', ')} navštívili ${targetName}`;
     }
-    
+
     case 'track': {
       // Random target or "nikam nešel"
       if (Math.random() < 0.5) {
@@ -116,23 +116,23 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
       }
       return `track:${targetName} navštívil ${trackedTargets[0]}`;
     }
-    
+
     case 'kill':
     case 'clean_kill':
       return `success:Zaútočil jsi na ${targetName}`;
-    
+
     case 'frame':
       return `success:Obvinil jsi ${targetName}`;
-    
+
     case 'infect':
       return `success:Nakazil jsi ${targetName}`;
-    
+
     case 'guard':
       return `success:Nastavil jsi stráž u ${targetName}`;
-    
+
     case 'witch_control':
       return `success:Ovladla jsi hráče, aby cílil na ${targetName}`;
-    
+
     default:
       return `success:Akce provedena`;
   }
@@ -143,10 +143,10 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
  */
 async function resolveNightActions(game, players) {
   console.log('🌙 [NightResolver] Starting night action resolution...');
-  
+
   // Create idMap and update players array reference
   const idMap = new Map(players.map(p => [p._id.toString(), p]));
-  
+
   // Helper to update both idMap and players array
   const updatePlayerInMemory = (player) => {
     const playerIdStr = player._id.toString();
@@ -156,29 +156,29 @@ async function resolveNightActions(game, players) {
       players[index] = player;
     }
   };
-  
+
   // Initialize tracking sets and maps
   const blocked = new Set();
   const guarded = new Set();
   const allVisits = [];
   const drunkPlayers = new Set();
-  const jailTargets = new Map(); 
-  const hunterKills = new Map(); 
+  const jailTargets = new Map();
+  const hunterKills = new Map();
   const janitorTargets = new Set();
   const toSave = new Set(); // Initialize toSave early - used in Phase 0 
 
   // ✅ Clear ALL temporary effects from previous night
   // NOTE: marked_for_cleaning should persist across nights until player dies
   for (const p of players) {
-    removeEffects(p, e => 
-      e.type === 'blocked' || 
-      e.type === 'guarded' || 
+    removeEffects(p, e =>
+      e.type === 'blocked' ||
+      e.type === 'guarded' ||
       e.type === 'protected' ||
       e.type === 'guard'
       // marked_for_cleaning is NOT removed here - it persists until player dies
     );
   }
-  
+
   // Clear previous results
   for (const p of players) {
     if (!p.nightAction) {
@@ -195,11 +195,11 @@ async function resolveNightActions(game, players) {
   const witchControls = [];
   for (const actor of players) {
     if (!actor.alive || actor.role !== 'Witch') continue;
-    
+
     const action = actor.nightAction?.action;
     const targetId = actor.nightAction?.targetId?.toString();
     const puppetId = actor.nightAction?.puppetId?.toString();
-    
+
     if (action !== 'witch_control' || !targetId || !puppetId) {
       if (actor.role === 'Witch' && (!action || action !== 'witch_control')) {
         console.log(`  ⚠️ ${actor.name} (Witch) has no valid control action`);
@@ -209,33 +209,33 @@ async function resolveNightActions(game, players) {
 
     const puppet = idMap.get(puppetId);
     const controlledTarget = idMap.get(targetId);
-    
+
     if (!puppet || !puppet.alive) {
       console.log(`  ⚠️ ${actor.name}: Puppet not found or dead`);
       actor.nightAction.results.push('failed:Loutka není naživu nebo neexistuje');
       continue;
     }
-    
+
     if (!controlledTarget || !controlledTarget.alive) {
       console.log(`  ⚠️ ${actor.name}: Controlled target not found or dead`);
       actor.nightAction.results.push('failed:Cíl není naživu nebo neexistuje');
       continue;
     }
-    
+
     // Puppet must have a night action
     if (!puppet.role || puppet.role === 'Citizen' || puppet.role === 'Jester') {
       console.log(`  ⚠️ ${actor.name}: Puppet (${puppet.name}) has no night action`);
       actor.nightAction.results.push(`failed:${puppet.name} nemá noční akci`);
       continue;
     }
-    
+
     const puppetRoleData = ROLES[puppet.role];
     if (!puppetRoleData || !puppetRoleData.actionType || puppetRoleData.actionType === 'none') {
       console.log(`  ⚠️ ${actor.name}: Puppet (${puppet.name}) has no valid night action`);
       actor.nightAction.results.push(`failed:${puppet.name} nemá platnou noční akci`);
       continue;
     }
-    
+
     // Store witch control info
     witchControls.push({
       witchId: actor._id.toString(),
@@ -245,9 +245,9 @@ async function resolveNightActions(game, players) {
       puppetName: puppet.name,
       controlledTargetName: controlledTarget.name
     });
-    
+
     console.log(`  🧙‍♀️ ${actor.name} controlling ${puppet.name} to target ${controlledTarget.name}`);
-    
+
     // Override puppet's action target
     // Save original target for results
     if (!puppet.roleData) puppet.roleData = {};
@@ -255,17 +255,17 @@ async function resolveNightActions(game, players) {
     puppet.roleData.originalAction = puppet.nightAction?.action || null;
     puppet.roleData.controlledByWitch = true;
     puppet.roleData.witchId = actor._id;
-    
+
     // Set puppet's action to controlled target
     if (!puppet.nightAction) {
       puppet.nightAction = { targetId: null, action: null, results: [] };
     }
-    
+
     // Determine puppet's action type based on their role
     // If puppet already has an action set, use it (for dual roles)
     // Otherwise, determine action from role definition
     let puppetAction = puppet.nightAction.action;
-    
+
     if (!puppetAction) {
       // Puppet hasn't set their action yet - determine from role
       const puppetRoleData = ROLES[puppet.role];
@@ -277,25 +277,25 @@ async function resolveNightActions(game, players) {
         puppetAction = puppetRoleData?.actionType || null;
       }
     }
-    
+
     // Override puppet's action target AND ensure action is set
     puppet.nightAction.targetId = controlledTarget._id;
     puppet.nightAction.action = puppetAction;
-    
+
     // Mark puppet as modified
     puppet.markModified('nightAction');
     puppet.markModified('roleData');
     toSave.add(puppetId);
-    
+
     // Save puppet immediately to ensure changes persist
     await puppet.save();
-    
+
     // Update both idMap and players array with modified puppet
     updatePlayerInMemory(puppet);
-    
+
     console.log(`  🧙‍♀️ ${puppet.name} action overridden: ${puppetAction} → ${controlledTarget.name} (saved)`);
     console.log(`    Puppet nightAction:`, JSON.stringify(puppet.nightAction, null, 2));
-    
+
     // Witch only gets success message - she doesn't see puppet's action results
     actor.nightAction.results.push(`success:Ovladla jsi ${puppet.name}, aby použil svou schopnost na ${controlledTarget.name}`);
   }
@@ -303,13 +303,13 @@ async function resolveNightActions(game, players) {
   // PHASE 1: Collect and validate all actions
   console.log('📋 [NightResolver] Phase 1: Collecting actions...');
   const actionsToResolve = [];
-  
+
   for (const actor of players) {
     if (!actor.alive) continue;
-    
+
     const action = actor.nightAction?.action;
     const targetId = actor.nightAction?.targetId?.toString();
-    
+
     if (!action || !targetId) continue;
 
     const target = idMap.get(targetId);
@@ -317,7 +317,7 @@ async function resolveNightActions(game, players) {
       console.log(`  ⚠️ ${actor.name}: Invalid target`);
       continue;
     }
-    
+
     // Most actions require alive target, but some actions need to validate dead targets themselves
     // autopsy and clean_role can target dead players
     // investigate, consig_investigate, and infect need to validate dead targets and provide user feedback
@@ -329,7 +329,7 @@ async function resolveNightActions(game, players) {
     // Get priority from role
     const roleData = ROLES[actor.role];
     let priority = roleData?.nightPriority || 5;
-    
+
     // Adjust priority for specific actions that need to happen before investigation
     // Accuser's frame action must happen before Investigator (priority 5)
     if (actor.role === 'Accuser' && action === 'frame') {
@@ -354,7 +354,7 @@ async function resolveNightActions(game, players) {
 
   // Sort by priority (lower number = earlier)
   actionsToResolve.sort((a, b) => a.priority - b.priority);
-  
+
   console.log('🔢 [NightResolver] Action order by priority:');
   actionsToResolve.forEach((a, idx) => {
     console.log(`  ${idx + 1}. [P${a.priority}] ${a.actorName} → ${a.action} → ${a.targetName}`);
@@ -421,13 +421,13 @@ async function resolveNightActions(game, players) {
           actor.nightAction.results.push(`failed:${target.name} je SerialKiller - nemůže být zablokován`);
           break;
         }
-        
+
         addEffect(target, 'blocked', actor._id, null, {});
         toSave.add(targetId);
-        
+
         // ✅ Track this jail for later feedback
         jailTargets.set(actorId, targetId);
-        
+
         // Don't give success message yet - will do it in PHASE 3
         console.log(`  👮 [P${actionData.priority}] ${actor.name} jailing ${target.name}...`);
         break;
@@ -462,7 +462,7 @@ async function resolveNightActions(game, players) {
           console.log(`  🔍 [P${actionData.priority}] ${actor.name} cannot investigate ${target.name} - role hidden`);
           break;
         }
-        
+
         // Investigator only works on alive players
         if (!target.alive) {
           actor.nightAction.results.push(
@@ -471,15 +471,15 @@ async function resolveNightActions(game, players) {
           console.log(`  🔍 [P${actionData.priority}] ${actor.name} cannot investigate dead player ${target.name}`);
           break;
         }
-        
+
         const trueRole = target.role;
         const allRoles = Object.keys(ROLES);
-        
+
         // ✅ Check if target is marked for cleaning - show completely fake results
         if (hasEffect(target, 'marked_for_cleaning')) {
           // Both roles are fake (random) - MUST exclude true role
           const fakeRoles = allRoles.filter(r => r !== trueRole);
-          
+
           if (fakeRoles.length === 0) {
             // Edge case: only one role exists (shouldn't happen in normal game)
             actor.nightAction.results.push(
@@ -488,27 +488,27 @@ async function resolveNightActions(game, players) {
             console.log(`  🔍 [P${actionData.priority}] ${actor.name} investigated ${target.name}: Unknown / Unknown (FAKE - marked for cleaning, true: ${trueRole}, no fake roles available)`);
             break;
           }
-          
+
           const fakeRole1 = fakeRoles[Math.floor(Math.random() * fakeRoles.length)];
           const otherFakeRoles = fakeRoles.filter(r => r !== fakeRole1);
-          
+
           // If only one fake role available, use it twice to avoid revealing true role
-          const fakeRole2 = otherFakeRoles.length > 0 
+          const fakeRole2 = otherFakeRoles.length > 0
             ? otherFakeRoles[Math.floor(Math.random() * otherFakeRoles.length)]
             : fakeRole1; // Reuse fakeRole1 instead of falling back to 'Citizen'
-          
-          const possibleRoles = Math.random() < 0.5 
+
+          const possibleRoles = Math.random() < 0.5
             ? [fakeRole1, fakeRole2]
             : [fakeRole2, fakeRole1];
-          
+
           actor.nightAction.results.push(
             `investigate:${target.name} = ${possibleRoles.join(' / ')}`
           );
-          
+
           // Store investigation history (even for fake results)
           if (!actor.roleData) actor.roleData = {};
           if (!actor.roleData.investigationHistory) actor.roleData.investigationHistory = {};
-          
+
           actor.roleData.investigationHistory[targetId] = {
             type: 'investigate',
             roles: possibleRoles.join(' / '),
@@ -517,37 +517,37 @@ async function resolveNightActions(game, players) {
           };
           actor.markModified('roleData'); // Mark roleData as modified for Mongoose
           toSave.add(actorId);
-          
+
           console.log(
             `  🔍 [P${actionData.priority}] ${actor.name} investigated ${target.name}: ` +
             `${possibleRoles.join(' / ')} (FAKE - marked for cleaning, true: ${trueRole})`
           );
           break;
         }
-        
+
         // ✅ Check Shady modifier - show true role + evil role
         // ✅ Check Innocent modifier - appear as good or neutral
         // ✅ Check framed effect - show evil role instead of true role
         let possibleRoles;
-        
+
         if (target.modifier === 'Shady') {
           // Shady: show true role + one evil role
           const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
           const evilRole = evilRoles[Math.floor(Math.random() * evilRoles.length)] || 'Cleaner';
-          possibleRoles = Math.random() < 0.5 
+          possibleRoles = Math.random() < 0.5
             ? [trueRole, evilRole]
             : [evilRole, trueRole];
         } else if (target.modifier === 'Innocent') {
           // Innocent: show good/neutral role instead of true role
-          const goodOrNeutralRoles = Object.keys(ROLES).filter(r => 
+          const goodOrNeutralRoles = Object.keys(ROLES).filter(r =>
             ROLES[r].team === 'good' || ROLES[r].team === 'neutral'
           );
           const fakeGoodOrNeutral = goodOrNeutralRoles[Math.floor(Math.random() * goodOrNeutralRoles.length)] || 'Citizen';
           const otherRoles = allRoles.filter(r => r !== trueRole && r !== fakeGoodOrNeutral);
-          const fakeRole = otherRoles.length > 0 
+          const fakeRole = otherRoles.length > 0
             ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
             : 'Citizen';
-          possibleRoles = Math.random() < 0.5 
+          possibleRoles = Math.random() < 0.5
             ? [fakeGoodOrNeutral, fakeRole]
             : [fakeRole, fakeGoodOrNeutral];
         } else if (hasEffect(target, 'framed')) {
@@ -555,31 +555,31 @@ async function resolveNightActions(game, players) {
           const framedEffect = target.effects.find(e => e.type === 'framed');
           const fakeEvilRole = framedEffect?.meta?.fakeEvilRole || 'Cleaner';
           const otherRoles = allRoles.filter(r => r !== trueRole && r !== fakeEvilRole);
-          const fakeRole = otherRoles.length > 0 
+          const fakeRole = otherRoles.length > 0
             ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
             : 'Citizen';
-          possibleRoles = Math.random() < 0.5 
+          possibleRoles = Math.random() < 0.5
             ? [fakeEvilRole, fakeRole]
             : [fakeRole, fakeEvilRole];
         } else {
           // Normal investigation: show true role + one random other role
           const otherRoles = allRoles.filter(r => r !== trueRole);
-          const fakeRole = otherRoles.length > 0 
+          const fakeRole = otherRoles.length > 0
             ? otherRoles[Math.floor(Math.random() * otherRoles.length)]
             : 'Citizen';
-          possibleRoles = Math.random() < 0.5 
+          possibleRoles = Math.random() < 0.5
             ? [trueRole, fakeRole]
             : [fakeRole, trueRole];
         }
-        
+
         actor.nightAction.results.push(
           `investigate:${target.name} = ${possibleRoles.join(' / ')}`
         );
-        
+
         // Store investigation history in roleData (similar to Infected visitedPlayers)
         if (!actor.roleData) actor.roleData = {};
         if (!actor.roleData.investigationHistory) actor.roleData.investigationHistory = {};
-        
+
         actor.roleData.investigationHistory[targetId] = {
           type: 'investigate',
           roles: possibleRoles.join(' / '),
@@ -588,19 +588,19 @@ async function resolveNightActions(game, players) {
         };
         actor.markModified('roleData'); // Mark roleData as modified for Mongoose
         toSave.add(actorId);
-        
+
         const modifiers = [];
         if (target.modifier === 'Shady') modifiers.push('Shady');
         if (target.modifier === 'Innocent') modifiers.push('Innocent');
         if (hasEffect(target, 'framed')) modifiers.push('framed');
-        
+
         console.log(
           `  🔍 [P${actionData.priority}] ${actor.name} investigated ${target.name}: ` +
           `${possibleRoles.join(' / ')} (true: ${trueRole}${modifiers.length > 0 ? ' [' + modifiers.join(', ') + ']' : ''})`
         );
         break;
       }
-      
+
       case 'autopsy': {
         // Coroner can only investigate dead players
         if (target.alive) {
@@ -610,7 +610,7 @@ async function resolveNightActions(game, players) {
           console.log(`  🔬 [P${actionData.priority}] ${actor.name} cannot autopsy alive player ${target.name}`);
           break;
         }
-        
+
         // If role is hidden (cleaned), Coroner gets "Unknown" result
         if (target.roleHidden) {
           actor.nightAction.results.push(
@@ -619,7 +619,7 @@ async function resolveNightActions(game, players) {
           console.log(`  🔬 [P${actionData.priority}] ${actor.name} autopsied ${target.name}: Unknown (role hidden)`);
           break;
         }
-        
+
         // Check if player was framed - show the fake evil role that Investigator saw
         let exactRole = target.role || 'Unknown';
         if (hasEffect(target, 'framed')) {
@@ -629,15 +629,15 @@ async function resolveNightActions(game, players) {
         } else {
           console.log(`  🔬 [P${actionData.priority}] ${actor.name} autopsied ${target.name}: ${exactRole}`);
         }
-        
+
         actor.nightAction.results.push(
           `autopsy:${target.name} = ${exactRole}`
         );
-        
+
         // Store autopsy history in roleData (similar to Infected visitedPlayers)
         if (!actor.roleData) actor.roleData = {};
         if (!actor.roleData.investigationHistory) actor.roleData.investigationHistory = {};
-        
+
         actor.roleData.investigationHistory[targetId] = {
           type: 'autopsy',
           roles: exactRole,
@@ -646,7 +646,7 @@ async function resolveNightActions(game, players) {
         };
         actor.markModified('roleData'); // Mark roleData as modified for Mongoose
         toSave.add(actorId);
-        
+
         break;
       }
 
@@ -659,18 +659,18 @@ async function resolveNightActions(game, players) {
           console.log(`  🦠 [P${actionData.priority}] ${actor.name} cannot infect dead player ${target.name}`);
           break;
         }
-        
+
         if (!hasEffect(target, 'infected')) {
           addEffect(target, 'infected', actor._id, null, {});
           toSave.add(targetId);
           actor.nightAction.results.push(`success:Nakazil ${target.name}`);
           console.log(`  🦠 [P${actionData.priority}] ${actor.name} infected ${target.name}`);
         }
-        
+
         // Sleduj navštívené hráče pro Infected roli
         if (!actor.roleData) actor.roleData = {};
         if (!actor.roleData.visitedPlayers) actor.roleData.visitedPlayers = [];
-        
+
         // Přidej cílového hráče do seznamu navštívených (pokud tam ještě není)
         // Použij bezpečný pattern s optional chaining a filter (stejně jako v victoryEvaluator.js)
         const visitedIds = actor.roleData.visitedPlayers.map(id => id?.toString()).filter(Boolean);
@@ -697,13 +697,13 @@ async function resolveNightActions(game, players) {
         // If target is dead: role will be hidden
         if (!actor.roleData) actor.roleData = {};
         const usesLeft = actor.roleData.usesRemaining || 0;
-        
+
         if (usesLeft > 0) {
           // Decrement uses first, then show message with correct remaining count
           actor.roleData.usesRemaining = usesLeft - 1;
           actor.markModified('roleData'); // Mark roleData as modified for Mongoose
           toSave.add(actorId);
-          
+
           if (target.alive) {
             // Mark alive player - Investigator will see fake investigation results
             addEffect(target, 'marked_for_cleaning', actor._id, null, {});
@@ -729,14 +729,14 @@ async function resolveNightActions(game, players) {
       case 'frame': {
         if (!actor.roleData) actor.roleData = {};
         const usesLeft = actor.roleData.usesRemaining || 0;
-        
+
         if (usesLeft > 0) {
           // Pick a random evil role to show instead of true role
           const evilRoles = Object.keys(ROLES).filter(r => ROLES[r].team === 'evil');
-          const fakeEvilRole = evilRoles.length > 0 
+          const fakeEvilRole = evilRoles.length > 0
             ? evilRoles[Math.floor(Math.random() * evilRoles.length)]
             : 'Cleaner';
-          
+
           // Store the fake evil role in the effect meta
           addEffect(target, 'framed', actor._id, null, { fakeEvilRole });
           toSave.add(targetId);
@@ -762,25 +762,25 @@ async function resolveNightActions(game, players) {
           console.log(`  🕵️ [P${actionData.priority}] ${actor.name} cannot investigate dead player ${target.name}`);
           break;
         }
-        
+
         if (!actor.roleData) actor.roleData = {};
         const usesLeft = actor.roleData.usesRemaining || 0;
-        
+
         if (usesLeft > 0) {
           // Consigliere always sees the true role (not affected by cleaning or framing)
           const exactRole = target.role;
-          
+
           actor.roleData.usesRemaining = usesLeft - 1;
           actor.markModified('roleData'); // Mark roleData as modified for Mongoose (immediately after usesRemaining change)
           toSave.add(actorId);
           actor.nightAction.results.push(
             `consig:${target.name} = ${exactRole} (${actor.roleData.usesRemaining})`
           );
-          
+
           // Store investigation history in roleData (similar to Infected visitedPlayers)
           if (!actor.roleData) actor.roleData = {};
           if (!actor.roleData.investigationHistory) actor.roleData.investigationHistory = {};
-          
+
           actor.roleData.investigationHistory[targetId] = {
             type: 'consig',
             roles: exactRole,
@@ -788,7 +788,7 @@ async function resolveNightActions(game, players) {
             round: game.round
           };
           actor.markModified('roleData'); // Mark roleData as modified for Mongoose (after investigationHistory change)
-          
+
           console.log(`  🕵️ [P${actionData.priority}] ${actor.name} investigated ${target.name}: ${exactRole} (true role)`);
         } else {
           actor.nightAction.results.push('failed:Žádná použití');
@@ -818,11 +818,11 @@ async function resolveNightActions(game, players) {
         // Janitor může cílit na MRTVÉ hráče
         // Musíme implementovat výběr mrtvého hráče v UI
         // Pro teď: cílí na živého, ale vyčistí ho pokud zemře
-        
+
         // Check if Janitor has uses left
         if (!actor.roleData) actor.roleData = {};
         if (!actor.roleData.janitorUses) actor.roleData.janitorUses = 3;
-        
+
         if (actor.roleData.janitorUses > 0) {
           janitorTargets.add(targetId);
           actor.roleData.janitorUses -= 1;
@@ -847,7 +847,7 @@ async function resolveNightActions(game, players) {
 
   // PHASE 3: Complete watch/track and Jailer feedback
   console.log('👁️ [NightResolver] Phase 3: Completing observations and Jailer feedback...');
-  
+
   // ✅ Jailer feedback - check if target tried to leave
   for (const [jailerId, targetId] of jailTargets.entries()) {
     const jailer = idMap.get(jailerId);
@@ -855,7 +855,7 @@ async function resolveNightActions(game, players) {
     if (!jailer || !target) continue;
 
     // Check if target tried to perform an action
-    const targetTriedToAct = actionsToResolve.some(a => 
+    const targetTriedToAct = actionsToResolve.some(a =>
       a.actorId === targetId && !drunkPlayers.has(targetId)
     );
 
@@ -876,26 +876,26 @@ async function resolveNightActions(game, players) {
 
     if (v.action === 'watch') {
       const targetId = v.targetId;
-      
+
       // ✅ Get ONLY visitors who actually made it to the target
       // (not blocked, not drunk, not guarded)
       const successfulVisitors = allVisits
         .filter(visit => {
           // Visit to this target
           if (visit.targetId !== targetId) return false;
-          
+
           const visitorId = visit.actorId;
           const visitor = idMap.get(visitorId);
           if (!visitor) return false;
-          
+
           // Skip self
           if (visitorId === actor._id.toString()) return false;
-          
+
           // Check if visitor was blocked/drunk/guarded
           if (drunkPlayers.has(visitorId)) return false;
           if (blocked.has(visitorId)) return false;
           if (guarded.has(visitorId)) return false;
-          
+
           return true;
         })
         .map(visit => {
@@ -903,7 +903,7 @@ async function resolveNightActions(game, players) {
           return visitor?.name;
         })
         .filter(Boolean);
-      
+
       if (successfulVisitors.length > 0) {
         actor.nightAction.results.push(`watch:U ${target.name}: ${successfulVisitors.join(', ')}`);
         console.log(`    👁️ ${actor.name} watched ${target.name}: ${successfulVisitors.join(', ')}`);
@@ -916,31 +916,31 @@ async function resolveNightActions(game, players) {
     if (v.action === 'track') {
       const targetId = v.targetId;
       const targetPlayer = idMap.get(targetId);
-      
+
       // Check if target was drunk - stayed home
       if (drunkPlayers.has(targetId)) {
         actor.nightAction.results.push(`track:${target.name} nikam nešel`);
         console.log(`    👣 ${actor.name} tracked drunk ${target.name} - stayed home`);
         continue;
       }
-      
+
       // Check if target was blocked - stayed home
       if (blocked.has(targetId)) {
         actor.nightAction.results.push(`track:${target.name} nikam nešel`);
         console.log(`    👣 ${actor.name} tracked blocked ${target.name} - stayed home`);
         continue;
       }
-      
+
       // Check if target was guarded - stayed home (was guarded)
       if (guarded.has(targetId)) {
         actor.nightAction.results.push(`track:${target.name} nikam nešel`);
         console.log(`    👣 ${actor.name} tracked guarded ${target.name} - stayed home`);
         continue;
       }
-      
+
       // Target actually went somewhere - find where
       const targetVisit = allVisits.find(visit => visit.actorId === targetId);
-      
+
       if (targetVisit && targetVisit.targetId) {
         const destination = idMap.get(targetVisit.targetId);
         actor.nightAction.results.push(`track:${target.name} → ${destination?.name || '?'}`);
@@ -960,19 +960,19 @@ async function resolveNightActions(game, players) {
     if (!target) continue;
 
     const homeInvaders = [];
-    
+
     for (const visitorName of visitors) {
       if (visitorName === target.name) continue;
-      
+
       const visitorAction = allVisits.find(v => {
         const actor = idMap.get(v.actorId);
         return actor && actor.name === visitorName && v.targetId === targetId;
       });
-      
+
       if (visitorAction) {
         const actor = idMap.get(visitorAction.actorId);
         const roleData = ROLES[actor.role];
-        
+
         if (roleData?.visitsTarget === true) {
           homeInvaders.push(visitorName);
         }
@@ -983,18 +983,18 @@ async function resolveNightActions(game, players) {
       if (!target.nightAction) {
         target.nightAction = { targetId: null, action: null, results: [] };
       }
-      
+
       const isBlocked = hasEffect(target, 'blocked');
       const onlyJailer = homeInvaders.length === 1 && homeInvaders.some(name => {
         const p = Array.from(idMap.values()).find(pl => pl.name === name);
         return p && p.role === 'Jailer';
       });
-      
+
       if (isBlocked && onlyJailer) {
         console.log(`  🔒 ${target.name} was blocked by Jailer only, skipping visited notification`);
         continue;
       }
-      
+
       // Přidej informaci o návštěvě do výsledků cíle
       target.nightAction.results.push(`visited:${homeInvaders.join(', ')}`);
       console.log(`  👤 ${target.name} was home-invaded by: ${homeInvaders.join(', ')}`);
@@ -1005,18 +1005,18 @@ async function resolveNightActions(game, players) {
   console.log('😱 [NightResolver] Phase 4b: Paranoid modifier...');
   for (const p of players) {
     if (!p.alive || p.modifier !== 'Paranoid') continue;
-    
+
     // 50% chance to see fake visitor
     if (Math.random() < 0.5) {
       const fakeVisitors = getRandomPlayerNames(players, p._id.toString(), 1);
-      
+
       if (!p.nightAction) {
         p.nightAction = { targetId: null, action: null, results: [] };
       }
-      
+
 
       const hasVisited = p.nightAction.results.some(r => r.startsWith('visited:'));
-      
+
       if (hasVisited) {
         // Add to existing visitors
         const visitedIdx = p.nightAction.results.findIndex(r => r.startsWith('visited:'));
@@ -1026,7 +1026,7 @@ async function resolveNightActions(game, players) {
         // Add new visited result
         p.nightAction.results.push(`visited:${fakeVisitors.join(', ')}`);
       }
-      
+
       console.log(`  😱 ${p.name} (Paranoid) sees fake visitor: ${fakeVisitors.join(', ')}`);
     }
   }
@@ -1035,22 +1035,22 @@ async function resolveNightActions(game, players) {
   for (const [targetId, visitors] of visitsByTarget.entries()) {
     const target = idMap.get(targetId);
     if (!target || !target.alive || target.modifier !== 'Insomniac') continue;
-    
+
     // Get all successful visitors (same logic as Lookout)
     const successfulVisitors = allVisits
       .filter(visit => {
         if (visit.targetId !== targetId) return false;
-        
+
         const visitorId = visit.actorId;
         const visitor = idMap.get(visitorId);
         if (!visitor) return false;
-        
+
         if (visitorId === target._id.toString()) return false;
-        
+
         if (drunkPlayers.has(visitorId)) return false;
         if (blocked.has(visitorId)) return false;
         if (guarded.has(visitorId)) return false;
-        
+
         return true;
       })
       .map(visit => {
@@ -1058,19 +1058,19 @@ async function resolveNightActions(game, players) {
         return visitor?.name;
       })
       .filter(Boolean);
-    
+
     if (successfulVisitors.length > 0) {
       if (!target.nightAction) {
         target.nightAction = { targetId: null, action: null, results: [] };
       }
-      
+
       target.nightAction.results.push(`visited:${successfulVisitors.join(', ')}`);
       console.log(`  😵 ${target.name} (Insomniac) heard: ${successfulVisitors.join(', ')}`);
     }
   }
 
 
-    // PHASE 5: Resolve kills and Doctor feedback
+  // PHASE 5: Resolve kills and Doctor feedback
   console.log('💀 [NightResolver] Phase 5: Resolving kills and Doctor feedback...');
 
   // Track which players Doctors protected
@@ -1090,7 +1090,7 @@ async function resolveNightActions(game, players) {
   // Resolve kills
   for (const p of players) {
     if (!p.alive) continue;
-    
+
     const pending = (p.effects || []).filter(e => e.type === 'pendingKill');
     if (!pending.length) continue;
 
@@ -1102,14 +1102,24 @@ async function resolveNightActions(game, players) {
     }
 
     const isProtected = hasEffect(p, 'protected');
-    
+
     if (!isProtected) {
       // Player died
       p.alive = false;
       p.nightAction.results.push('killed:Zavražděn');
       toSave.add(p._id.toString());
       console.log(`  ☠️ ${p.name} was killed`);
-      
+
+      // ✅ Sweetheart death effect
+      if (p.modifier === 'Sweetheart') {
+        const candidates = players.filter(pl => pl.alive && pl.modifier !== 'Drunk' && pl.modifier !== 'Sweetheart' && pl._id.toString() !== p._id.toString());
+        if (candidates.length > 0) {
+          const victim = candidates[Math.floor(Math.random() * candidates.length)];
+          victim.modifier = 'Drunk';
+          console.log(`  🍺 Sweetheart ${p.name} died... ${victim.name} became Drunk!`);
+        }
+      }
+
       // Check if mayor died - remove mayor status
       if (game.mayor && game.mayor.toString() === p._id.toString()) {
         p.voteWeight = 1; // Remove mayor vote weight
@@ -1134,12 +1144,12 @@ async function resolveNightActions(game, players) {
   for (const control of witchControls) {
     const puppet = idMap.get(control.puppetId);
     if (!puppet || !puppet.alive) continue;
-    
+
     // Puppet should get normal results for their action on the controlled target
     // Results are already generated in Phase 2, but we need to ensure puppet sees them correctly
     // The puppet's results should show as if they chose the target themselves
     // (Results are already in puppet.nightAction.results from Phase 2)
-    
+
     console.log(`  🧙‍♀️ ${control.witchName} controlled ${control.puppetName} - puppet got normal results`);
   }
 
@@ -1151,8 +1161,8 @@ async function resolveNightActions(game, players) {
     if (!doctor || !target) continue;
 
     // Check if target was attacked
-    const targetWasAttacked = !target.alive || 
-      (target.nightAction?.results || []).some(r => 
+    const targetWasAttacked = !target.alive ||
+      (target.nightAction?.results || []).some(r =>
         r.startsWith('attacked:') || r.startsWith('healed:')
       );
 
@@ -1171,14 +1181,14 @@ async function resolveNightActions(game, players) {
   for (const [hunterId, targetId] of hunterKills.entries()) {
     const hunter = idMap.get(hunterId);
     const target = idMap.get(targetId);
-    
+
     if (!hunter || !hunter.alive) continue; // Hunter already dead
     if (!target) continue;
-    
+
     // Check if target died and was innocent (good)
     if (!target.alive) {
       const targetTeam = ROLES[target.role]?.team;
-      
+
       // If killed good player, Hunter dies
       if (targetTeam === 'good') {
         hunter.alive = false;
@@ -1201,17 +1211,17 @@ async function resolveNightActions(game, players) {
   for (const playerId of janitorTargets) {
     const player = idMap.get(playerId);
     if (!player || player.alive) continue; // Only clean if dead
-    
+
     // Hide role from everyone
     player.roleHidden = true;
     toSave.add(playerId);
     console.log(`  🧼 ${player.name}'s role has been cleaned (hidden)`);
   }
-  
+
   // Also clean roles for players who were marked_for_cleaning while alive and died this night
   for (const player of players) {
     if (!player || player.alive) continue; // Only process dead players
-    
+
     if (hasEffect(player, 'marked_for_cleaning')) {
       // Hide role from everyone
       player.roleHidden = true;
@@ -1227,16 +1237,16 @@ async function resolveNightActions(game, players) {
   console.log('📝 [NightResolver] Phase 6: Adding default messages...');
   for (const p of players) {
     if (!p.alive) continue;
-    
+
     if (!p.nightAction) {
       p.nightAction = { targetId: null, action: null, results: [] };
     }
-    
+
     // Skip default message for Witch - she already has her success message
     if (p.role === 'Witch' && p.nightAction.results.length > 0) {
       continue;
     }
-    
+
     if (p.nightAction.results.length === 0) {
       p.nightAction.results.push('safe:V noci se ti nic nestalo');
     }

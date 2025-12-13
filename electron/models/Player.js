@@ -33,13 +33,13 @@ const PlayerSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['Doctor', 'Jailer', 'Investigator', 'Coroner', 'Lookout', 'Guardian', 'Tracker',
-           'Hunter', 'Citizen', 'Cleaner', 'Accuser', 'Consigliere',
-           'SerialKiller', 'Infected', 'Jester', 'Witch', null],
+      'Hunter', 'Citizen', 'Cleaner', 'Accuser', 'Consigliere',
+      'SerialKiller', 'Infected', 'Jester', 'Witch', null],
     default: null
   },
   modifier: {
     type: String,
-    enum: ['Drunk', 'Shady', 'Paranoid', 'Insomniac', 'Amnesiac', 'Innocent', null],
+    enum: ['Drunk', 'Shady', 'Paranoid', 'Insomniac', 'Innocent', 'Sweetheart', null],
     default: null
   },
   effects: { type: [EffectSchema], default: [] },
@@ -72,8 +72,8 @@ const PlayerSchema = new mongoose.Schema({
     action: {
       type: String,
       enum: ['protect', 'block', 'investigate', 'autopsy', 'watch', 'guard', 'track',
-             'kill', 'clean_kill', 'clean_role', 'janitor_clean', 'frame',
-             'hunter_kill', 'consig_investigate', 'infect', 'witch_control', null]
+        'kill', 'clean_kill', 'clean_role', 'janitor_clean', 'frame',
+        'hunter_kill', 'consig_investigate', 'infect', 'witch_control', null]
     },
     puppetId: {
       type: mongoose.Schema.Types.ObjectId,

@@ -117,6 +117,7 @@ export const ROLE_INFO = {
     actionVerb: 'Žádná'
   },
 
+
   // ==================
   // MAFIA (Evil)
   // ==================
@@ -222,7 +223,7 @@ export const ROLE_INFO = {
       description: 'Nakazi jednoho hráče'
     }
   },
-  
+
   'Jester': {
     emoji: '🎭',
     team: 'neutral',
@@ -273,6 +274,11 @@ export const MODIFIER_INFO = {
     emoji: '😵',
     label: 'Nespavec',
     description: 'Vidí všechny, kdo ho navštíví'
+  },
+  'Sweetheart': {
+    emoji: '💖',
+    label: 'Miláček',
+    description: 'Když zemřeš, náhodný hráč se stane opilcem.'
   }
 };
 
