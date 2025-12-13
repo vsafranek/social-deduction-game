@@ -7,6 +7,7 @@ import GameArena from './GameArena/GameArena';
 import GameStartLoadingScreen from './GameArena/GameStartLoadingScreen';
 import DevMultiPlayerTool from './DevMultiPlayerTool/DevMultiPlayerTool';
 import NightResultsStories from '../player/components/NightResultsStories/NightResultsStories';
+import ConfirmModal from './components/ConfirmModal/ConfirmModal';
 import './ModeratorView.css';
 
 const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
@@ -41,6 +42,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [showTestStories, setShowTestStories] = useState(false);
   const [showGameStartLoading, setShowGameStartLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const previousPhaseRef = useRef(null);
   const gameReadyNotifiedRef = useRef(false);
 
@@ -173,8 +175,15 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
     }
   };
 
-  // Handle return to menu - end lobby (kick all players) and delete game from database
+  // Handle return to menu - show confirmation modal first
+  const handleReturnToMenuClick = () => {
+    setShowConfirmModal(true);
+  };
+
+  // Actually return to menu - end lobby (kick all players) and delete game from database
   const handleReturnToMenu = async () => {
+    setShowConfirmModal(false);
+    
     if (gameId) {
       try {
         console.log('🚪 Ending lobby and kicking all players...');
@@ -273,7 +282,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
           onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
           onDevToggle={setShowDevPanel}
           onTestStories={IS_DEVELOPMENT ? () => setShowTestStories(true) : undefined}
-          onReturnToMenu={handleReturnToMenu}
+          onReturnToMenu={handleReturnToMenuClick}
           onSettings={onSettings}
         />
       )}
@@ -313,6 +322,19 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
         <NightResultsStories 
           results={TEST_STORIES_DATA}
           onComplete={() => setShowTestStories(false)}
+        />
+      )}
+
+      {/* Confirmation Modal for Return to Menu */}
+      {showConfirmModal && (
+        <ConfirmModal
+          title="End Lobby?"
+          message="All players will be disconnected and the lobby will be deleted."
+          confirmText="End Lobby"
+          cancelText="Cancel"
+          onConfirm={handleReturnToMenu}
+          onCancel={() => setShowConfirmModal(false)}
+          isDanger={true}
         />
       )}
     </div>

@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { gameApi } from '../../api/gameApi';
+import ConfirmModal from '../components/ConfirmModal/ConfirmModal';
 import './PlayersList.css';
 
 function PlayersList({
@@ -7,20 +9,38 @@ function PlayersList({
   gameId,
   onRefresh
 }) {
-  const handleKick = async (playerId, playerName) => {
-    if (!window.confirm(`Do you really want to kick player "${playerName}"?`)) {
+  const [showKickModal, setShowKickModal] = useState(false);
+  const [playerToKick, setPlayerToKick] = useState(null);
+
+  const handleKickClick = (playerId, playerName) => {
+    setPlayerToKick({ id: playerId, name: playerName });
+    setShowKickModal(true);
+  };
+
+  const handleKickConfirm = async () => {
+    if (!playerToKick || !gameId) {
+      setShowKickModal(false);
       return;
     }
 
     try {
-      await gameApi.kickPlayer(gameId, playerId);
+      await gameApi.kickPlayer(gameId, playerToKick.id);
       if (onRefresh) {
         onRefresh();
       }
+      setShowKickModal(false);
+      setPlayerToKick(null);
     } catch (error) {
       console.error('Error kicking player:', error);
-      alert(error.message || 'Failed to kick player');
+      alert(error.message || 'Nepodařilo se vykopnout hráče');
+      setShowKickModal(false);
+      setPlayerToKick(null);
     }
+  };
+
+  const handleKickCancel = () => {
+    setShowKickModal(false);
+    setPlayerToKick(null);
   };
 
   // Get details version path of avatar
@@ -133,8 +153,8 @@ function PlayersList({
               </div>
               <button
                 className="btn-kick-player"
-                onClick={() => handleKick(p._id, p.name)}
-                title="Kick player"
+                onClick={() => handleKickClick(p._id, p.name)}
+                title="Vykopnout hráče"
               >
                 ❌
               </button>
@@ -142,6 +162,20 @@ function PlayersList({
           );
           })}
         </div>
+      )}
+
+      {/* Confirmation Modal for Kicking Player - rendered via Portal to avoid overflow issues */}
+      {showKickModal && playerToKick && createPortal(
+        <ConfirmModal
+          title="Kick Player?"
+          message={`Kick "${playerToKick.name}" from the lobby?`}
+          confirmText="Kick"
+          cancelText="Cancel"
+          onConfirm={handleKickConfirm}
+          onCancel={handleKickCancel}
+          isDanger={true}
+        />,
+        document.body
       )}
     </div>
   );
