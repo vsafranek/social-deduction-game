@@ -352,6 +352,14 @@ router.get('/:gameId/state', async (req, res) => {
       roleData: p.roleData || {} // Přidej roleData pro sledování navštívených hráčů (Infected)
     }));
 
+    // Convert roleConfiguration Map to object for JSON response
+    let roleConfigObj = {};
+    if (game.roleConfiguration instanceof Map) {
+      roleConfigObj = Object.fromEntries(game.roleConfiguration);
+    } else if (game.roleConfiguration) {
+      roleConfigObj = game.roleConfiguration;
+    }
+
     res.json({
       game: {
         _id: game._id,
@@ -362,7 +370,8 @@ router.get('/:gameId/state', async (req, res) => {
         timers: game.timers,
         timerState: game.timerState,
         winner: game.winner,
-        winnerPlayerIds: game.winnerPlayerIds || []
+        winnerPlayerIds: game.winnerPlayerIds || [],
+        roleConfiguration: roleConfigObj
       },
       players: publicPlayers,
       logs: logs.map(l => ({
@@ -456,7 +465,7 @@ router.post('/:gameId/vote', async (req, res) => {
 router.post('/:gameId/start-config', async (req, res) => {
   try {
     const { gameId } = req.params;
-    const { assignments, modifiers, timers } = req.body || {};
+    const { assignments, modifiers, timers, roleConfiguration } = req.body || {};
 
     if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
 
@@ -613,6 +622,22 @@ router.post('/:gameId/start-config', async (req, res) => {
         }
 
         await p.save();
+      }
+    }
+
+    // Save roleConfiguration if provided
+    if (roleConfiguration) {
+      // Convert object to Map for Mongoose
+      if (game.roleConfiguration instanceof Map) {
+        // Clear existing map
+        game.roleConfiguration.clear();
+        // Set new values
+        Object.entries(roleConfiguration).forEach(([role, count]) => {
+          game.roleConfiguration.set(role, count);
+        });
+      } else {
+        // If not a Map, convert to Map
+        game.roleConfiguration = new Map(Object.entries(roleConfiguration));
       }
     }
 

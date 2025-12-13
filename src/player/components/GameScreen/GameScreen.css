@@ -146,6 +146,35 @@
   gap: 8px;
 }
 
+.role-pool-button {
+  background: linear-gradient(180deg, rgba(45, 38, 54, 0.8) 0%, rgba(30, 25, 35, 0.8) 100%);
+  border: 2px solid #4a4e69;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s ease;
+  padding: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.role-pool-button:hover {
+  background: linear-gradient(180deg, rgba(197, 160, 89, 0.2) 0%, rgba(255, 215, 0, 0.15) 100%);
+  border-color: #c5a059;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.4);
+  transform: translateY(-1px);
+}
+
+.role-pool-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(197, 160, 89, 0.3);
+}
+
 .alive-indicators {
   display: flex;
   gap: 4px;

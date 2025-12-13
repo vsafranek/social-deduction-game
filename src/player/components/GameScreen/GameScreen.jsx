@@ -7,6 +7,7 @@ import NightResultsStories from '../NightResultsStories/NightResultsStories';
 import NightResults from '../NightResults/NightResults';
 import VotingModal from '../VotingModal/VotingModal';
 import AvatarModal from '../AvatarSelector/AvatarModal';
+import RolePoolModal from '../RolePoolModal/RolePoolModal';
 import { gameApi } from '../../../api/gameApi';
 import './GameScreen.css';
 
@@ -27,6 +28,7 @@ function GameScreen({
   const [previousPhase, setPreviousPhase] = useState(null);
   const [showVotingModal, setShowVotingModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showRolePoolModal, setShowRolePoolModal] = useState(false);
   const [availableAvatars, setAvailableAvatars] = useState([]);
   const [modalKey, setModalKey] = useState(0);
 
@@ -213,6 +215,13 @@ function GameScreen({
         </div>
 
         <div className="header-right">
+          <button 
+            className="role-pool-button"
+            onClick={() => setShowRolePoolModal(true)}
+            title="View Role Pool"
+          >
+            📋
+          </button>
           <div className="alive-indicators">
             {gameState.players.map(p => (
               <span
@@ -282,6 +291,14 @@ function GameScreen({
           currentAvatar={currentPlayer.avatar}
           onSelect={handleAvatarSelect}
           onClose={() => setShowAvatarModal(false)}
+        />
+      )}
+
+      {/* Role Pool Modal */}
+      {showRolePoolModal && (
+        <RolePoolModal
+          gameState={gameState}
+          onClose={() => setShowRolePoolModal(false)}
         />
       )}
 

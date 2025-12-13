@@ -43,6 +43,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
   const [showTestStories, setShowTestStories] = useState(false);
   const [showGameStartLoading, setShowGameStartLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [gameReadyForLoadingScreen, setGameReadyForLoadingScreen] = useState(false);
   const previousPhaseRef = useRef(null);
   const gameReadyNotifiedRef = useRef(false);
 
@@ -64,6 +65,10 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
       const currentPhase = gameState.game.phase;
       const previousPhase = previousPhaseRef.current;
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:62',message:'Phase change tracking',data:{currentPhase,previousPhase,showGameStartLoading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+
       // Initialize previousPhase on first load
       if (previousPhase === null) {
         previousPhaseRef.current = currentPhase;
@@ -72,7 +77,12 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
 
       // If transitioning from lobby to night/day, show loading screen
       if (previousPhase === 'lobby' && (currentPhase === 'night' || currentPhase === 'day')) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:74',message:'Setting showGameStartLoading to true',data:{previousPhase,currentPhase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         setShowGameStartLoading(true);
+        // Game is ready when phase changes from lobby to night/day
+        setGameReadyForLoadingScreen(true);
       }
 
       previousPhaseRef.current = currentPhase;
@@ -142,13 +152,25 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
     await fetchGameState();
   };
 
-  const startGame = async (finalRoleConfig, modifierConfig, timers) => {
+  const startGame = async (finalRoleConfig, modifierConfig, timers, roleConfiguration) => {
     try {
-      await gameApi.startGameWithConfig(gameId, finalRoleConfig, modifierConfig, timers);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:145',message:'startGame called',data:{gameId,hasFinalRoleConfig:!!finalRoleConfig,hasRoleConfiguration:!!roleConfiguration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
+      await gameApi.startGameWithConfig(gameId, finalRoleConfig, modifierConfig, timers, roleConfiguration);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:148',message:'startGameWithConfig completed, fetching state',data:{gameId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
       await fetchGameState();
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:149',message:'fetchGameState completed after startGame',data:{gameId,currentPhase:gameState?.game?.phase,hasRoleConfig:!!gameState?.game?.roleConfiguration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
       return true;
     } catch (error) {
       console.error('Chyba při startu hry:', error);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:151',message:'startGame error',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
       alert(error.message || 'Nepodařilo se spustit hru');
       return false;
     }
@@ -265,10 +287,20 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
 
   // Show game start loading screen
   if (showGameStartLoading) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:267',message:'Rendering GameStartLoadingScreen',data:{showGameStartLoading,gameReadyForLoadingScreen,currentPhase:gameState?.game?.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     return (
       <GameStartLoadingScreen 
         gameName={gameState?.game?.name}
-        onComplete={() => setShowGameStartLoading(false)}
+        onComplete={() => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:271',message:'GameStartLoadingScreen onComplete called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          setShowGameStartLoading(false);
+          setGameReadyForLoadingScreen(false);
+        }}
+        onGameReady={gameReadyForLoadingScreen}
       />
     );
   }

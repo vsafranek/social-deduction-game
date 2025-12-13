@@ -216,12 +216,41 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
       }
     }
 
-    return { finalRoles, modifierConfig };
+    // Build roleConfiguration map (roleName -> count) for display in role pool modal
+    // Show configured roles (what's allowed in the pool), not what was actually assigned
+    // Filter out roles from teams with limit 0 (they can't be in the game)
+    const roleConfiguration = {};
+    Object.entries(roleCount).forEach(([role, count]) => {
+      if (randomPoolRoles[role] && count > 0) {
+        const team = availableRoles[role]?.team || 'good';
+        const teamLimit = teamLimits[team];
+        // Only include if team limit is > 0 (or null for unlimited)
+        // teamLimit === 0 means no roles from this team can be in the game
+        if (teamLimit === null || teamLimit > 0) {
+          roleConfiguration[role] = count;
+        }
+      }
+    });
+    // Add guaranteed roles (they're always in the pool, but only if team limit allows)
+    guaranteedRoles.forEach(role => {
+      const team = availableRoles[role]?.team || 'good';
+      const teamLimit = teamLimits[team];
+      // Only include guaranteed roles if team limit allows
+      if (teamLimit === null || teamLimit > 0) {
+        roleConfiguration[role] = (roleConfiguration[role] || 0) + 1;
+      }
+    });
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LobbyLayout.jsx:232',message:'Built roleConfiguration',data:{teamLimits,roleConfiguration,guaranteedRoles},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+    // #endregion
+
+    return { finalRoles, modifierConfig, roleConfiguration };
   };
 
   const onClickStartGame = async () => {
     const built = buildFinalRoleDistribution();
-    const success = await onStartGame(built.finalRoles, built.modifierConfig, timers);
+    const success = await onStartGame(built.finalRoles, built.modifierConfig, timers, built.roleConfiguration);
     if (success) {
       setTimersDirty(false);
     }

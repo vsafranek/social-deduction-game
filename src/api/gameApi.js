@@ -59,14 +59,15 @@ export const gameApi = {
   /**
    * Start game with role and modifier configuration
    */
-  async startGameWithConfig(gameId, finalRoleConfig, modifierConfig, timers) {
+  async startGameWithConfig(gameId, finalRoleConfig, modifierConfig, timers, roleConfiguration) {
     const res = await fetch(`${API_BASE}/game/${gameId}/start-config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         assignments: finalRoleConfig,
         modifiers: modifierConfig,
-        timers
+        timers,
+        roleConfiguration
       })
     });
     
