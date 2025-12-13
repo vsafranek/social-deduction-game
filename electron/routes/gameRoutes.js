@@ -203,6 +203,32 @@ router.post('/join', async (req, res) => {
   }
 });
 
+// Delete entire game (moderator action - deletes game, all players, and logs)
+// IMPORTANT: This route must come before GET routes with similar patterns
+router.delete('/:gameId', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
+
+    const game = await Game.findById(gameId);
+    if (!game) {
+      // Idempotent: if game doesn't exist, return success
+      return res.json({ success: true, message: 'Game already deleted or not found' });
+    }
+
+    // Delete all related data
+    await Player.deleteMany({ gameId });
+    await GameLog.deleteMany({ gameId });
+    await Game.findByIdAndDelete(gameId);
+
+    console.log(`✅ Game ${gameId} deleted from database (including players and logs)`);
+    res.json({ success: true, message: 'Game deleted successfully' });
+  } catch (e) {
+    console.error('delete game error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Kick/remove player from game (moderator action - lobby only)
 // IMPORTANT: This route must come before GET routes with similar patterns
 router.delete('/:gameId/player/:playerId', async (req, res) => {

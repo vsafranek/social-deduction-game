@@ -1,8 +1,19 @@
 const mongoose = require('mongoose');
 
+// Load environment variables based on NODE_ENV
+const nodeEnv = process.env.NODE_ENV || 'development';
+if (nodeEnv === 'test') {
+  require('dotenv').config({ path: '.env.test' });
+} else if (nodeEnv === 'development') {
+  require('dotenv').config({ path: '.env.development' });
+} else {
+  // Production - load .env
+  require('dotenv').config({ path: '.env' });
+}
+
 const connectDB = async () => {
   try {
-    // Use local MongoDB or MongoDB Atlas
+    // Use environment variable or fallback to local MongoDB
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/social-deduction-game';
     
     console.log('🔌 Attempting MongoDB connection to:', mongoURI);

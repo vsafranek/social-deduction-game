@@ -9,17 +9,18 @@
     "electron": "wait-on http://localhost:5173 && electron .",
     "electron:dev": "cross-env NODE_ENV=development wait-on http://localhost:5173 && electron .",
     "dev": "cross-env NODE_ENV=development concurrently \"npm:vite\" \"npm:electron:dev\"",
-    "start": "concurrently \"npm:vite\" \"npm:electron\"",
+    "start": "cross-env NODE_ENV=production concurrently \"npm:vite\" \"npm:electron\"",
     "build": "vite build",
     "package": "npm run build && electron-builder",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test": "cross-env NODE_ENV=test jest",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage"
   },
   "dependencies": {
     "@ngrok/ngrok": "^1.5.2",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.5",
     "mongoose": "^8.19.2",

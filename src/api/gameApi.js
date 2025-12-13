@@ -88,6 +88,28 @@ export const gameApi = {
     return res.json();
   },
 
+  /**
+   * Delete entire game from database (including all players and logs)
+   */
+  async deleteGame(gameId) {
+    try {
+      const res = await fetch(`${API_BASE}/game/${gameId}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ deleteGame error:', error);
+      throw error;
+    }
+  },
+
   // ==================
   // NIGHT PHASE
   // ==================

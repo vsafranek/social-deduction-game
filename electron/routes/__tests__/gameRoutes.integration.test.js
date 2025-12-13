@@ -1,6 +1,9 @@
 // electron/routes/__tests__/gameRoutes.integration.test.js
 // Integration tests using Jest and Mongoose only (no supertest, no mongodb-memory-server)
 
+// Load environment variables for tests
+require('dotenv').config({ path: '.env.test' });
+
 const mongoose = require('mongoose');
 const Game = require('../../models/Game');
 const Player = require('../../models/Player');
@@ -11,8 +14,9 @@ jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'error').mockImplementation(() => {});
 
 describe('GameRoutes Integration Tests', () => {
-  // Use test database if available, otherwise skip tests
-  const TEST_DB_URI = process.env.TEST_DB_URI || 'mongodb://localhost:27017/game-app-test';
+  // Use test database from .env.test (loaded via database.js when NODE_ENV=test)
+  // Fallback to default test URI if MONGODB_URI not set
+  const TEST_DB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/social-deduction-game-test';
   let isConnected = false;
 
   beforeAll(async () => {

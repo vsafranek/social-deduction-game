@@ -173,6 +173,45 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
     }
   };
 
+  // Handle return to menu - delete game from database first
+  const handleReturnToMenu = async () => {
+    if (gameId) {
+      try {
+        console.log('🗑️ Deleting game from database before returning to menu...');
+        await gameApi.deleteGame(gameId);
+        console.log('✅ Game deleted successfully');
+      } catch (error) {
+        // Log error but don't block return to menu
+        console.error('⚠️ Failed to delete game from database:', error);
+      }
+    }
+    
+    // Always call onReturnToMenu even if delete failed
+    if (onReturnToMenu) {
+      onReturnToMenu();
+    }
+  };
+
+  // Cleanup: delete game when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup function runs when component unmounts
+      if (gameId) {
+        // Use async IIFE to handle async cleanup
+        (async () => {
+          try {
+            console.log('🗑️ Cleaning up: deleting game from database on unmount...');
+            await gameApi.deleteGame(gameId);
+            console.log('✅ Game deleted successfully on unmount');
+          } catch (error) {
+            // Log error but don't throw (cleanup functions shouldn't throw)
+            console.error('⚠️ Failed to delete game on unmount:', error);
+          }
+        })();
+      }
+    };
+  }, [gameId]);
+
   if (error) {
     return (
       <div className="error-container">
@@ -227,7 +266,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
           onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
           onDevToggle={setShowDevPanel}
           onTestStories={IS_DEVELOPMENT ? () => setShowTestStories(true) : undefined}
-          onReturnToMenu={onReturnToMenu}
+          onReturnToMenu={handleReturnToMenu}
           onSettings={onSettings}
         />
       )}
