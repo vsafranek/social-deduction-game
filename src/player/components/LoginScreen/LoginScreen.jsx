@@ -37,7 +37,7 @@ function LoginScreen({
               onKeyPress={handleKeyPress}
               disabled={loading}
               maxLength="4"
-              autoFocus
+              autoFocus={!roomCode}
             />
           </div>
 
@@ -51,6 +51,7 @@ function LoginScreen({
               onChange={(e) => onPlayerNameChange(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={loading}
+              autoFocus={!!roomCode}
             />
           </div>
 

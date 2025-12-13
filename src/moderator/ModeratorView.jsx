@@ -173,16 +173,23 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
     }
   };
 
-  // Handle return to menu - delete game from database first
+  // Handle return to menu - end lobby (kick all players) and delete game from database
   const handleReturnToMenu = async () => {
     if (gameId) {
       try {
-        console.log('🗑️ Deleting game from database before returning to menu...');
-        await gameApi.deleteGame(gameId);
-        console.log('✅ Game deleted successfully');
+        console.log('🚪 Ending lobby and kicking all players...');
+        const result = await gameApi.endLobby(gameId);
+        console.log(`✅ Lobby ended: ${result.playersKicked || 0} players kicked, game deleted`);
       } catch (error) {
         // Log error but don't block return to menu
-        console.error('⚠️ Failed to delete game from database:', error);
+        console.error('⚠️ Failed to end lobby:', error);
+        // Fallback to regular delete if end-lobby fails
+        try {
+          await gameApi.deleteGame(gameId);
+          console.log('✅ Game deleted (fallback)');
+        } catch (deleteError) {
+          console.error('⚠️ Failed to delete game (fallback):', deleteError);
+        }
       }
     }
     

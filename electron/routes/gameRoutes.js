@@ -176,15 +176,42 @@ async function assignUniqueAvatar(gameId, maxRetries = 5) {
 router.post('/join', async (req, res) => {
   try {
     const { roomCode, name, sessionId } = req.body || {};
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:177',message:'Join request received',data:{roomCode,name,sessionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     const game = await Game.findOne({ roomCode });
     if (!game) return res.status(404).json({ error: 'Game not found' });
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:182',message:'Searching for existing player',data:{gameId:game._id.toString(),sessionId,searchQuery:'gameId+sessionId'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     let player = await Player.findOne({ gameId: game._id, sessionId });
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:190',message:'Player search result',data:{playerFound:!!player,playerId:player?._id?.toString(),playerGameId:player?.gameId?.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     if (!player) {
       // Nový hráč - přiřaď unikátní náhodný avatar
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:195',message:'Creating new player',data:{gameId:game._id.toString(),sessionId,name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       const avatar = await assignUniqueAvatar(game._id);
       player = new Player({ gameId: game._id, sessionId, name, role: null, avatar });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:200',message:'Before player.save()',data:{playerId:player._id?.toString(),sessionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       await player.save();
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:203',message:'Player saved successfully',data:{playerId:player._id.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       await GameLog.create({ gameId: game._id, message: `${name} joined.` });
     } else {
       // Existující hráč - pokud nemá avatar, přiřaď mu náhodný volný
@@ -198,7 +225,48 @@ router.post('/join', async (req, res) => {
 
     res.json({ success: true, gameId: game._id, playerId: player._id });
   } catch (e) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:230',message:'Join error caught',data:{errorMessage:e.message,errorCode:e.code,isDuplicateKey:e.code===11000},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     console.error('join error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// End lobby - kick all players and delete game (moderator action)
+// IMPORTANT: This route must come before GET routes with similar patterns
+router.post('/:gameId/end-lobby', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    if (!ensureObjectId(gameId)) return res.status(400).json({ error: 'Invalid game id' });
+
+    const game = await Game.findById(gameId);
+    if (!game) {
+      // Idempotent: if game doesn't exist, return success
+      return res.json({ success: true, message: 'Game already deleted or not found', playersKicked: 0 });
+    }
+
+    // Find all players in the game
+    const players = await Player.find({ gameId });
+    const playerCount = players.length;
+
+    // Delete all players (kick them from lobby)
+    await Player.deleteMany({ gameId });
+    
+    // Delete all logs
+    await GameLog.deleteMany({ gameId });
+    
+    // Delete the game
+    await Game.findByIdAndDelete(gameId);
+
+    console.log(`✅ Lobby ended: ${playerCount} players kicked, game ${gameId} deleted`);
+    res.json({ 
+      success: true, 
+      message: 'Lobby ended successfully', 
+      playersKicked: playerCount 
+    });
+  } catch (e) {
+    console.error('end-lobby error:', e);
     res.status(500).json({ error: e.message });
   }
 });

@@ -89,6 +89,28 @@ export const gameApi = {
   },
 
   /**
+   * End lobby - kick all players and delete game
+   */
+  async endLobby(gameId) {
+    try {
+      const res = await fetch(`${API_BASE}/game/${gameId}/end-lobby`, {
+        method: 'POST'
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ endLobby error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Delete entire game from database (including all players and logs)
    */
   async deleteGame(gameId) {

@@ -66,10 +66,14 @@ function PlayerView() {
     }
   }, []);
 
-  // Automatické přihlášení z URL
+  // Automatické přihlášení z URL - pouze v Electronu (pro testování)
   useEffect(() => {
-    if (playerName && roomCode && step === 'login' && !loading) {
-      console.log('🤖 Auto-login z URL');
+    // Check if running in Electron
+    const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
+    
+    // Auto-login only in Electron (for testing with multiple windows)
+    if (isElectron && playerName && roomCode && step === 'login' && !loading) {
+      console.log('🤖 Auto-login z URL (Electron test mode)');
       console.log('  SessionId:', sessionId);
       performLogin(playerName, roomCode);
     }
@@ -84,14 +88,68 @@ function PlayerView() {
     const interval = setInterval(async () => {
       try {
         const data = await gameApi.getGameState(gameId);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PlayerView.jsx:91',message:'Game state received',data:{gameId,playerId,playersCount:data?.players?.length,playerIds:data?.players?.map(p=>p._id?.toString())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
+        // Check if current player still exists in the game
+        const currentPlayerExists = data?.players?.some(p => p._id?.toString() === playerId?.toString());
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PlayerView.jsx:95',message:'Player existence check',data:{currentPlayerExists,playerId,roomCode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
+        if (!currentPlayerExists && data?.game) {
+          // Player was kicked from the game
+          console.log('🚪 Player was kicked from the game, returning to login screen');
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PlayerView.jsx:103',message:'Player kicked detected',data:{playerId,currentRoomCode:roomCode,gameRoomCode:data?.game?.roomCode,gameId,preservingRoomCode:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          // Preserve roomCode when returning to login screen
+          // Get roomCode from game state if available, otherwise keep current roomCode
+          const preservedRoomCode = data?.game?.roomCode || roomCode;
+          if (preservedRoomCode && preservedRoomCode !== roomCode) {
+            setRoomCode(preservedRoomCode);
+          }
+          setStep('login');
+          setGameId(null);
+          setPlayerId(null);
+          setGameState(null);
+          setError('Byl jsi vyhozen z lobby. Můžeš se připojit znovu.');
+          clearInterval(interval);
+          return;
+        }
+        
         setGameState(data);
       } catch (err) {
         console.error('❌ Error polling game state:', err);
+        // If game not found (404) or other error, game was likely deleted
+        // Reset to login screen
+        if (err.message?.includes('404') || err.message?.includes('not found') || err.message?.includes('Game not found')) {
+          console.log('🚪 Game was deleted, returning to login screen');
+          setStep('login');
+          setGameId(null);
+          setPlayerId(null);
+          setGameState(null);
+          setError('Hra byla ukončena moderátorem. Prosím připoj se znovu.');
+          clearInterval(interval);
+        }
       }
     }, 2000);
 
     // Initial fetch
-    fetchGameState();
+    fetchGameState().catch((err) => {
+      // Handle initial fetch error
+      if (err.message?.includes('404') || err.message?.includes('not found') || err.message?.includes('Game not found')) {
+        console.log('🚪 Game was deleted, returning to login screen');
+        setStep('login');
+        setGameId(null);
+        setPlayerId(null);
+        setGameState(null);
+        setError('Hra byla ukončena moderátorem. Prosím připoj se znovu.');
+      }
+    });
 
     return () => clearInterval(interval);
   }, [gameId, playerId]);
@@ -145,9 +203,50 @@ function PlayerView() {
     
     try {
       const data = await gameApi.getGameState(gameId);
+      
+      // Check if current player still exists in the game
+      if (playerId && data?.players) {
+        const currentPlayerExists = data.players.some(p => p._id?.toString() === playerId?.toString());
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PlayerView.jsx:150',message:'fetchGameState player check',data:{currentPlayerExists,playerId,roomCode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
+        if (!currentPlayerExists) {
+          // Player was kicked from the game
+          console.log('🚪 Player was kicked from the game, returning to login screen');
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PlayerView.jsx:163',message:'fetchGameState player kicked',data:{playerId,currentRoomCode:roomCode,gameRoomCode:data?.game?.roomCode,preservingRoomCode:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          // Preserve roomCode when returning to login screen
+          // Get roomCode from game state if available, otherwise keep current roomCode
+          const preservedRoomCode = data?.game?.roomCode || roomCode;
+          if (preservedRoomCode && preservedRoomCode !== roomCode) {
+            setRoomCode(preservedRoomCode);
+          }
+          setStep('login');
+          setGameId(null);
+          setPlayerId(null);
+          setGameState(null);
+          setError('Byl jsi vyhozen z lobby. Můžeš se připojit znovu.');
+          return;
+        }
+      }
+      
       setGameState(data);
     } catch (error) {
       console.error('Chyba při načítání stavu:', error);
+      // If game not found (404), game was likely deleted - return to login
+      if (error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('Game not found')) {
+        console.log('🚪 Game was deleted, returning to login screen');
+        setStep('login');
+        setGameId(null);
+        setPlayerId(null);
+        setGameState(null);
+        setError('Hra byla ukončena moderátorem. Prosím připoj se znovu.');
+      }
+      // Re-throw error so polling can handle it
+      throw error;
     }
   };
 

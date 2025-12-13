@@ -215,6 +215,49 @@
   letter-spacing: 0.5px;
 }
 
+/* Web version - centered and larger Join Game button */
+.main-menu-web .menu-content-web {
+  position: static;
+  bottom: auto;
+  left: auto;
+  width: 100%;
+  min-width: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10vh;
+}
+
+.main-menu-web .menu-buttons {
+  width: auto;
+}
+
+.menu-button-web-center {
+  position: relative;
+  width: auto;
+  min-width: 400px;
+  padding: 32px 80px;
+  font-size: 32px;
+  font-weight: 700;
+  box-shadow: 
+    0 6px 0 #2a2430,
+    0 8px 16px rgba(0,0,0,0.6);
+}
+
+.menu-button-web-center:hover:not(:disabled) {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 8px 0 #2a2430,
+    0 12px 24px rgba(0,0,0,0.7);
+}
+
+.menu-button-web-center:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 
+    0 2px 0 #2a2430,
+    0 4px 8px rgba(0,0,0,0.5);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .menu-header {
@@ -241,6 +284,27 @@
   .menu-button {
     padding: 10px 16px;
     font-size: 13px;
+  }
+  
+  /* Web version - mobile: centered button */
+  .main-menu-web .menu-content-web {
+    position: static;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    min-width: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20vh;
+    padding: 0 20px;
+  }
+  
+  .main-menu-web .menu-button-web-center {
+    min-width: 280px;
+    padding: 24px 48px;
+    font-size: 24px;
   }
 }
 

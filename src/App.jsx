@@ -48,13 +48,28 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState('menu'); // 'menu', 'moderator', 'player', 'creating-game'
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
+
+  // Detect mobile device and handle resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Check URL parameters for direct mode access (for player view)
     const params = new URLSearchParams(window.location.search);
     const modeParam = params.get('mode');
+    const roomParam = params.get('room');
     
-    if (modeParam === 'player') {
+    // Auto-switch to player view if room parameter is present (even without mode=player)
+    if (modeParam === 'player' || roomParam) {
       // Player view - skip menu and loading screen
       setCurrentView('player');
       setIsLoading(false);
@@ -72,8 +87,9 @@ function App() {
   };
 
   const handleJoinGame = () => {
-    // Placeholder - will be implemented later
-    alert('Join game feature will be available soon');
+    // Switch to player view for joining game (will show LoginScreen)
+    setCurrentView('player');
+    setIsLoading(false);
   };
 
   const handleSettings = () => {
@@ -128,6 +144,8 @@ function App() {
             onJoinGame={handleJoinGame}
             onSettings={handleSettings}
             onExit={handleExit}
+            isMobile={isMobile}
+            isElectron={isElectron}
           />
         </div>
       );

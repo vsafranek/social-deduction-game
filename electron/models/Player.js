@@ -23,8 +23,8 @@ const PlayerSchema = new mongoose.Schema({
   },
   sessionId: {
     type: String,
-    required: true,
-    unique: true
+    required: true
+    // Removed global unique - sessionId should be unique per game, not globally
   },
   name: {
     type: String,
@@ -106,5 +106,8 @@ const PlayerSchema = new mongoose.Schema({
     default: null
   }
 });
+
+// Compound unique index: sessionId should be unique per game, not globally
+PlayerSchema.index({ gameId: 1, sessionId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Player', PlayerSchema);
