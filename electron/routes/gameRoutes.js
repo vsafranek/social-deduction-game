@@ -1002,7 +1002,12 @@ router.post('/:gameId/set-night-action', async (req, res) => {
       if (!actionMode) return res.status(400).json({ error: 'Action mode required for dual role' });
 
       // Check if special ability has uses left
-      if (actionMode !== 'kill') {
+      // For Poisoner: only strong_poison has limited uses, poison can be used unlimited
+      // For other dual roles: first action (usually 'kill') is unlimited, second action has limited uses
+      const firstAction = roleData.dualActions?.[0];
+      const isLimitedAction = actionMode !== firstAction;
+      
+      if (isLimitedAction) {
         if (!player.roleData) player.roleData = {};
         // Pokud není usesRemaining nastaveno, inicializuj ho z role definice
         if (player.roleData.usesRemaining === undefined || player.roleData.usesRemaining === null) {

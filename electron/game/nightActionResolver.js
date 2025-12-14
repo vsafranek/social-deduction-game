@@ -803,6 +803,36 @@ async function resolveNightActions(game, players) {
         break;
       }
 
+      case 'poison': {
+        // Regular poison - victim dies next day, can be healed by Doctor
+        addEffect(target, 'poisoned', actor._id, null, { round: game.round });
+        toSave.add(targetId);
+        actor.nightAction.results.push(`success:Otrávil ${target.name}`);
+        console.log(`  ☠️ [P${actionData.priority}] ${actor.name} poisoned ${target.name} (will die next day if not cured)`);
+        break;
+      }
+
+      case 'strong_poison': {
+        // Strong poison - one-time use, activates after Doctor visit, cannot be healed
+        if (!actor.roleData) actor.roleData = {};
+        const usesLeft = actor.roleData.usesRemaining !== undefined ? actor.roleData.usesRemaining : 1;
+
+        if (usesLeft > 0) {
+          actor.roleData.usesRemaining = usesLeft - 1;
+          actor.markModified('roleData');
+          toSave.add(actorId);
+          
+          addEffect(target, 'strong_poisoned', actor._id, null, { round: game.round, activated: false });
+          toSave.add(targetId);
+          actor.nightAction.results.push(`success:Použil silný jed na ${target.name} (${actor.roleData.usesRemaining} použití zbývá)`);
+          console.log(`  💀 [P${actionData.priority}] ${actor.name} used strong poison on ${target.name} (will activate after Doctor visit)`);
+        } else {
+          actor.nightAction.results.push('failed:Žádná použití silného jedu');
+          console.log(`  ⚠️ [P${actionData.priority}] ${actor.name} tried to use strong poison but has no uses left`);
+        }
+        break;
+      }
+
       case 'hunter_kill': {
         // Hunter připraví kill (zkontroluje se po smrti)
         addEffect(target, 'pendingKill', actor._id, null, { hunter: true });
@@ -1090,6 +1120,93 @@ async function resolveNightActions(game, players) {
   // Track processed Sweethearts to avoid duplicate effects
   const processedSweethearts = new Set();
 
+  // PHASE 5a: Process poison effects (regular and strong)
+  console.log('☠️ [NightResolver] Phase 5a: Processing poison effects...');
+  
+  // Process regular poison effects
+  for (const p of players) {
+    if (!p.alive) continue;
+    
+    const poisonedEffects = (p.effects || []).filter(e => e.type === 'poisoned');
+    if (poisonedEffects.length === 0) continue;
+    
+    // Check if poison was applied in previous round (not current round)
+    // Poison kills the next day, so we check if it was applied before current round
+    const poisonFromPreviousRound = poisonedEffects.some(e => {
+      const poisonRound = e.meta?.round || 0;
+      return poisonRound < game.round;
+    });
+    
+    if (poisonFromPreviousRound) {
+      const isProtected = hasEffect(p, 'protected');
+      
+      if (!p.nightAction) {
+        p.nightAction = { targetId: null, action: null, results: [] };
+      }
+      if (!p.nightAction.results) {
+        p.nightAction.results = [];
+      }
+      
+      if (isProtected) {
+        // Doctor cured the poison
+        removeEffects(p, e => e.type === 'poisoned');
+        p.nightAction.results.push('healed:Vyléčen z otravy');
+        toSave.add(p._id.toString());
+        console.log(`  💚 ${p.name} was cured from poison by Doctor`);
+      } else {
+        // Poison kills - apply pendingKill
+        addEffect(p, 'pendingKill', poisonedEffects[0].source, null, {});
+        toSave.add(p._id.toString());
+        console.log(`  ☠️ ${p.name} dies from poison (not protected)`);
+      }
+    }
+  }
+  
+  // Process strong poison activation (activates after Doctor visit)
+  for (const p of players) {
+    if (!p.alive) continue;
+    
+    const strongPoisonedEffects = (p.effects || []).filter(e => e.type === 'strong_poisoned');
+    if (strongPoisonedEffects.length === 0) continue;
+    
+    // Check if strong poison is not yet activated
+    const unactivatedPoison = strongPoisonedEffects.find(e => !e.meta?.activated);
+    if (!unactivatedPoison) continue;
+    
+    // Check if Doctor visited this night using doctorProtections map
+    const playerId = p._id.toString();
+    let doctorVisitedThisNight = false;
+    for (const [doctorId, targetId] of doctorProtections.entries()) {
+      if (targetId === playerId) {
+        const doctor = idMap.get(doctorId);
+        if (doctor && doctor.role === 'Doctor') {
+          doctorVisitedThisNight = true;
+          break;
+        }
+      }
+    }
+    
+    if (doctorVisitedThisNight) {
+      // Doctor visited this night - activate strong poison (cannot be healed)
+      unactivatedPoison.meta.activated = true;
+      unactivatedPoison.meta.unhealable = true;
+      
+      // Apply pendingKill with unhealable flag
+      addEffect(p, 'pendingKill', unactivatedPoison.source, null, { unhealable: true });
+      toSave.add(p._id.toString());
+      
+      if (!p.nightAction) {
+        p.nightAction = { targetId: null, action: null, results: [] };
+      }
+      if (!p.nightAction.results) {
+        p.nightAction.results = [];
+      }
+      
+      console.log(`  💀 ${p.name} - strong poison activated after Doctor visit (cannot be healed)`);
+    }
+    // If Doctor didn't visit this night, keep the effect for next round
+  }
+
   // Resolve kills
   for (const p of players) {
     if (!p.alive) continue;
@@ -1104,14 +1221,16 @@ async function resolveNightActions(game, players) {
       p.nightAction.results = [];
     }
 
-    const isProtected = hasEffect(p, 'protected');
+    // Check if kill is unhealable (from strong poison)
+    const unhealableKill = pending.some(e => e.meta?.unhealable === true);
+    const isProtected = hasEffect(p, 'protected') && !unhealableKill;
 
     if (!isProtected) {
       // Player died
       p.alive = false;
       p.nightAction.results.push('killed:Zavražděn');
       toSave.add(p._id.toString());
-      console.log(`  ☠️ ${p.name} was killed`);
+      console.log(`  ☠️ ${p.name} was killed${unhealableKill ? ' (unhealable - strong poison)' : ''}`);
 
       // ✅ Sweetheart death effect (only process once per Sweetheart)
       if (p.modifier === 'Sweetheart' && !processedSweethearts.has(p._id.toString())) {

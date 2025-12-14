@@ -2112,5 +2112,224 @@ describe('nightActionResolver', () => {
       expect(drunkCount).toBe(1);
     });
   });
+
+  describe('Poisoner Role', () => {
+    
+    test('should apply regular poison effect', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'poison', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, victim]);
+
+      const hasPoisoned = victim.effects.some(e => e.type === 'poisoned');
+      expect(hasPoisoned).toBe(true);
+      expect(poisoner.nightAction.results).toContain('success:Otrávil Victim');
+      expect(victim.alive).toBe(true); // Should not die immediately
+    });
+
+    test('should kill victim with regular poison next day if not protected', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'poison', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true,
+        effects: [{ type: 'poisoned', source: '1', addedAt: new Date(), expiresAt: null, meta: { round: 1 } }]
+      });
+
+      // Simulate next round (round 2) - poison should kill
+      await resolveNightActions({ round: 2 }, [poisoner, victim]);
+
+      expect(victim.alive).toBe(false);
+      expect(victim.nightAction.results).toContain('killed:Zavražděn');
+    });
+
+    test('should cure regular poison if Doctor protects victim', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'poison', results: [] }
+      });
+      const doctor = createMockPlayer('3', 'Doctor', 'Doctor', {
+        nightAction: { targetId: '2', action: 'protect', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true,
+        effects: [{ type: 'poisoned', source: '1', addedAt: new Date(), expiresAt: null, meta: { round: 1 } }]
+      });
+
+      // Simulate next round (round 2) - Doctor protects, poison should be cured
+      await resolveNightActions({ round: 2 }, [poisoner, doctor, victim]);
+
+      expect(victim.alive).toBe(true);
+      const hasPoisoned = victim.effects.some(e => e.type === 'poisoned');
+      expect(hasPoisoned).toBe(false);
+      expect(victim.nightAction.results).toContain('healed:Vyléčen z otravy');
+    });
+
+    test('should not kill victim with regular poison in same round', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'poison', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, victim]);
+
+      // Poison was just applied, should not kill yet
+      expect(victim.alive).toBe(true);
+      const hasPoisoned = victim.effects.some(e => e.type === 'poisoned' && e.meta?.round === 1);
+      expect(hasPoisoned).toBe(true);
+    });
+
+    test('should apply strong poison effect', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'strong_poison', results: [] },
+        roleData: { usesRemaining: 1 }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, victim]);
+
+      const hasStrongPoisoned = victim.effects.some(e => e.type === 'strong_poisoned' && !e.meta?.activated);
+      expect(hasStrongPoisoned).toBe(true);
+      expect(poisoner.roleData.usesRemaining).toBe(0);
+      expect(poisoner.nightAction.results.some(r => r.includes('silný jed'))).toBe(true);
+      expect(victim.alive).toBe(true); // Should not die immediately
+    });
+
+    test('should not allow strong poison if no uses remaining', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'strong_poison', results: [] },
+        roleData: { usesRemaining: 0 }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, victim]);
+
+      const hasStrongPoisoned = victim.effects.some(e => e.type === 'strong_poisoned');
+      expect(hasStrongPoisoned).toBe(false);
+      expect(poisoner.nightAction.results).toContain('failed:Žádná použití silného jedu');
+    });
+
+    test('should activate strong poison when Doctor visits', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'strong_poison', results: [] },
+        roleData: { usesRemaining: 1 }
+      });
+      const doctor = createMockPlayer('3', 'Doctor', 'Doctor', {
+        nightAction: { targetId: '2', action: 'protect', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true,
+        effects: [{ type: 'strong_poisoned', source: '1', addedAt: new Date(), expiresAt: null, meta: { round: 1, activated: false } }]
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, doctor, victim]);
+
+      const strongPoisonEffect = victim.effects.find(e => e.type === 'strong_poisoned');
+      expect(strongPoisonEffect?.meta?.activated).toBe(true);
+      expect(victim.alive).toBe(false);
+      expect(victim.nightAction.results).toContain('killed:Zavražděn');
+    });
+
+    test('should not activate strong poison if Doctor does not visit', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'strong_poison', results: [] },
+        roleData: { usesRemaining: 1 }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true,
+        effects: [{ type: 'strong_poisoned', source: '1', addedAt: new Date(), expiresAt: null, meta: { round: 1, activated: false } }]
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, victim]);
+
+      const strongPoisonEffect = victim.effects.find(e => e.type === 'strong_poisoned');
+      expect(strongPoisonEffect?.meta?.activated).toBe(false);
+      expect(victim.alive).toBe(true); // Should not die without Doctor visit
+    });
+
+    test('should not allow Doctor to heal strong poison', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'strong_poison', results: [] },
+        roleData: { usesRemaining: 1 }
+      });
+      const doctor = createMockPlayer('3', 'Doctor', 'Doctor', {
+        nightAction: { targetId: '2', action: 'protect', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true,
+        effects: [{ type: 'strong_poisoned', source: '1', addedAt: new Date(), expiresAt: null, meta: { round: 1, activated: false } }]
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, doctor, victim]);
+
+      // Strong poison should activate and kill (cannot be healed)
+      expect(victim.alive).toBe(false);
+      const hasProtected = victim.effects.some(e => e.type === 'protected');
+      // Even if protected, strong poison should still kill
+      expect(victim.nightAction.results).toContain('killed:Zavražděn');
+    });
+
+    test('should allow regular poison to be blocked by Jailer', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'poison', results: [] }
+      });
+      const jailer = createMockPlayer('3', 'Jailer', 'Jailer', {
+        nightAction: { targetId: '1', action: 'block', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, jailer, victim]);
+
+      // Poisoner should be blocked, so no poison effect
+      const hasPoisoned = victim.effects.some(e => e.type === 'poisoned');
+      expect(hasPoisoned).toBe(false);
+    });
+
+    test('should allow strong poison to be blocked by Jailer', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'strong_poison', results: [] },
+        roleData: { usesRemaining: 1 }
+      });
+      const jailer = createMockPlayer('3', 'Jailer', 'Jailer', {
+        nightAction: { targetId: '1', action: 'block', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, jailer, victim]);
+
+      // Poisoner should be blocked, so no strong poison effect and uses should remain
+      const hasStrongPoisoned = victim.effects.some(e => e.type === 'strong_poisoned');
+      expect(hasStrongPoisoned).toBe(false);
+      expect(poisoner.roleData.usesRemaining).toBe(1); // Uses should not be decremented if blocked
+    });
+
+    test('should show visited message to poisoned victim', async () => {
+      const poisoner = createMockPlayer('1', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'poison', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [poisoner, victim]);
+
+      const visitedResult = victim.nightAction.results.find(r => r.startsWith('visited:'));
+      expect(visitedResult).toBeDefined();
+      expect(visitedResult).toContain('Poisoner');
+    });
+  });
 });
 

@@ -38,6 +38,7 @@ const EMOJI_FALLBACK = {
   'Cleaner': '🧹',
   'Accuser': '👉',
   'Consigliere': '🕵️',
+  'Poisoner': '☠️',
   'SerialKiller': '🛡️',
   'Infected': '🦠',
   'Jester': '🎭',

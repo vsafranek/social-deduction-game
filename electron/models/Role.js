@@ -164,6 +164,24 @@ const ROLES = {
     }
   },
 
+  'Poisoner': {
+    team: 'evil',
+    description: 'Can poison players - poisoned player dies the next day but can be healed by Doctor. Has a strong poison (once per game) that activates only after Doctor visits and cannot be healed.',
+    actionType: 'dual',
+    dualActions: ['poison', 'strong_poison'],
+    nightPriority: 7,
+    canUseEveryNight: true,
+    visitsTarget: true,
+    hasLimitedUses: true,
+    maxUses: 1, // Only strong_poison has limited uses
+    defaultAffiliations: ['evil'],
+    defaultVictory: {
+      canWinWithTeams: ['evil'],
+      soloWin: false,
+      customRules: []
+    }
+  },
+
   // ==================
   // NEUTRAL
   // ==================

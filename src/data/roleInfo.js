@@ -193,6 +193,30 @@ export const ROLE_INFO = {
       }
     }
   },
+  'Poisoner': {
+    emoji: '☠️',
+    team: 'evil',
+    teamLabel: 'Mafie',
+    description: 'Každou noc můžeš otrávit hráče - otrávený hráč umře další den, ale může být vyléčen doktorem. Máš také extra silný jed (jednou za hru), který se aktivuje až po návštěvě doktora a nedá se vyléčit.',
+    actionVerb: 'Otrávit nebo silný jed',
+    nightAction: {
+      dual: true,
+      actions: {
+        'poison': {
+          verb: 'Otrávit',
+          icon: '☠️',
+          color: 'purple',
+          description: 'Otrávíš hráče - umře další den, může být vyléčen doktorem'
+        },
+        'strong_poison': {
+          verb: 'Silný jed',
+          icon: '💀',
+          color: 'red',
+          description: 'Použiješ silný jed (jednou za hru) - aktivuje se až po návštěvě doktora, nedá se vyléčit'
+        }
+      }
+    }
+  },
 
   // ==================
   // NEUTRAL
