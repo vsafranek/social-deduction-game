@@ -304,7 +304,7 @@ function ModeratorView() {
     try {
       const result = await gameApi.endDay(gameId);
       if (result.winner) {
-        alert(result.winner === 'town' ? '🎉 Město vyhrálo!' : '🎉 Mafiáni vyhráli!');
+        alert(result.winner === 'town' ? '🎉 The Order wins!' : '🎉 The Shadows win!');
       }
       await fetchGameState();
     } catch (error) {
@@ -539,7 +539,7 @@ function ModeratorView() {
                       <div className="team-limit-item">
                         <label>
                           <span className="team-icon good">🟢</span>
-                          <span>Dobré role:</span>
+                          <span>The Order:</span>
                         </label>
                         <input 
                           type="number"
@@ -555,7 +555,7 @@ function ModeratorView() {
                       <div className="team-limit-item">
                         <label>
                           <span className="team-icon evil">🔴</span>
-                          <span>Zlé role:</span>
+                          <span>The Shadows:</span>
                         </label>
                         <input 
                           type="number"
@@ -587,7 +587,7 @@ function ModeratorView() {
                   </div>
 
                   {/* Good Roles */}
-                  <h3 className="team-header good">🟢 Dobré Role</h3>
+                  <h3 className="team-header good">🟢 The Order</h3>
                   <div className="role-config-grid">
                     {Object.keys(availableRoles)
                       .filter(role => getRoleTeam(role) === 'good')
@@ -635,7 +635,7 @@ function ModeratorView() {
                   </div>
 
                   {/* Evil Roles */}
-                  <h3 className="team-header evil">🔴 Zlé Role</h3>
+                  <h3 className="team-header evil">🔴 The Shadows</h3>
                   <div className="role-config-grid">
                     {Object.keys(availableRoles)
                       .filter(role => getRoleTeam(role) === 'evil')

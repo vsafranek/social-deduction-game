@@ -8,7 +8,7 @@ export const ROLE_INFO = {
   'Doctor': {
     emoji: '💉',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Každou noc chráníš jednoho hráče před smrtí',
     actionVerb: 'Chránit',
     nightAction: {
@@ -21,7 +21,7 @@ export const ROLE_INFO = {
   'Jailer': {
     emoji: '👮',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Každou noc uzamkneš jednoho hráče - nemůže provést akci',
     actionVerb: 'Uzamknout',
     nightAction: {
@@ -34,7 +34,7 @@ export const ROLE_INFO = {
   'Investigator': {
     emoji: '🔍',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Zjišťuješ dvě možné role živého hráče (jedna je správná)',
     actionVerb: 'Vyšetřit',
     nightAction: {
@@ -47,7 +47,7 @@ export const ROLE_INFO = {
   'Coroner': {
     emoji: '🔬',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Provedeš pitvu na mrtvém hráči a zjistíš jeho přesnou roli',
     actionVerb: 'Proveď pitvu',
     nightAction: {
@@ -60,7 +60,7 @@ export const ROLE_INFO = {
   'Lookout': {
     emoji: '👁️',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Sleduj dům hráče a uvidíš, kdo ho navštívil',
     actionVerb: 'Pozorovat',
     nightAction: {
@@ -73,7 +73,7 @@ export const ROLE_INFO = {
   'Guardian': {
     emoji: '🛡️',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Nastav stráž u domu jiného hráče - návštěvníci jsou odhaleni a zastaveni',
     actionVerb: 'Nastavit stráž',
     nightAction: {
@@ -86,7 +86,7 @@ export const ROLE_INFO = {
   'Tracker': {
     emoji: '👣',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Sleduj hráče a zjisti, kam šel',
     actionVerb: 'Sledovat',
     nightAction: {
@@ -99,7 +99,7 @@ export const ROLE_INFO = {
   'Hunter': {
     emoji: '🏹',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Můžeš zabíjet v noci - pokud zabiješ nevinného, zemřeš',
     actionVerb: 'Zastřelit',
     nightAction: {
@@ -112,7 +112,7 @@ export const ROLE_INFO = {
   'Citizen': {
     emoji: '👤',
     team: 'good',
-    teamLabel: 'Město',
+    teamLabel: 'The Order',
     description: 'Obyčejný občan bez speciální schopnosti',
     actionVerb: 'Žádná'
   },
@@ -124,7 +124,7 @@ export const ROLE_INFO = {
   'Cleaner': {
     emoji: '🧹',
     team: 'evil',
-    teamLabel: 'Mafie',
+    teamLabel: 'The Shadows',
     description: 'Můžeš zabíjet NEBO označit hráče - označený živý hráč ukáže Investigator falešný výsledek, mrtvý hráč bude mít skrytou roli',
     actionVerb: 'Zabít nebo označit',
     nightAction: {
@@ -148,7 +148,7 @@ export const ROLE_INFO = {
   'Accuser': {
     emoji: '👉',
     team: 'evil',
-    teamLabel: 'Mafie',
+    teamLabel: 'The Shadows',
     description: 'Můžeš zabíjet NEBO obviňovat hráče - obviněný hráč bude vypadat jako zločinec při vyšetřování',
     actionVerb: 'Zabít nebo obviňovat',
     nightAction: {
@@ -172,7 +172,7 @@ export const ROLE_INFO = {
   'Consigliere': {
     emoji: '🕵️',
     team: 'evil',
-    teamLabel: 'Mafie',
+    teamLabel: 'The Shadows',
     description: 'Můžeš zabíjet NEBO vyšetřit živého hráče a zjistit jeho přesnou roli',
     actionVerb: 'Zabít nebo vyšetřit',
     nightAction: {
@@ -196,7 +196,7 @@ export const ROLE_INFO = {
   'Poisoner': {
     emoji: '☠️',
     team: 'evil',
-    teamLabel: 'Mafie',
+    teamLabel: 'The Shadows',
     description: 'Každou noc můžeš otrávit hráče - otrávený hráč umře další den, ale může být vyléčen doktorem. Máš také extra silný jed (jednou za hru), který se aktivuje až po návštěvě doktora a nedá se vyléčit.',
     actionVerb: 'Otrávit nebo silný jed',
     nightAction: {
@@ -319,8 +319,8 @@ export function getModifierInfo(modifier) {
 // Helper function to get team label
 export function getTeamLabel(team) {
   const teamLabels = {
-    'good': 'Město',
-    'evil': 'Mafie',
+    'good': 'The Order',
+    'evil': 'The Shadows',
     'neutral': 'Neutrální'
   };
   return teamLabels[team] || 'Neutrální';

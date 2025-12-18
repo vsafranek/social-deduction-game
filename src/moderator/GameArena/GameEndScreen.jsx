@@ -6,16 +6,16 @@ import './GameEndScreen.css';
 
 const WINNER_LABELS = {
   'good': { 
-    label: 'Město vyhrává!', 
+    label: 'The Order wins!', 
     emoji: '✨', 
     gradient: 'linear-gradient(135deg, #2e7d32, #1b5e20)',
     description: 'Všichni zločinci byli eliminováni!'
   },
   'evil': { 
-    label: 'Mafie vyhrává!', 
+    label: 'The Shadows win!', 
     emoji: '🔥', 
     gradient: 'linear-gradient(135deg, #c62828, #b71c1c)',
-    description: 'Mafie převzala kontrolu!'
+    description: 'The Shadows have taken control!'
   },
   'solo': { 
     label: 'Sólové vítězství!', 
@@ -259,7 +259,7 @@ function GameEndScreen({ gameState, currentPlayer }) {
             <div className="team-section good">
               <h3 className="team-title">
                 <span className="team-icon">✨</span>
-                Město ({goodPlayers.length})
+                The Order ({goodPlayers.length})
               </h3>
               <div className="players-grid">
                 {goodPlayers.map(p => renderPlayerCard(p))}
@@ -272,7 +272,7 @@ function GameEndScreen({ gameState, currentPlayer }) {
             <div className="team-section evil">
               <h3 className="team-title">
                 <span className="team-icon">🔥</span>
-                Mafie ({evilPlayers.length})
+                The Shadows ({evilPlayers.length})
               </h3>
               <div className="players-grid">
                 {evilPlayers.map(p => renderPlayerCard(p))}

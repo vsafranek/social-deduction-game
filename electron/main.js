@@ -100,8 +100,9 @@ app.whenReady().then(async () => {
     // Start server
     const serverInstance = expressApp.listen(PORT, '0.0.0.0', () => {
       console.log('');
+      const GAME_NAME = 'Shadows of Gloaming';
       console.log('╔═══════════════════════════════════════════════════════╗');
-      console.log('║ 🎮 SOCIÁLNÍ DEDUKČNÍ HRA 🎮 ║');
+      console.log(`║ 🎮 ${GAME_NAME.toUpperCase()} 🎮 ║`);
       console.log('╚═══════════════════════════════════════════════════════╝');
       console.log('');
       console.log(` 🌐 Server: http://${LOCAL_IP}:${PORT}`);

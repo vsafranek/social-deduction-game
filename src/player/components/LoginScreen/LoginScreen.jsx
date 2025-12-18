@@ -1,5 +1,6 @@
 // src/player/components/LoginScreen/LoginScreen.jsx
 import React from 'react';
+import { GAME_NAME } from '../../../config/gameConfig';
 import './LoginScreen.css';
 
 function LoginScreen({
@@ -21,7 +22,7 @@ function LoginScreen({
     <div className="login-screen">
       <div className="login-container">
         <div className="login-header">
-          <h1>Sociální Dedukce</h1>
+          <h1>{GAME_NAME}</h1>
           <p>Připoj se ke hře</p>
         </div>
 
@@ -59,7 +60,7 @@ function LoginScreen({
             className="login-button"
             disabled={loading}
           >
-            {loading ? '⏳ Připojuji se...' : '✅ Připojit se'}
+            {loading ? 'Připojuji se...' : 'Připojit se'}
           </button>
         </form>
 

@@ -1,8 +1,7 @@
 // src/moderator/GameArena/GameStartLoadingScreen.jsx
 import React, { useEffect, useState, useRef } from 'react';
+import { GAME_NAME } from '../../config/gameConfig';
 import './GameStartLoadingScreen.css';
-
-const GAME_NAME = 'Social Deduction Game';
 
 function GameStartLoadingScreen({ gameName, onComplete, onGameReady }) {
   const displayName = gameName || GAME_NAME;

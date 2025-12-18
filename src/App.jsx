@@ -5,9 +5,8 @@ import MainMenu from './components/MainMenu/MainMenu';
 import ModeratorView from './moderator/ModeratorView';
 import PlayerView from './player/PlayerView';
 import ConfirmDialog from './components/ConfirmDialog/ConfirmDialog';
+import { GAME_NAME } from './config/gameConfig';
 import './App.css';
-
-const GAME_NAME = 'Social Deduction Game';
 
 function CreatingGameView({ onReturnToMenu, onSettings }) {
   const [gameReady, setGameReady] = useState(false);

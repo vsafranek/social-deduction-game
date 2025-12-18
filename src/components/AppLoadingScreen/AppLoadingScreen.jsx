@@ -1,8 +1,7 @@
 // src/components/AppLoadingScreen/AppLoadingScreen.jsx
 import React, { useEffect, useState } from 'react';
+import { GAME_NAME } from '../../config/gameConfig';
 import './AppLoadingScreen.css';
-
-const GAME_NAME = 'Social Deduction Game';
 
 function AppLoadingScreen({ onComplete }) {
   const [progress, setProgress] = useState(0);

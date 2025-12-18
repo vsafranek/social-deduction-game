@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import RoleConfigModal from './RoleConfigModal';
 import RoleIcon from '../../components/icons/RoleIcon';
 import { canAddRandomRole, canAddGuaranteedRole } from './roleLimitUtils';
+import { getTeamLabel } from '../../data/roleInfo';
 import './RoleConfiguration.css';
 
 function RoleConfiguration({
@@ -161,7 +162,7 @@ function RoleConfiguration({
             <div className="team-limit-item">
               <label>
                 <span className="team-icon good">🟢</span>
-                <span>Good roles:</span>
+                <span>The Order:</span>
               </label>
               <button
                 className="btn-guaranteed-roles"
@@ -183,7 +184,7 @@ function RoleConfiguration({
             <div className="team-limit-item">
               <label>
                 <span className="team-icon evil">🔴</span>
-                <span>Evil roles:</span>
+                <span>The Shadows:</span>
               </label>
               <button
                 className="btn-guaranteed-roles"
@@ -237,7 +238,7 @@ function RoleConfiguration({
               <div className="guaranteed-modal-overlay" onClick={handleCloseGuaranteedModal}>
                 <div className="guaranteed-modal" onClick={(e) => e.stopPropagation()}>
                   <div className="guaranteed-modal-header">
-                    <h3>⚙️ Configure {currentTeam.charAt(0).toUpperCase() + currentTeam.slice(1)} Team</h3>
+                    <h3>⚙️ Configure {getTeamLabel(currentTeam)}</h3>
                     <button className="btn-close-modal" onClick={handleCloseGuaranteedModal}>✕</button>
                   </div>
                   <div className="guaranteed-modal-body">

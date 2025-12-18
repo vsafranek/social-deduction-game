@@ -1,6 +1,7 @@
 // src/components/MainMenu/MainMenu.jsx
 import React from 'react';
 import ModeratorView from '../../moderator/ModeratorView';
+import { GAME_NAME } from '../../config/gameConfig';
 import './MainMenu.css';
 
 function MainMenu({ onCreateGame, onJoinGame, onSettings, onExit, isMobile = false, isElectron = false }) {
@@ -39,8 +40,7 @@ function MainMenu({ onCreateGame, onJoinGame, onSettings, onExit, isMobile = fal
   return (
     <div className={`main-menu ${!isElectron ? 'main-menu-web' : ''}`}>
       <div className="menu-header">
-        <h1 className="menu-title">Social Deduction Game</h1>
-        <p className="menu-subtitle">Choose an action</p>
+        <h1 className="menu-title">{GAME_NAME}</h1>
       </div>
       
       <div className={`menu-content ${!isElectron ? 'menu-content-web' : ''}`}>

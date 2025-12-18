@@ -189,7 +189,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
     try {
       const result = await gameApi.endDay(gameId);
       if (result.winner) {
-        alert(result.winner === 'town' ? '🎉 Město vyhrálo!' : '🎉 Mafiáni vyhráli!');
+        alert(result.winner === 'town' ? '🎉 The Order wins!' : '🎉 The Shadows win!');
       }
       await fetchGameState();
     } catch (error) {
