@@ -17,19 +17,28 @@ const TEST_STORIES_DATA = [
   'attacked:Neznámý Útočník',
   'healed:Byl jsi zachráněn',
   'blocked:Policista tě zablokoval',
+  'jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen',
+  'jailer_blocked:Zadržel Test Hráč - pokusil se odejít',
+  'jailer_home:Zadržel Test Hráč - zůstal doma',
   'guarded:Zastaven stráží',
+  'guardian_stopped:Zastavil jsi návštěvníka u Test Hráč',
+  'guardian_quiet:Nikdo nepřišel k Test Hráč',
   'success:Tvá akce byla úspěšná',
   'visited:Někdo tě navštívil',
-  'watch:Viděl jsi: Hráč1, Hráč2',
-  'track:Sledovaný šel k: Cíl',
+  'lookout_visitors:U Test Hráč navštívili: Hráč1, Hráč2',
+  'lookout_quiet:U Test Hráč nikdo nebyl',
+  'tracker_followed:Test Hráč navštívil Cíl',
+  'tracker_stayed:Test Hráč zůstal doma',
   'investigate:Cíl je: MAFIA',
   'autopsy:Příčina smrti: Nůž',
   'safe:Klidná noc',
-  'protect:Ochránil jsi cíl',
-  'insomniac:Viděl jsi pohyb u: Hráč3',
+  'doctor_saved:Úspěšně jsi zachránil Test Hráč',
+  'doctor_quiet:Chránil jsi Test Hráč, ale služby nebyly potřeba',
   'consig:Role cíle je: DETEKTIV',
+  'hunter_kill:Zabil Test Hráč',
   'hunter_success:Zastřelil jsi vlkodlaka',
-  'hunter_guilt:Zabil jsi nevinného'
+  'hunter_guilt:Zabil jsi nevinného a zemřel z viny',
+  'failed:Akce selhala - cíl není dostupný'
 ];
 
 function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, onSettings }) {
@@ -346,6 +355,8 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
           gameState={gameState}
           onEndNight={endNight}
           onEndDay={endDay}
+          onRefresh={fetchGameState}
+          onReturnToMenu={handleReturnToMenuClick}
         />
       )}
 

@@ -6,6 +6,21 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const SKIP_VALUE = 'skip';
 
+  // Get details version path of avatar
+  const getDetailAvatarPath = (avatarPath) => {
+    if (!avatarPath) return null;
+    
+    // Extract filename and extension
+    // avatarPath is like "/avatars/meercat.jpg"
+    const pathParts = avatarPath.split('/');
+    const filename = pathParts[pathParts.length - 1];
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/i, '');
+    const originalExt = filename.match(/\.[^/.]+$/i)?.[0] || '';
+    
+    // Construct detail path: /avatars/meercat_detail.jpg
+    return `/avatars/${nameWithoutExt}_detail${originalExt}`;
+  };
+
   const handleVote = () => {
     // Pokud je vybrán skip, pošleme null, jinak ID hráče
     const targetId = selectedPlayer === SKIP_VALUE ? null : selectedPlayer;
@@ -40,14 +55,50 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
                 <div className="player-vote-avatar">
                   {player.avatar ? (
                     <img 
-                      src={player.avatar} 
+                      src={getDetailAvatarPath(player.avatar) || player.avatar} 
                       alt={player.name}
                       className="vote-avatar-img"
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        const fallback = e.target.nextElementSibling;
-                        if (fallback) {
-                          fallback.style.display = 'flex';
+                        const img = e.target;
+                        const currentSrc = img.src;
+                        
+                        // Track attempts using data attribute to prevent infinite loops
+                        const currentAttempts = parseInt(img.dataset.errorAttempts || '0', 10);
+                        const attempts = currentAttempts + 1;
+                        img.dataset.errorAttempts = attempts.toString();
+                        
+                        // Prevent infinite loops - max 3 attempts
+                        if (attempts >= 4) {
+                          img.style.display = 'none';
+                          const fallback = img.nextElementSibling;
+                          if (fallback) {
+                            fallback.style.display = 'flex';
+                          }
+                          return;
+                        }
+                        
+                        if (currentSrc.includes('_detail')) {
+                          // We're trying a detail variant
+                          const pathParts = currentSrc.split('_detail');
+                          const basePath = pathParts[0];
+                          const ext = pathParts[1];
+                          
+                          // Try alternate case only on first attempt
+                          if (attempts === 1 && ext === ext.toLowerCase() && ext !== ext.toUpperCase()) {
+                            img.src = `${basePath}_detail${ext.toUpperCase()}`;
+                          } else if (attempts === 1 && ext === ext.toUpperCase() && ext !== ext.toLowerCase()) {
+                            img.src = `${basePath}_detail${ext.toLowerCase()}`;
+                          } else {
+                            // All detail variants failed, use normal avatar
+                            img.src = player.avatar;
+                          }
+                        } else {
+                          // Normal avatar also failed, show fallback
+                          img.style.display = 'none';
+                          const fallback = img.nextElementSibling;
+                          if (fallback) {
+                            fallback.style.display = 'flex';
+                          }
                         }
                       }}
                     />

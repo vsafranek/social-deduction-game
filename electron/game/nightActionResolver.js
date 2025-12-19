@@ -93,28 +93,28 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
     }
 
     case 'watch': {
-      // Random 0-3 visitors
+      // Random visitors or quiet night - use new lookout result types
       const visitorCount = Math.floor(Math.random() * 4);
       if (visitorCount === 0) {
-        return `watch:U ${targetName} nikdo nebyl`;
+        return `lookout_quiet:U ${targetName} nikdo nebyl`;
       }
       const visitors = getRandomPlayerNames(visitorCount);
       if (visitors.length === 0) {
-        return `watch:U ${targetName} nikdo nebyl`;
+        return `lookout_quiet:U ${targetName} nikdo nebyl`;
       }
-      return `watch:${visitors.join(', ')} navštívili ${targetName}`;
+      return `lookout_visitors:U ${targetName} navštívili: ${visitors.join(', ')}`;
     }
 
     case 'track': {
-      // Random target or "nikam nešel"
+      // Random target went somewhere or stayed home - use new tracker result types
       if (Math.random() < 0.5) {
-        return `track:${targetName} nikam nešel`;
+        return `tracker_stayed:${targetName} zůstal doma`;
       }
       const trackedTargets = getRandomPlayerNames(1);
       if (trackedTargets.length === 0) {
-        return `track:${targetName} nikam nešel`;
+        return `tracker_stayed:${targetName} zůstal doma`;
       }
-      return `track:${targetName} navštívil ${trackedTargets[0]}`;
+      return `tracker_followed:${targetName} navštívil ${trackedTargets[0]}`;
     }
 
     case 'kill':
@@ -163,6 +163,9 @@ async function resolveNightActions(game, players) {
   const allVisits = [];
   const drunkPlayers = new Set();
   const jailTargets = new Map();
+  const guardTargets = new Map(); // Track Guardian targets for feedback
+  const watchTargets = new Map(); // Track Lookout targets for feedback
+  const trackTargets = new Map(); // Track Tracker targets for feedback
   const hunterKills = new Map();
   const janitorTargets = new Set();
   const toSave = new Set(); // Initialize toSave early - used in Phase 0 
@@ -437,17 +440,25 @@ async function resolveNightActions(game, players) {
         // Guardian nastaví stráž u cílového hráče, ne u sebe
         addEffect(target, 'guard', actor._id, null, {});
         toSave.add(targetId);
-        actor.nightAction.results.push(`success:Nastavil jsi stráž u ${target.name}`);
+        
+        // ✅ Track this guard for later feedback
+        guardTargets.set(actorId, targetId);
+        
+        // Don't give success message yet - will do it in PHASE 3
         console.log(`  🛡️ [P${actionData.priority}] ${actor.name} set a guard on ${target.name}'s house`);
         break;
       }
 
       case 'watch': {
+        // ✅ Track this watch for later feedback
+        watchTargets.set(actorId, targetId);
         console.log(`  👁️ [P${actionData.priority}] ${actor.name} watching ${target.name}`);
         break;
       }
 
       case 'track': {
+        // ✅ Track this track for later feedback
+        trackTargets.set(actorId, targetId);
         console.log(`  👣 [P${actionData.priority}] ${actor.name} tracking ${target.name}`);
         break;
       }
@@ -875,8 +886,8 @@ async function resolveNightActions(game, players) {
     }
   }
 
-  // PHASE 3: Complete watch/track and Jailer feedback
-  console.log('👁️ [NightResolver] Phase 3: Completing observations and Jailer feedback...');
+  // PHASE 3: Complete watch/track and Jailer/Guardian feedback
+  console.log('👁️ [NightResolver] Phase 3: Completing observations and Jailer/Guardian feedback...');
 
   // ✅ Jailer feedback - check if target tried to leave
   for (const [jailerId, targetId] of jailTargets.entries()) {
@@ -890,96 +901,120 @@ async function resolveNightActions(game, players) {
     );
 
     if (targetTriedToAct) {
-      jailer.nightAction.results.push(`success:Uzamkl ${target.name} - odešel`);
-      console.log(`  👮 ${jailer.name}: ${target.name} tried to leave`);
+      // Target tried to leave but was blocked by Jailer
+      jailer.nightAction.results.push(`jailer_blocked:Zadržel ${target.name} - pokusil se odejít`);
+      // Replace generic blocked message with specific jailer_prevented message
+      // This only happens if target was blocked by this Jailer (which we know from jailTargets map)
+      const blockedResultIndex = target.nightAction.results.findIndex(r => r.startsWith('blocked:'));
+      if (blockedResultIndex !== -1) {
+        target.nightAction.results[blockedResultIndex] = 'jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen';
+      }
+      console.log(`  👮 ${jailer.name}: ${target.name} tried to leave but was prevented`);
     } else {
-      jailer.nightAction.results.push(`success:Uzamkl ${target.name} - doma`);
+      // Target stayed home (no action attempted) - Jailer still blocked them, but they didn't try to leave
+      jailer.nightAction.results.push(`jailer_home:Zadržel ${target.name} - zůstal doma`);
+      // Target doesn't get a blocked message since they didn't try to do anything
       console.log(`  👮 ${jailer.name}: ${target.name} stayed home`);
     }
   }
 
-  // Watch/Track
-  for (const v of allVisits) {
-    const actor = idMap.get(v.actorId);
-    const target = idMap.get(v.targetId);
-    if (!actor || !target) continue;
+  // ✅ Guardian feedback - check if anyone tried to visit the guarded target
+  for (const [guardianId, targetId] of guardTargets.entries()) {
+    const guardian = idMap.get(guardianId);
+    const target = idMap.get(targetId);
+    if (!guardian || !target) continue;
 
-    if (v.action === 'watch') {
-      const targetId = v.targetId;
+    // Check if anyone tried to visit the target and was stopped by guard
+    // Look in actionsToResolve for actions targeting this guarded target
+    // and check if the actor was added to guarded set (stopped by guard)
+    const someoneWasStopped = actionsToResolve.some(actionData => {
+      if (actionData.targetId !== targetId) return false;
+      const visitorId = actionData.actorId;
+      // Skip if visitor was drunk (they didn't actually try to visit)
+      if (drunkPlayers.has(visitorId)) return false;
+      // Check if this visitor was guarded (stopped by guard)
+      return guarded.has(visitorId);
+    });
 
-      // ✅ Get ONLY visitors who actually made it to the target
-      // (not blocked, not drunk, not guarded)
-      const successfulVisitors = allVisits
-        .filter(visit => {
-          // Visit to this target
-          if (visit.targetId !== targetId) return false;
+    if (someoneWasStopped) {
+      // Someone tried to visit but was stopped by guard
+      guardian.nightAction.results.push(`guardian_stopped:Zastavil jsi návštěvníka u ${target.name}`);
+      console.log(`  🛡️ ${guardian.name}: Someone was stopped at ${target.name}'s house`);
+    } else {
+      // No one tried to visit (or no one was stopped)
+      guardian.nightAction.results.push(`guardian_quiet:Nikdo nepřišel k ${target.name}`);
+      console.log(`  🛡️ ${guardian.name}: No one came to ${target.name}'s house`);
+    }
+  }
 
-          const visitorId = visit.actorId;
-          const visitor = idMap.get(visitorId);
-          if (!visitor) return false;
+  // ✅ Lookout feedback - check if anyone visited the watched target
+  for (const [lookoutId, targetId] of watchTargets.entries()) {
+    const lookout = idMap.get(lookoutId);
+    const target = idMap.get(targetId);
+    if (!lookout || !target) continue;
 
-          // Skip self
-          if (visitorId === actor._id.toString()) return false;
+    // Get ONLY visitors who actually made it to the target
+    // (not blocked, not drunk, not guarded)
+    const successfulVisitors = allVisits
+      .filter(visit => {
+        // Visit to this target
+        if (visit.targetId !== targetId) return false;
 
-          // Check if visitor was blocked/drunk/guarded
-          if (drunkPlayers.has(visitorId)) return false;
-          if (blocked.has(visitorId)) return false;
-          if (guarded.has(visitorId)) return false;
+        const visitorId = visit.actorId;
+        const visitor = idMap.get(visitorId);
+        if (!visitor) return false;
 
-          return true;
-        })
-        .map(visit => {
-          const visitor = idMap.get(visit.actorId);
-          return visitor?.name;
-        })
-        .filter(Boolean);
+        // Skip self (lookout)
+        if (visitorId === lookoutId) return false;
 
-      if (successfulVisitors.length > 0) {
-        actor.nightAction.results.push(`watch:U ${target.name}: ${successfulVisitors.join(', ')}`);
-        console.log(`    👁️ ${actor.name} watched ${target.name}: ${successfulVisitors.join(', ')}`);
-      } else {
-        actor.nightAction.results.push(`watch:U ${target.name} nikdo nebyl`);
-        console.log(`    👁️ ${actor.name} watched ${target.name}: nobody`);
-      }
+        // Check if visitor was blocked/drunk/guarded
+        if (drunkPlayers.has(visitorId)) return false;
+        if (blocked.has(visitorId)) return false;
+        if (guarded.has(visitorId)) return false;
+
+        return true;
+      })
+      .map(visit => {
+        const visitor = idMap.get(visit.actorId);
+        return visitor?.name;
+      })
+      .filter(Boolean);
+
+    if (successfulVisitors.length > 0) {
+      // Someone visited the target
+      lookout.nightAction.results.push(`lookout_visitors:U ${target.name} navštívili: ${successfulVisitors.join(', ')}`);
+      console.log(`  👁️ ${lookout.name} watched ${target.name}: ${successfulVisitors.join(', ')}`);
+    } else {
+      // No one visited
+      lookout.nightAction.results.push(`lookout_quiet:U ${target.name} nikdo nebyl`);
+      console.log(`  👁️ ${lookout.name} watched ${target.name}: nobody`);
+    }
+  }
+
+  // ✅ Tracker feedback - check if target went somewhere or stayed home
+  for (const [trackerId, targetId] of trackTargets.entries()) {
+    const tracker = idMap.get(trackerId);
+    const target = idMap.get(targetId);
+    if (!tracker || !target) continue;
+
+    // Check if target was drunk/blocked/guarded - stayed home
+    if (drunkPlayers.has(targetId) || blocked.has(targetId) || guarded.has(targetId)) {
+      tracker.nightAction.results.push(`tracker_stayed:${target.name} zůstal doma`);
+      console.log(`  👣 ${tracker.name} tracked ${target.name} - stayed home`);
+      continue;
     }
 
-    if (v.action === 'track') {
-      const targetId = v.targetId;
-      const targetPlayer = idMap.get(targetId);
+    // Target actually went somewhere - find where
+    const targetVisit = allVisits.find(visit => visit.actorId === targetId);
 
-      // Check if target was drunk - stayed home
-      if (drunkPlayers.has(targetId)) {
-        actor.nightAction.results.push(`track:${target.name} nikam nešel`);
-        console.log(`    👣 ${actor.name} tracked drunk ${target.name} - stayed home`);
-        continue;
-      }
-
-      // Check if target was blocked - stayed home
-      if (blocked.has(targetId)) {
-        actor.nightAction.results.push(`track:${target.name} nikam nešel`);
-        console.log(`    👣 ${actor.name} tracked blocked ${target.name} - stayed home`);
-        continue;
-      }
-
-      // Check if target was guarded - stayed home (was guarded)
-      if (guarded.has(targetId)) {
-        actor.nightAction.results.push(`track:${target.name} nikam nešel`);
-        console.log(`    👣 ${actor.name} tracked guarded ${target.name} - stayed home`);
-        continue;
-      }
-
-      // Target actually went somewhere - find where
-      const targetVisit = allVisits.find(visit => visit.actorId === targetId);
-
-      if (targetVisit && targetVisit.targetId) {
-        const destination = idMap.get(targetVisit.targetId);
-        actor.nightAction.results.push(`track:${target.name} → ${destination?.name || '?'}`);
-        console.log(`    👣 ${actor.name} tracked ${target.name} → ${destination?.name}`);
-      } else {
-        // Target had no action or is Citizen
-        actor.nightAction.results.push(`track:${target.name} nikam nešel`);
-        console.log(`    👣 ${actor.name} tracked ${target.name} - stayed home (no action)`);
-      }
+    if (targetVisit && targetVisit.targetId) {
+      const destination = idMap.get(targetVisit.targetId);
+      tracker.nightAction.results.push(`tracker_followed:${target.name} navštívil ${destination?.name || '?'}`);
+      console.log(`  👣 ${tracker.name} tracked ${target.name} → ${destination?.name}`);
+    } else {
+      // Target had no action or is Citizen
+      tracker.nightAction.results.push(`tracker_stayed:${target.name} zůstal doma`);
+      console.log(`  👣 ${tracker.name} tracked ${target.name} - stayed home (no action)`);
     }
   }
 
@@ -1119,6 +1154,9 @@ async function resolveNightActions(game, players) {
 
   // Track processed Sweethearts to avoid duplicate effects
   const processedSweethearts = new Set();
+  
+  // Track who killed whom (for Hunter penalty check)
+  const killSources = new Map(); // targetId -> { sourceId, wasHunterKill }
 
   // PHASE 5a: Process poison effects (regular and strong)
   console.log('☠️ [NightResolver] Phase 5a: Processing poison effects...');
@@ -1230,7 +1268,20 @@ async function resolveNightActions(game, players) {
       p.alive = false;
       p.nightAction.results.push('killed:Zavražděn');
       toSave.add(p._id.toString());
-      console.log(`  ☠️ ${p.name} was killed${unhealableKill ? ' (unhealable - strong poison)' : ''}`);
+      
+      // Track kill source for Hunter penalty check
+      const killSource = pending.find(e => e.source);
+      const wasHunterKill = pending.some(e => e.meta?.hunter === true);
+      if (killSource) {
+        // Normalize sourceId to string for consistent comparison
+        const sourceIdStr = killSource.source?.toString?.() || killSource.source;
+        killSources.set(p._id.toString(), {
+          sourceId: sourceIdStr,
+          wasHunterKill: wasHunterKill
+        });
+      }
+      
+      console.log(`  ☠️ ${p.name} was killed${unhealableKill ? ' (unhealable - strong poison)' : ''}${wasHunterKill ? ' (by Hunter)' : ''}`);
 
       // ✅ Sweetheart death effect (only process once per Sweetheart)
       if (p.modifier === 'Sweetheart' && !processedSweethearts.has(p._id.toString())) {
@@ -1284,19 +1335,20 @@ async function resolveNightActions(game, players) {
     const target = idMap.get(targetId);
     if (!doctor || !target) continue;
 
-    // Check if target was attacked
-    const targetWasAttacked = !target.alive ||
-      (target.nightAction?.results || []).some(r =>
-        r.startsWith('attacked:') || r.startsWith('healed:')
-      );
+    // Check if target was attacked and saved (has 'attacked:' and 'healed:' results)
+    // or was poisoned and cured (has 'healed:Vyléčen z otravy' result)
+    const targetResults = target.nightAction?.results || [];
+    const wasAttackedAndSaved = targetResults.some(r => r.startsWith('attacked:')) &&
+      targetResults.some(r => r.startsWith('healed:'));
+    const wasPoisonedAndCured = targetResults.some(r => r === 'healed:Vyléčen z otravy');
 
-    if (targetWasAttacked) {
-      // Doctor saved someone!
-      doctor.nightAction.results.push(`success:Zachránil ${target.name}`);
+    if (wasAttackedAndSaved || wasPoisonedAndCured) {
+      // Doctor saved someone or cured poison!
+      doctor.nightAction.results.push(`doctor_saved:Úspěšně jsi zachránil ${target.name}`);
       console.log(`  💉 ${doctor.name}: Successfully saved ${target.name}`);
     } else {
-      // Target wasn't attacked
-      doctor.nightAction.results.push(`protect:Chránil ${target.name}`);
+      // Target wasn't attacked - Doctor's services weren't needed
+      doctor.nightAction.results.push(`doctor_quiet:Chránil jsi ${target.name}, ale služby nebyly potřeba`);
       console.log(`  💉 ${doctor.name}: Protected ${target.name} (no attack)`);
     }
   }
@@ -1309,24 +1361,63 @@ async function resolveNightActions(game, players) {
     if (!hunter || !hunter.alive) continue; // Hunter already dead
     if (!target) continue;
 
-    // Check if target died and was innocent (good)
-    if (!target.alive) {
-      const targetTeam = ROLES[target.role]?.team;
+    const targetTeam = ROLES[target.role]?.team;
+    const killInfo = killSources.get(targetId);
+    
+    // Normalize IDs to strings for comparison
+    const killSourceId = killInfo?.sourceId?.toString();
+    const normalizedHunterId = hunterId.toString();
+    const wasKilledByThisHunter = killInfo && killSourceId === normalizedHunterId && killInfo.wasHunterKill;
+    
+    // Check if target was attacked but saved (has attacked/healed results)
+    const wasAttackedButSaved = target.alive && 
+      (target.nightAction?.results || []).some(r => 
+        r.startsWith('attacked:') || r.startsWith('healed:')
+      );
 
-      // If killed good player, Hunter dies
+    if (wasKilledByThisHunter && !target.alive) {
+      // Target died from this Hunter's attack
+      // First, add story about killing the target (regardless of team)
+      if (!hunter.nightAction) {
+        hunter.nightAction = { targetId: null, action: null, results: [] };
+      }
+      // Remove the generic success message
+      hunter.nightAction.results = hunter.nightAction.results.filter(r => 
+        !r.includes(`Zaútočil ${target.name}`)
+      );
+      // Add story about killing the target
+      hunter.nightAction.results.push(`hunter_kill:Zabil ${target.name}`);
+      
+      // If killed good player, Hunter dies - add guilt story after kill story
       if (targetTeam === 'good') {
         hunter.alive = false;
-        if (!hunter.nightAction) {
-          hunter.nightAction = { targetId: null, action: null, results: [] };
-        }
-        hunter.nightAction.results.push('hunter_guilt:Zabil nevinného');
+        hunter.nightAction.results.push('hunter_guilt:Zabil nevinného a zemřel z viny');
         toSave.add(hunterId);
-        console.log(`  💀 ${hunter.name} died from guilt (killed innocent ${target.name})`);
+        console.log(`  💀 ${hunter.name} died from guilt (killed innocent ${target.name}, team: ${targetTeam})`);
       } else {
         // Killed evil/neutral - success
-        hunter.nightAction.results.push(`hunter_success:Zabil ${target.name}`);
+        hunter.nightAction.results.push(`hunter_success:Úspěšně jsi zabil ${target.name}`);
         console.log(`  ✅ ${hunter.name} successfully killed ${target.name} (${targetTeam})`);
       }
+    } else if (wasAttackedButSaved) {
+      // Target was attacked but saved by Doctor - no penalty
+      if (!hunter.nightAction) {
+        hunter.nightAction = { targetId: null, action: null, results: [] };
+      }
+      // Remove the generic success message
+      hunter.nightAction.results = hunter.nightAction.results.filter(r => 
+        !r.includes(`Zaútočil ${target.name}`)
+      );
+      hunter.nightAction.results.push(`hunter_kill:Zaútočil na ${target.name}, ale byl zachráněn`);
+      console.log(`  🛡️ ${hunter.name} attacked ${target.name} but target was saved`);
+    } else if (!target.alive && !wasKilledByThisHunter) {
+      // Target died but not from this Hunter (maybe from another source)
+      // No action needed - Hunter didn't kill them
+      console.log(`  ℹ️ ${hunter.name} attacked ${target.name} but target died from another cause`);
+    } else {
+      // Target is still alive and wasn't attacked - this shouldn't happen normally
+      // But handle gracefully - maybe target was blocked or something else happened
+      console.log(`  ⚠️ ${hunter.name} attacked ${target.name} but target status unclear (alive: ${target.alive}, wasKilledByThisHunter: ${wasKilledByThisHunter}, killInfo: ${JSON.stringify(killInfo)})`);
     }
   }
 

@@ -4,18 +4,26 @@ import './InGameModMenu.css';
 
 function InGameModMenu({ gameId, onReturnToLobby }) {
   const [open, setOpen] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleReturnToLobby = async () => {
-    if (!window.confirm('Return to lobby? This will reset the game for all players.')) {
-      return;
-    }
+  const handleReturnToLobbyClick = () => {
+    setShowConfirm(true);
+    setOpen(false);
+  };
+
+  const handleConfirm = async () => {
     try {
       await onReturnToLobby();
-      setOpen(false);
+      setShowConfirm(false);
     } catch (e) {
       console.error('Failed to return to lobby:', e);
       alert('Error returning to lobby');
+      setShowConfirm(false);
     }
+  };
+
+  const handleCancel = () => {
+    setShowConfirm(false);
   };
 
   return (
@@ -34,9 +42,11 @@ function InGameModMenu({ gameId, onReturnToLobby }) {
             <h3>Moderator Menu</h3>
           </div>
           <div className="mod-menu-options">
-            <button className="mod-option danger" onClick={handleReturnToLobby}>
-              🔙 Return to Lobby
-            </button>
+            {onReturnToLobby && (
+              <button className="mod-option danger" onClick={handleReturnToLobbyClick}>
+                🔙 Return to Lobby
+              </button>
+            )}
             {/* Další možnosti pro debug/moderátora */}
             <button className="mod-option" onClick={() => alert('Not implemented yet')}>
               ⏸️ Pause Game
@@ -44,6 +54,30 @@ function InGameModMenu({ gameId, onReturnToLobby }) {
             <button className="mod-option" onClick={() => alert('Not implemented yet')}>
               📊 View Stats
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {showConfirm && (
+        <div className="confirm-modal-overlay" onClick={handleCancel}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-header">
+              <h3>⚠️ Confirm Action</h3>
+            </div>
+            <div className="confirm-modal-content">
+              <p className="confirm-message">
+                Return to lobby? This will reset the game for all players.
+              </p>
+            </div>
+            <div className="confirm-modal-actions">
+              <button className="confirm-button cancel" onClick={handleCancel}>
+                Cancel
+              </button>
+              <button className="confirm-button confirm" onClick={handleConfirm}>
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}

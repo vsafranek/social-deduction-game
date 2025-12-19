@@ -159,7 +159,7 @@ function GameScreen({
 
     if (isJesterWin && customWinner) {
       if (playerWon) {
-        personalResult = 'Vyhrál jsi! 🎭';
+        personalResult = 'Vyhrál jsi!';
         victoryMessage = 'Byl jsi vyhlasován a vyhrál jsi jako Šašek!';
       } else {
         personalResult = 'Prohrál jsi.';
@@ -167,36 +167,43 @@ function GameScreen({
       }
     } else if (isInfectedWin && customWinner) {
       if (playerWon) {
-        personalResult = 'Vyhrál jsi! 🦠';
+        personalResult = 'Vyhrál jsi!';
         victoryMessage = 'Všichni hráči byli nakaženi - vyhrál jsi jako Nakažený!';
       } else {
         personalResult = 'Prohrál jsi.';
         victoryMessage = `Nakažený ${customWinner.name} vyhrál - všichni hráči byli nakaženi!`;
       }
     } else {
-      personalResult = playerWon ? 'Vyhrál jsi! 🎉' : 'Prohrál jsi.';
+      personalResult = playerWon ? 'Vyhrál jsi!' : 'Prohrál jsi.';
       victoryMessage = null;
     }
 
     return (
       <div className="game-screen phase-end">
         <div className="end-screen">
-          <h1>Hra skončila!</h1>
-          <h2>{personalResult}</h2>
-          {victoryMessage && (
-            <p className="victory-message" style={{
-              marginTop: '8px',
-              fontSize: '16px',
-              color: '#a855f7',
-              fontWeight: '600'
-            }}>
-              {victoryMessage}
-            </p>
-          )}
-          <p className="player-role">Role: {currentPlayer.role}</p>
-          <p className="player-status">
-            {currentPlayer.alive ? '✅ Přežil jsi' : '💀 Zemřel jsi'}
-          </p>
+          <div className="end-screen-content">
+            <h1 className="end-title">Hra skončila!</h1>
+            <h2 className={`end-result ${playerWon ? 'victory' : 'defeat'}`}>
+              {personalResult}
+            </h2>
+            {victoryMessage && (
+              <p className="victory-message">
+                {victoryMessage}
+              </p>
+            )}
+            <div className="end-info">
+              <div className="end-info-item">
+                <span className="end-info-label">Role:</span>
+                <span className="end-info-value">{currentPlayer.role}</span>
+              </div>
+              <div className="end-info-item">
+                <span className="end-info-label">Status:</span>
+                <span className={`end-info-value ${currentPlayer.alive ? 'alive' : 'dead'}`}>
+                  {currentPlayer.alive ? 'Přežil jsi' : 'Zemřel jsi'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

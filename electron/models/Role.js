@@ -29,7 +29,7 @@ const ROLES = {
 
   'Investigator': {
     team: 'good',
-    description: 'Learns two possible roles of the target each night (one is correct). Can only investigate alive players.',
+    description: 'Learns two possible roles of the target each night. Can only investigate alive players.',
     actionType: 'investigate',
     nightPriority: 5,
     canUseEveryNight: true,
@@ -160,7 +160,7 @@ const ROLES = {
     defaultVictory: {
       canWinWithTeams: ['evil'],
       soloWin: false,
-      customRules: [] // ✅ Removed - uses victoryEvaluator logic
+      customRules: [] 
     }
   },
 

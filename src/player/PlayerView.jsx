@@ -294,9 +294,20 @@ function PlayerView() {
 
   if (!gameState) {
     return (
-      <div className="loading-screen">
-        <div className="spinner"></div>
-        <p>Načítání hry...</p>
+      <div className="player-loading-screen">
+        <div className="loading-content-wrapper">
+          <div className="loading-spinner-container">
+            <div className="loading-spinner-outer"></div>
+            <div className="loading-spinner-inner"></div>
+            <div className="loading-spinner-core"></div>
+          </div>
+          <p className="loading-text">Načítání hry...</p>
+          <div className="loading-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -306,9 +317,20 @@ function PlayerView() {
   
   if (!currentPlayer) {
     return (
-      <div className="loading-screen">
-        <div className="spinner"></div>
-        <p>Načítání tvého profilu...</p>
+      <div className="player-loading-screen">
+        <div className="loading-content-wrapper">
+          <div className="loading-spinner-container">
+            <div className="loading-spinner-outer"></div>
+            <div className="loading-spinner-inner"></div>
+            <div className="loading-spinner-core"></div>
+          </div>
+          <p className="loading-text">Načítání tvého profilu...</p>
+          <div className="loading-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
       </div>
     );
   }

@@ -52,7 +52,24 @@ function RolePoolModal({ gameState, onClose }) {
     return roles;
   }, [gameState]);
 
-  // Group roles by team
+  // Check which teams have at least one guaranteed player (player with a role from that team)
+  const teamsWithGuaranteedPlayers = useMemo(() => {
+    const teams = new Set();
+    const players = gameState?.players || [];
+    
+    players.forEach(player => {
+      if (player.role) {
+        const roleInfo = ROLE_INFO[player.role];
+        if (roleInfo && roleInfo.team) {
+          teams.add(roleInfo.team);
+        }
+      }
+    });
+    
+    return teams;
+  }, [gameState?.players]);
+
+  // Group roles by team, but only include teams that have at least one guaranteed player
   const rolesByTeam = useMemo(() => {
     const grouped = {
       good: [],
@@ -61,13 +78,14 @@ function RolePoolModal({ gameState, onClose }) {
     };
 
     activeRoles.forEach(role => {
-      if (grouped[role.team]) {
+      // Only add roles from teams that have at least one guaranteed player
+      if (grouped[role.team] && teamsWithGuaranteedPlayers.has(role.team)) {
         grouped[role.team].push(role);
       }
     });
 
     return grouped;
-  }, [activeRoles]);
+  }, [activeRoles, teamsWithGuaranteedPlayers]);
 
   const getTeamHeaderClass = (team) => {
     switch (team) {
@@ -189,3 +207,4 @@ function RolePoolModal({ gameState, onClose }) {
 }
 
 export default RolePoolModal;
+

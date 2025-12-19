@@ -987,7 +987,9 @@ describe('nightActionResolver', () => {
 
       expect(innocent.alive).toBe(false);
       expect(hunter.alive).toBe(false);
-      expect(hunter.nightAction.results).toContain('hunter_guilt:Zabil nevinného');
+      // Hunter should have kill story first, then guilt story
+      expect(hunter.nightAction.results).toContain('hunter_kill:Zabil Innocent');
+      expect(hunter.nightAction.results).toContain('hunter_guilt:Zabil nevinného a zemřel z viny');
     });
 
     test('should kill evil target without Hunter dying', async () => {

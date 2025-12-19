@@ -2,42 +2,38 @@
 import React, { useEffect, useState } from 'react';
 import RoleIcon from '../../components/icons/RoleIcon';
 import { getRoleInfo, getModifierInfo } from '../../data/roleInfo';
+import InGameModMenu from './InGameModMenu';
 import './GameEndScreen.css';
 
 const WINNER_LABELS = {
   'good': { 
     label: 'The Order wins!', 
-    emoji: '✨', 
-    gradient: 'linear-gradient(135deg, #2e7d32, #1b5e20)',
-    description: 'Všichni zločinci byli eliminováni!'
+    gradient: 'linear-gradient(135deg, rgba(46, 125, 50, 0.3), rgba(27, 94, 32, 0.2))',
+    description: 'All criminals have been eliminated!'
   },
   'evil': { 
     label: 'The Shadows win!', 
-    emoji: '🔥', 
-    gradient: 'linear-gradient(135deg, #c62828, #b71c1c)',
+    gradient: 'linear-gradient(135deg, rgba(198, 40, 40, 0.3), rgba(183, 28, 28, 0.2))',
     description: 'The Shadows have taken control!'
   },
   'solo': { 
-    label: 'Sólové vítězství!', 
-    emoji: '👑', 
-    gradient: 'linear-gradient(135deg, #f57f17, #e65100)',
-    description: 'Poslední přeživší!'
+    label: 'Solo Victory!', 
+    gradient: 'linear-gradient(135deg, rgba(245, 127, 23, 0.3), rgba(230, 81, 0, 0.2))',
+    description: 'Last survivor!'
   },
   'custom': { 
-    label: 'Speciální vítězství!', 
-    emoji: '🌟', 
-    gradient: 'linear-gradient(135deg, #6a1b9a, #4a148c)',
-    description: 'Speciální win condition!'
+    label: 'Special Victory!', 
+    gradient: 'linear-gradient(135deg, rgba(106, 27, 154, 0.3), rgba(74, 20, 140, 0.2))',
+    description: 'Special win condition!'
   },
   'unknown': {
-    label: 'Výsledek neznámý',
-    emoji: '❔',
-    gradient: 'linear-gradient(135deg, #455a64, #263238)',
-    description: 'Čekáme na potvrzení vítěze.'
+    label: 'Unknown Result',
+    gradient: 'linear-gradient(135deg, rgba(69, 90, 100, 0.3), rgba(38, 50, 56, 0.2))',
+    description: 'Waiting for winner confirmation.'
   }
 };
 
-function GameEndScreen({ gameState, currentPlayer }) {
+function GameEndScreen({ gameState, currentPlayer, onReturnToLobby, onReturnToMenu }) {
   const [showAnimation, setShowAnimation] = useState(true);
 
   useEffect(() => {
@@ -57,17 +53,15 @@ function GameEndScreen({ gameState, currentPlayer }) {
     const winnerPlayer = players.find(p => winnerIds.includes(p._id?.toString?.() ?? p._id));
     if (winnerPlayer?.role === 'Jester') {
       winnerInfo = {
-        label: 'Vítězství Šaška!',
-        emoji: '🎭',
-        gradient: 'linear-gradient(135deg, #7b1fa2, #4a148c)',
-        description: 'Šašek byl vyhlasován a vyhrál!'
+        label: 'Jester Victory!',
+        gradient: 'linear-gradient(135deg, rgba(123, 31, 162, 0.3), rgba(74, 20, 140, 0.2))',
+        description: 'The Jester was executed and won!'
       };
     } else if (winnerPlayer?.role === 'Infected') {
       winnerInfo = {
-        label: 'Vítězství Nakaženého!',
-        emoji: '🦠',
-        gradient: 'linear-gradient(135deg, #512da8, #311b92)',
-        description: 'Všichni hráči byli nakaženi!'
+        label: 'Infected Victory!',
+        gradient: 'linear-gradient(135deg, rgba(81, 45, 168, 0.3), rgba(49, 27, 146, 0.2))',
+        description: 'All players have been infected!'
       };
     }
   }
@@ -201,11 +195,11 @@ function GameEndScreen({ gameState, currentPlayer }) {
           <div className="player-info">
             <div className="player-name">
               {player.name}
-              {isCurrent && <span className="self-badge">(Ty)</span>}
+              {isCurrent && <span className="self-badge">(You)</span>}
             </div>
             
             {isPlayerWinner && (
-              <span className="winner-crown" title="Vítěz">👑</span>
+              <span className="winner-crown" title="Winner">👑</span>
             )}
           </div>
         </div>
@@ -222,7 +216,7 @@ function GameEndScreen({ gameState, currentPlayer }) {
 
         <div className="player-card-footer">
           <span className={`status-badge ${player.alive ? 'alive' : 'dead'}`}>
-            {player.alive ? '✅ Přežil' : '💀 Zemřel'}
+            {player.alive ? '✅ Survived' : '💀 Died'}
           </span>
         </div>
       </div>
@@ -231,11 +225,16 @@ function GameEndScreen({ gameState, currentPlayer }) {
 
   return (
     <div className="game-end-screen">
+      {/* Moderator Menu - Top Right */}
+      <InGameModMenu 
+        gameId={gameState.game._id}
+        onReturnToLobby={onReturnToLobby}
+      />
+
       {/* Victory Animation */}
       {showAnimation && (
         <div className="victory-animation" style={{ background: winnerInfo.gradient }}>
           <div className="victory-banner">
-            <span className="victory-emoji">{winnerInfo.emoji}</span>
             <h1>{winnerInfo.label}</h1>
           </div>
         </div>
@@ -245,7 +244,6 @@ function GameEndScreen({ gameState, currentPlayer }) {
       <div className="end-content">
         {/* ✅ Compact Header */}
         <div className="end-header" style={{ background: winnerInfo.gradient }}>
-          <span className="victory-emoji-small">{winnerInfo.emoji}</span>
           <div className="header-text">
             <h2>{winnerInfo.label}</h2>
             <p>{winnerInfo.description}</p>
@@ -285,7 +283,7 @@ function GameEndScreen({ gameState, currentPlayer }) {
             <div className="neutrals-section">
               <h3 className="section-title">
                 <span className="team-icon">⚖️</span>
-                Neutrální hráči
+                Neutral Players
               </h3>
               <div className="neutrals-grid">
                 {neutralPlayers.map(player => {
@@ -310,17 +308,17 @@ function GameEndScreen({ gameState, currentPlayer }) {
         {/* Game Stats */}
         <div className="game-stats">
           <div className="stat-card">
-            <span className="stat-label">Kol</span>
+            <span className="stat-label">Round</span>
             <span className="stat-value">{gameState.game.round}</span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Přeživší</span>
+            <span className="stat-label">Survivors</span>
             <span className="stat-value">
               {players.filter(p => p.alive).length}/{players.length}
             </span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Vítězů</span>
+            <span className="stat-label">Winners</span>
             <span className="stat-value">{winnerIds.length}</span>
           </div>
         </div>

@@ -9,7 +9,7 @@ import DeathReveal from './DeathReveal';
 import GameEndScreen from './GameEndScreen';
 import './GameArena.css';
 
-function GameArena({ gameState, onRefresh }) {
+function GameArena({ gameState, onRefresh, onReturnToMenu }) {
   const [remaining, setRemaining] = useState(null);
   const [transition, setTransition] = useState(null);
   const [deadReveal, setDeadReveal] = useState([]);
@@ -226,6 +226,7 @@ function GameArena({ gameState, onRefresh }) {
       <GameEndScreen 
         gameState={gameState}
         onReturnToLobby={handleReturnToLobby}
+        onReturnToMenu={onReturnToMenu}
       />
     );
   }

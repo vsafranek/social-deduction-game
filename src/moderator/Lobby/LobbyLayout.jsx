@@ -217,28 +217,18 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
     }
 
     // Build roleConfiguration map (roleName -> count) for display in role pool modal
-    // Show configured roles (what's allowed in the pool), not what was actually assigned
-    // Filter out roles from teams with limit 0 (they can't be in the game)
+    // Show ALL configured roles in the pool, regardless of team limits
+    // Team limits only affect actual assignment, not what's visible in the pool
     const roleConfiguration = {};
     Object.entries(roleCount).forEach(([role, count]) => {
       if (randomPoolRoles[role] && count > 0) {
-        const team = availableRoles[role]?.team || 'good';
-        const teamLimit = teamLimits[team];
-        // Only include if team limit is > 0 (or null for unlimited)
-        // teamLimit === 0 means no roles from this team can be in the game
-        if (teamLimit === null || teamLimit > 0) {
-          roleConfiguration[role] = count;
-        }
+        // Include all roles that are in the pool, regardless of team limits
+        roleConfiguration[role] = count;
       }
     });
-    // Add guaranteed roles (they're always in the pool, but only if team limit allows)
+    // Add guaranteed roles (they're always in the pool)
     guaranteedRoles.forEach(role => {
-      const team = availableRoles[role]?.team || 'good';
-      const teamLimit = teamLimits[team];
-      // Only include guaranteed roles if team limit allows
-      if (teamLimit === null || teamLimit > 0) {
-        roleConfiguration[role] = (roleConfiguration[role] || 0) + 1;
-      }
+      roleConfiguration[role] = (roleConfiguration[role] || 0) + 1;
     });
     
     // #region agent log

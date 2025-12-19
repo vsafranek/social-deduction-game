@@ -33,11 +33,46 @@ const RESULT_MAPPING = {
     bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     hideDetails: false
   },
+  'jailer_prevented': { 
+    emoji: '🔒', 
+    label: 'Zadržen', 
+    subtitle: 'Pokusil jsi se odejít, ale byl jsi zadržen',
+    bgGradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    hideDetails: false
+  },
+  'jailer_blocked': { 
+    emoji: '👮', 
+    label: 'Zadržení', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    hideDetails: false
+  },
+  'jailer_home': { 
+    emoji: '🏠', 
+    label: 'Zadržení', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    hideDetails: false
+  },
   'guarded': { 
     emoji: '🛡️', 
     label: 'Stráž!', 
     subtitle: 'Zastaven stráží',
     bgGradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    hideDetails: false
+  },
+  'guardian_stopped': { 
+    emoji: '🛡️', 
+    label: 'Zastavení', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    hideDetails: false
+  },
+  'guardian_quiet': { 
+    emoji: '😴', 
+    label: 'Klidná noc', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     hideDetails: false
   },
   'success': { 
@@ -54,16 +89,30 @@ const RESULT_MAPPING = {
     bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     hideDetails: true // ✅ Skryj jména návštěvníků (pokud nemáš Lookout/Guardian)
   },
-  'watch': { 
+  'lookout_visitors': { 
     emoji: '👁️', 
-    label: 'Pozorování', 
-    subtitle: 'detail', // Zobraz jména
+    label: 'Návštěvníci', 
+    subtitle: 'detail',
     bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     hideDetails: false
   },
-  'track': { 
+  'lookout_quiet': { 
+    emoji: '😴', 
+    label: 'Klidná noc', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    hideDetails: false
+  },
+  'tracker_followed': { 
     emoji: '👣', 
     label: 'Sledování', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    hideDetails: false
+  },
+  'tracker_stayed': { 
+    emoji: '🏠', 
+    label: 'Zůstal doma', 
     subtitle: 'detail',
     bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     hideDetails: false
@@ -89,18 +138,18 @@ const RESULT_MAPPING = {
     bgGradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
     hideDetails: false
   },
-  'protect': { 
-    emoji: '💉', 
-    label: 'Ochrana', 
+  'doctor_saved': { 
+    emoji: '💚', 
+    label: 'Zachránil jsi', 
     subtitle: 'detail',
     bgGradient: 'linear-gradient(135deg, #10b981, #059669)',
     hideDetails: false
   },
-  'insomniac': { 
-    emoji: '😵', 
-    label: 'Nespavost', 
+  'doctor_quiet': { 
+    emoji: '💉', 
+    label: 'Ochrana', 
     subtitle: 'detail',
-    bgGradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    bgGradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     hideDetails: false
   },
   'consig': { 
@@ -108,6 +157,13 @@ const RESULT_MAPPING = {
     label: 'Vyšetřování', 
     subtitle: 'detail',
     bgGradient: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+    hideDetails: false
+  },
+  'hunter_kill': { 
+    emoji: '🏹', 
+    label: 'Zabil jsi cíl', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #f97316, #ea580c)',
     hideDetails: false
   },
   'hunter_success': { 
@@ -119,10 +175,17 @@ const RESULT_MAPPING = {
   },
   'hunter_guilt': { 
     emoji: '💀', 
-    label: 'Zemřel jsi', 
-    subtitle: 'Zabil jsi nevinného',
+    label: 'Zemřel jsi z viny', 
+    subtitle: 'Zabil jsi nevinného a akce tě stála život',
     bgGradient: 'linear-gradient(135deg, #dc2626, #991b1b)',
     hideDetails: true
+  },
+  'failed': { 
+    emoji: '❌', 
+    label: 'Selhání', 
+    subtitle: 'detail',
+    bgGradient: 'linear-gradient(135deg, #ef4444, #dc2626)',
+    hideDetails: false
   },
   
  };
