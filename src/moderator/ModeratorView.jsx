@@ -20,7 +20,7 @@ const TEST_STORIES_DATA = [
   'jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen',
   'jailer_blocked:Zadržel Test Hráč - pokusil se odejít',
   'jailer_home:Zadržel Test Hráč - zůstal doma',
-  'guarded:Zastaven stráží',
+  'guardian_prevented:Zastaven stráží',
   'guardian_stopped:Zastavil jsi návštěvníka u Test Hráč',
   'guardian_quiet:Nikdo nepřišel k Test Hráč',
   'success:Tvá akce byla úspěšná',

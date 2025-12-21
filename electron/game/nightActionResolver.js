@@ -402,7 +402,7 @@ async function resolveNightActions(game, players) {
       if (!guarded.has(actorId)) {
         guarded.add(actorId);
         addEffect(actor, 'guarded', null, null, {});
-        actor.nightAction.results.push('guarded:Stráž');
+        actor.nightAction.results.push('guardian_prevented:Stráž');
         console.log(`  🛡️ ${actor.name}: Guarded by ${target.name}`);
       }
       continue;

@@ -10,7 +10,7 @@ export const ROLE_INFO = {
     team: 'good',
     teamLabel: 'The Order',
     description: 'Každou noc chráníš jednoho hráče před smrtí',
-    actionVerb: 'Chránit',
+    actionVerb: 'Ochránit',
     nightAction: {
       verb: 'Chraň',
       icon: '💉',
@@ -49,7 +49,7 @@ export const ROLE_INFO = {
     team: 'good',
     teamLabel: 'The Order',
     description: 'Provedeš pitvu na mrtvém hráči a zjistíš jeho přesnou roli',
-    actionVerb: 'Proveď pitvu',
+    actionVerb: 'Prozkoumat',
     nightAction: {
       verb: 'Proveď pitvu',
       icon: '🔬',
@@ -75,7 +75,7 @@ export const ROLE_INFO = {
     team: 'good',
     teamLabel: 'The Order',
     description: 'Nastav stráž u domu jiného hráče - návštěvníci jsou odhaleni a zastaveni',
-    actionVerb: 'Nastavit stráž',
+    actionVerb: 'Strážit',
     nightAction: {
       verb: 'Nastav Stráž',
       icon: '🛡️',
@@ -131,10 +131,10 @@ export const ROLE_INFO = {
       dual: true,
       actions: {
         'kill': {
-          verb: 'Zabiš',
+          verb: 'Zabij',
           icon: '🔪',
           color: 'red',
-          description: 'Zabiš jednoho hráče'
+          description: 'Zabij jednoho hráče'
         },
         'clean_role': {
           verb: 'Označ',
@@ -150,15 +150,15 @@ export const ROLE_INFO = {
     team: 'evil',
     teamLabel: 'The Shadows',
     description: 'Můžeš zabíjet NEBO obviňovat hráče - obviněný hráč bude vypadat jako zločinec při vyšetřování',
-    actionVerb: 'Zabít nebo obviňovat',
+    actionVerb: 'Zabít nebo obviňit',
     nightAction: {
       dual: true,
       actions: {
         'kill': {
-          verb: 'Zabiš',
+          verb: 'Zabij',
           icon: '🔪',
           color: 'red',
-          description: 'Zabiš jednoho hráče'
+          description: 'Zabij jednoho hráče'
         },
         'frame': {
           verb: 'Obviň',
@@ -179,10 +179,10 @@ export const ROLE_INFO = {
       dual: true,
       actions: {
         'kill': {
-          verb: 'Zabiš',
+          verb: 'Zabij',
           icon: '🔪',
           color: 'red',
-          description: 'Zabiš jednoho hráče'
+          description: 'Zabij jednoho hráče'
         },
         'consig_investigate': {
           verb: 'Vyšetři',
@@ -198,7 +198,7 @@ export const ROLE_INFO = {
     team: 'evil',
     teamLabel: 'The Shadows',
     description: 'Každou noc můžeš otrávit hráče - otrávený hráč umře další den, ale může být vyléčen doktorem. Máš také extra silný jed (jednou za hru), který se aktivuje až po návštěvě doktora a nedá se vyléčit.',
-    actionVerb: 'Otrávit nebo silný jed',
+    actionVerb: 'Otrávit nebo zabít',
     nightAction: {
       dual: true,
       actions: {
@@ -209,7 +209,7 @@ export const ROLE_INFO = {
           description: 'Otrávíš hráče - umře další den, může být vyléčen doktorem'
         },
         'strong_poison': {
-          verb: 'Silný jed',
+          verb: 'Zabít',
           icon: '💀',
           color: 'red',
           description: 'Použiješ silný jed (jednou za hru) - aktivuje se až po návštěvě doktora, nedá se vyléčit'
@@ -228,10 +228,10 @@ export const ROLE_INFO = {
     description: 'Zabíjej všechny - vyhraj sám. Chodíš vždy první a nemůžeš být zastaven.',
     actionVerb: 'Zabít',
     nightAction: {
-      verb: 'Zabiš',
+      verb: 'Zabij',
       icon: '🛡️',
       color: 'red',
-      description: 'Zabiš jednoho hráče'
+      description: 'Zabij jednoho hráče'
     }
   },
   'Infected': {
@@ -241,10 +241,10 @@ export const ROLE_INFO = {
     description: 'Nakaz všechny hráče a vyhraj',
     actionVerb: 'Nakazit',
     nightAction: {
-      verb: 'Nakazi',
+      verb: 'Nakaž',
       icon: '🦠',
       color: 'purple',
-      description: 'Nakazi jednoho hráče'
+      description: 'Nakaž jednoho hráče'
     }
   },
 
