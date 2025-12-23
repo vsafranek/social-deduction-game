@@ -333,7 +333,9 @@ describe('nightActionResolver', () => {
       await resolveNightActions({}, [jailer, blocked, target]);
 
       expect(target.alive).toBe(true);
-      expect(blocked.nightAction.results).toContain('blocked:Uzamčen');
+      expect(blocked.nightAction.results).toContain(
+        'jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen'
+      );
     });
 
     test('should clear blocked effects at start of night', async () => {

@@ -223,12 +223,12 @@ function LobbyLayout({ gameState, onStartGame, onRefresh }) {
     Object.entries(roleCount).forEach(([role, count]) => {
       if (randomPoolRoles[role] && count > 0) {
         // Include all roles that are in the pool, regardless of team limits
-        roleConfiguration[role] = count;
+          roleConfiguration[role] = count;
       }
     });
     // Add guaranteed roles (they're always in the pool)
     guaranteedRoles.forEach(role => {
-      roleConfiguration[role] = (roleConfiguration[role] || 0) + 1;
+        roleConfiguration[role] = (roleConfiguration[role] || 0) + 1;
     });
     
     // #region agent log

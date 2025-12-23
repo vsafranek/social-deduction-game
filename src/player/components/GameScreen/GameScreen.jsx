@@ -137,6 +137,7 @@ function GameScreen({
       <NightResultsStories
         results={currentPlayer.nightResults}
         onComplete={handleStoriesComplete}
+        useLegacyStories={false}
       />
     );
   }

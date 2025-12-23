@@ -96,8 +96,8 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
                           // Normal avatar also failed, show fallback
                           img.style.display = 'none';
                           const fallback = img.nextElementSibling;
-                          if (fallback) {
-                            fallback.style.display = 'flex';
+                        if (fallback) {
+                          fallback.style.display = 'flex';
                           }
                         }
                       }}

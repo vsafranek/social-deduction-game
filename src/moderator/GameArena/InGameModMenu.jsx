@@ -44,8 +44,8 @@ function InGameModMenu({ gameId, onReturnToLobby }) {
           <div className="mod-menu-options">
             {onReturnToLobby && (
               <button className="mod-option danger" onClick={handleReturnToLobbyClick}>
-                🔙 Return to Lobby
-              </button>
+              🔙 Return to Lobby
+            </button>
             )}
             {/* Další možnosti pro debug/moderátora */}
             <button className="mod-option" onClick={() => alert('Not implemented yet')}>

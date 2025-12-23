@@ -15,6 +15,14 @@ export const RESULT_MAPPING = {
     severity: 'critical',
     hideDetails: true
   },
+  'poisoned_killed': { 
+    emoji: '☠️', 
+    label: 'Zemřel jsi na otravu', 
+    subtitle: 'Otrava tě zabila',
+    bgGradient: 'linear-gradient(135deg, #7c2d12, #991b1b)',
+    severity: 'critical',
+    hideDetails: true
+  },
   'attacked': { 
     emoji: '⚔️', 
     label: 'Útok!', 

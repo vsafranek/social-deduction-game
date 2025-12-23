@@ -7,14 +7,22 @@ import './NightResultsStories.css';
 
 const STORY_DURATION = 6000;
 
-function NightResultsStories({ results = [], onComplete }) {
+// Map result type to image path
+const getImagePath = (resultType) => {
+  return `/nightStories/01/${resultType}.jpg`;
+};
+
+function NightResultsStories({ results = [], onComplete, useLegacyStories = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [imageExists, setImageExists] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   
   const timerRef = useRef(null);
   const startTimeRef = useRef(Date.now());
   const pausedTimeRef = useRef(0);
+  const imageRef = useRef(null);
 
   const visibleResults = useMemo(() => {
     return results.filter((r) => {
@@ -123,6 +131,38 @@ function NightResultsStories({ results = [], onComplete }) {
   const currentResult = parseResult(visibleResults[currentIndex]);
   const eventData = RESULT_MAPPING[currentResult.type] || RESULT_MAPPING['safe'];
   
+  // Check if image exists for current result type
+  useEffect(() => {
+    if (useLegacyStories) {
+      setImageExists(false);
+      setImageLoading(false);
+      return;
+    }
+
+    const imagePath = getImagePath(currentResult.type);
+    setImageLoading(true);
+    setImageExists(false);
+
+    const img = new Image();
+    img.onload = () => {
+      setImageExists(true);
+      setImageLoading(false);
+    };
+    img.onerror = () => {
+      setImageExists(false);
+      setImageLoading(false);
+    };
+    img.src = imagePath;
+    imageRef.current = img;
+
+    return () => {
+      if (imageRef.current) {
+        imageRef.current.onload = null;
+        imageRef.current.onerror = null;
+      }
+    };
+  }, [currentResult.type, useLegacyStories]);
+  
   // ✅ Rozhodnutí o zobrazení detailů
   const shouldShowDetail = !eventData.hideDetails && currentResult.detail;
   const subtitle = shouldShowDetail ? currentResult.detail : eventData.subtitle;
@@ -130,6 +170,10 @@ function NightResultsStories({ results = [], onComplete }) {
   // Check if this is an investigation-like result (investigate, consig, autopsy)
   const shouldShowRoleIcons = ['investigate', 'consig', 'autopsy'].includes(currentResult.type);
   const investigationData = shouldShowRoleIcons ? parseInvestigationResult(currentResult.detail) : null;
+
+  // Determine if we should use image or legacy (emoji/gradient)
+  const useImage = !useLegacyStories && imageExists && !imageLoading;
+  const imagePath = useImage ? getImagePath(currentResult.type) : null;
 
   const handleNext = () => {
     goToNext();
@@ -187,32 +231,27 @@ function NightResultsStories({ results = [], onComplete }) {
 
       {/* Story content */}
       <div 
-        className="story-content"
-        style={{ background: eventData.bgGradient }}
+        className={`story-content ${useImage ? 'story-content-with-image' : ''}`}
+        style={{ 
+          background: useImage 
+            ? `url(${imagePath})`
+            : eventData.bgGradient,
+          backgroundSize: useImage ? 'cover' : 'auto',
+          backgroundPosition: useImage ? 'center' : 'auto',
+          backgroundRepeat: useImage ? 'no-repeat' : 'repeat'
+        }}
         key={currentIndex}
       >
-        {/* Floating particles */}
-        <div className="particles">
-          {[...Array(20)].map((_, i) => (
-            <div 
-              key={i} 
-              className="particle"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-                animationDuration: `${3 + Math.random() * 2}s`
-              }}
-            />
-          ))}
-        </div>
 
-        {/* Main emoji */}
-        <div className="story-emoji">
-          {eventData.emoji}
-        </div>
+        {/* Main emoji - only show if not using image */}
+        {!useImage && (
+          <div className="story-emoji">
+            {eventData.emoji}
+          </div>
+        )}
 
         {/* Text content */}
-        <div className="story-text">
+        <div className={`story-text ${useImage ? 'story-text-with-image' : ''}`}>
           <h2>{eventData.label}</h2>
           {investigationData ? (
             <div className="investigation-story-result">

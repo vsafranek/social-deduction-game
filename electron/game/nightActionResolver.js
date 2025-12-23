@@ -390,8 +390,9 @@ async function resolveNightActions(game, players) {
     if (hasEffect(actor, 'blocked') && actor.role !== 'SerialKiller') {
       if (!blocked.has(actorId)) {
         blocked.add(actorId);
-        actor.nightAction.results.push('blocked:Uzamčen');
-        console.log(`  🔒 ${actor.name}: Blocked`);
+        // Jailer-specific feedback for blocked target
+        actor.nightAction.results.push('jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen');
+        console.log(`  🔒 ${actor.name}: Blocked by Jailer`);
       }
       continue;
     }
@@ -903,12 +904,6 @@ async function resolveNightActions(game, players) {
     if (targetTriedToAct) {
       // Target tried to leave but was blocked by Jailer
       jailer.nightAction.results.push(`jailer_blocked:Zadržel ${target.name} - pokusil se odejít`);
-      // Replace generic blocked message with specific jailer_prevented message
-      // This only happens if target was blocked by this Jailer (which we know from jailTargets map)
-      const blockedResultIndex = target.nightAction.results.findIndex(r => r.startsWith('blocked:'));
-      if (blockedResultIndex !== -1) {
-        target.nightAction.results[blockedResultIndex] = 'jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen';
-      }
       console.log(`  👮 ${jailer.name}: ${target.name} tried to leave but was prevented`);
     } else {
       // Target stayed home (no action attempted) - Jailer still blocked them, but they didn't try to leave
@@ -1192,8 +1187,8 @@ async function resolveNightActions(game, players) {
         toSave.add(p._id.toString());
         console.log(`  💚 ${p.name} was cured from poison by Doctor`);
       } else {
-        // Poison kills - apply pendingKill
-        addEffect(p, 'pendingKill', poisonedEffects[0].source, null, {});
+        // Poison kills - apply pendingKill with poisoned flag
+        addEffect(p, 'pendingKill', poisonedEffects[0].source, null, { poisoned: true });
         toSave.add(p._id.toString());
         console.log(`  ☠️ ${p.name} dies from poison (not protected)`);
       }
@@ -1229,8 +1224,8 @@ async function resolveNightActions(game, players) {
       unactivatedPoison.meta.activated = true;
       unactivatedPoison.meta.unhealable = true;
       
-      // Apply pendingKill with unhealable flag
-      addEffect(p, 'pendingKill', unactivatedPoison.source, null, { unhealable: true });
+      // Apply pendingKill with unhealable and poisoned flags
+      addEffect(p, 'pendingKill', unactivatedPoison.source, null, { unhealable: true, poisoned: true });
       toSave.add(p._id.toString());
       
       if (!p.nightAction) {
@@ -1266,7 +1261,15 @@ async function resolveNightActions(game, players) {
     if (!isProtected) {
       // Player died
       p.alive = false;
-      p.nightAction.results.push('killed:Zavražděn');
+      
+      // Check if death was from poison
+      const wasPoisoned = pending.some(e => e.meta?.poisoned === true);
+      if (wasPoisoned) {
+        p.nightAction.results.push('poisoned_killed:Zemřel na otravu');
+      } else {
+        p.nightAction.results.push('killed:Zavražděn');
+      }
+      
       toSave.add(p._id.toString());
       
       // Track kill source for Hunter penalty check

@@ -14,9 +14,9 @@ const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 
 const TEST_STORIES_DATA = [
   'killed:Testovací Hráč',
+  'poisoned_killed:Zemřel na otravu',
   'attacked:Neznámý Útočník',
   'healed:Byl jsi zachráněn',
-  'blocked:Policista tě zablokoval',
   'jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen',
   'jailer_blocked:Zadržel Test Hráč - pokusil se odejít',
   'jailer_home:Zadržel Test Hráč - zůstal doma',
@@ -365,6 +365,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
         <NightResultsStories 
           results={TEST_STORIES_DATA}
           onComplete={() => setShowTestStories(false)}
+          useLegacyStories={false}
         />
       )}
 
