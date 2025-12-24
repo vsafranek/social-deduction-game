@@ -48,6 +48,11 @@ console.log('📦 Middleware configured');
 app.whenReady().then(async () => {
   console.log('⚡ Electron ready, starting server...');
   try {
+    // Set NODE_ENV to production if app is packaged (production build)
+    if (app.isPackaged && !process.env.NODE_ENV) {
+      process.env.NODE_ENV = 'production';
+    }
+    
     console.log('🔌 Connecting to MongoDB...');
     const connectDB = require('./database');
     await connectDB();
