@@ -12,30 +12,31 @@
  * - Total votes = sum of all weighted votes from all alive players (including skips)
  */
 
-async function resolveDayVoting(game, players, GameLog) {
+async function resolveDayVoting(game, players, createGameLog) {
   console.log('🗳️ [VotingResolver] Starting day voting resolution...');
 
   const alive = players.filter(p => p.alive);
   const totalAlive = alive.length;
 
   if (totalAlive === 0) {
-    await GameLog.create({ gameId: game._id, message: 'No execution (no alive players).' });
-    return { executed: null, reason: 'no_players' };
+    await createGameLog({ gameId: game._id, message: 'No execution (no alive players).' });
+    return { executed: null, reason: 'no_players', updates: { players: [], game: null } };
   }
 
   // Check if this is first day and no mayor has been elected yet
-  const isFirstDayMayorElection = game.round === 1 && !game.mayor;
+  const mayorId = game.mayor_id || game.mayor;
+  const isFirstDayMayorElection = game.round === 1 && !mayorId;
 
   if (isFirstDayMayorElection) {
     console.log('  🏛️ First day - Mayor election instead of execution');
-    return await resolveMayorElection(game, players, GameLog);
+    return await resolveMayorElection(game, players, createGameLog);
   }
 
   // Normal execution voting
-  return await resolveExecutionVoting(game, players, GameLog);
+  return await resolveExecutionVoting(game, players, createGameLog);
 }
 
-async function resolveMayorElection(game, players, GameLog) {
+async function resolveMayorElection(game, players, createGameLog) {
   const alive = players.filter(p => p.alive);
   const totalAlive = alive.length;
 
@@ -57,7 +58,7 @@ async function resolveMayorElection(game, players, GameLog) {
   // If nobody voted for anyone, all alive players are candidates
   if (voteCounts.size === 0) {
     console.log('  ℹ️ No votes cast - selecting mayor randomly from all alive players');
-    await GameLog.create({
+    await createGameLog({
       gameId: game._id,
       message: 'No votes cast for mayor - selecting randomly'
     });
@@ -92,7 +93,7 @@ async function resolveMayorElection(game, players, GameLog) {
     topId = tied[randomIndex];
     topVotes = voteCounts.get(topId) || 0;
 
-    await GameLog.create({
+    await createGameLog({
       gameId: game._id,
       message: `Tie for mayor (${tiedNames.join(', ')}) - ${players.find(p => p._id.toString() === topId)?.name} selected randomly`
     });
@@ -106,9 +107,11 @@ async function resolveMayorElection(game, players, GameLog) {
   // Elect mayor
   const mayor = players.find(p => p._id.toString() === topId);
 
+  const playerUpdates = [];
+
   if (!mayor || !mayor.alive) {
     // Selected candidate is dead or doesn't exist - cannot elect mayor
-    await GameLog.create({
+    await createGameLog({
       gameId: game._id,
       message: `Cannot elect mayor - selected candidate is not alive`
     });
@@ -116,9 +119,7 @@ async function resolveMayorElection(game, players, GameLog) {
 
     // Clear daily votes
     for (const p of alive) {
-      p.hasVoted = false;
-      p.voteFor = null;
-      await p.save();
+      playerUpdates.push({ id: p._id, updates: { has_voted: false, vote_for_id: null } });
     }
 
     return {
@@ -127,33 +128,39 @@ async function resolveMayorElection(game, players, GameLog) {
       mayorId: null,
       mayorName: null,
       votesFor: topVotes,
-      reason: 'candidate_not_alive'
+      reason: 'candidate_not_alive',
+      updates: { players: playerUpdates, game: null }
     };
   }
 
   // Remove any existing modifier (overwrite passive role)
   if (mayor.modifier) {
     console.log(`  🔄 Removing existing modifier ${mayor.modifier} from ${mayor.name}`);
-    await GameLog.create({
+    await createGameLog({
       gameId: game._id,
       message: `${mayor.name}'s modifier ${mayor.modifier} was overwritten by Mayor role`
     });
   }
 
   // Set mayor
-  mayor.modifier = null; // Overwrite any existing modifier
-  mayor.voteWeight = 2; // Mayor has 2 votes
-  await mayor.save();
+  playerUpdates.push({
+    id: mayor._id,
+    updates: {
+      modifier: null,
+      vote_weight: 2
+    }
+  });
 
   // Set mayor in game
-  game.mayor = mayor._id;
-  await game.save();
+  const gameUpdates = {
+    mayor_id: mayor._id
+  };
 
   const voteMessage = topVotes > 0
     ? `🏛️ ${mayor.name} was elected Mayor (${topVotes} weighted votes)`
     : `🏛️ ${mayor.name} was randomly selected as Mayor (no votes cast)`;
 
-  await GameLog.create({
+  await createGameLog({
     gameId: game._id,
     message: voteMessage
   });
@@ -161,9 +168,16 @@ async function resolveMayorElection(game, players, GameLog) {
 
   // Clear daily votes
   for (const p of alive) {
-    p.hasVoted = false;
-    p.voteFor = null;
-    await p.save();
+    if (p._id.toString() !== mayor._id.toString()) {
+      playerUpdates.push({ id: p._id, updates: { has_voted: false, vote_for_id: null } });
+    } else {
+      // Mayor already in updates, just add vote reset
+      const mayorUpdate = playerUpdates.find(u => u.id.toString() === mayor._id.toString());
+      if (mayorUpdate) {
+        mayorUpdate.updates.has_voted = false;
+        mayorUpdate.updates.vote_for_id = null;
+      }
+    }
   }
 
   return {
@@ -171,11 +185,12 @@ async function resolveMayorElection(game, players, GameLog) {
     mayorElected: true,
     mayorId: mayor._id,
     mayorName: mayor.name,
-    votesFor: topVotes
+    votesFor: topVotes,
+    updates: { players: playerUpdates, game: { id: game._id, updates: gameUpdates } }
   };
 }
 
-async function resolveExecutionVoting(game, players, GameLog) {
+async function resolveExecutionVoting(game, players, createGameLog) {
   const alive = players.filter(p => p.alive);
   const totalAlive = alive.length;
 
@@ -194,9 +209,9 @@ async function resolveExecutionVoting(game, players, GameLog) {
 
   // If nobody voted for anyone
   if (voteCounts.size === 0) {
-    await GameLog.create({ gameId: game._id, message: 'No execution (no votes cast).' });
+    await createGameLog({ gameId: game._id, message: 'No execution (no votes cast).' });
     console.log('  ℹ️ No votes cast');
-    return { executed: null, reason: 'no_votes' };
+    return { executed: null, reason: 'no_votes', updates: { players: [], game: null } };
   }
 
   // Find player with most votes (using weighted votes)
@@ -234,13 +249,13 @@ async function resolveExecutionVoting(game, players, GameLog) {
       return `${candidate?.name || '?'} (${topVotes} votes: ${voters})`;
     }).join(' vs ');
 
-    await GameLog.create({
+    await createGameLog({
       gameId: game._id,
       message: `No execution (tie: ${tiedNames.join(', ')} with ${topVotes} weighted votes each)`
     });
     console.log(`  ⚖️ Tie between: ${tiedNames.join(', ')} (${topVotes} weighted votes each)`);
     console.log(`     Details: ${tieDetails}`);
-    return { executed: null, reason: 'tie', tied, tiedVotes: topVotes };
+    return { executed: null, reason: 'tie', tied, tiedVotes: topVotes, updates: { players: [], game: null } };
   }
 
   let totalWeightedVotes = 0;
@@ -280,34 +295,41 @@ async function resolveExecutionVoting(game, players, GameLog) {
   // Starosta s 2 hlasy se počítá jako 1 hráč při výpočtu většiny
   if (playersVotingForTop < majorityThreshold) {
     const target = players.find(p => p._id.toString() === topId);
-    await GameLog.create({
+    await createGameLog({
       gameId: game._id,
       message: `No execution (insufficient votes: ${playersVotingForTop}/${totalAlive} players voted for ${target?.name}, need ${majorityThreshold})`
     });
     console.log(`  ❌ Insufficient votes: ${playersVotingForTop}/${totalAlive} players (need ${majorityThreshold} players for majority)`);
-    return { executed: null, reason: 'insufficient_votes', topCandidate: topId, votesFor, playersVotingFor: playersVotingForTop };
+    return { executed: null, reason: 'insufficient_votes', topCandidate: topId, votesFor, playersVotingFor: playersVotingForTop, updates: { players: [], game: null } };
   }
 
   // Má většinu → execute
   const target = players.find(p => p._id.toString() === topId);
+  const playerUpdates = [];
+  let gameUpdates = null;
 
   if (target && target.alive) {
     // If mayor is being executed, remove mayor status
-    if (game.mayor && game.mayor.toString() === target._id.toString()) {
-      target.voteWeight = 1; // Remove mayor vote weight
-      game.mayor = null; // No new mayor can be elected
-      await game.save();
-      await GameLog.create({
+    if (game.mayor && (game.mayor_id || game.mayor).toString() === target._id.toString()) {
+      playerUpdates.push({
+        id: target._id,
+        updates: { vote_weight: 1, alive: false }
+      });
+      gameUpdates = { mayor_id: null };
+      await createGameLog({
         gameId: game._id,
         message: `🏛️ Mayor ${target.name} was executed`
+      });
+    } else {
+      playerUpdates.push({
+        id: target._id,
+        updates: { alive: false }
       });
     }
 
     // ✅ Check if Jester was executed - special win condition
     if (target.role === 'Jester') {
-      target.alive = false;
-      await target.save();
-      await GameLog.create({
+      await createGameLog({
         gameId: game._id,
         message: `🎭 Jester ${target.name} was executed - Jester wins!`
       });
@@ -315,9 +337,7 @@ async function resolveExecutionVoting(game, players, GameLog) {
 
       // Clear daily votes
       for (const p of alive) {
-        p.hasVoted = false;
-        p.voteFor = null;
-        await p.save();
+        playerUpdates.push({ id: p._id, updates: { has_voted: false, vote_for_id: null } });
       }
 
       return {
@@ -326,13 +346,12 @@ async function resolveExecutionVoting(game, players, GameLog) {
         votesFor,
         votesAgainst,
         totalAlive,
-        jesterWin: true // Special flag for Jester win
+        jesterWin: true, // Special flag for Jester win
+        updates: { players: playerUpdates, game: gameUpdates ? { id: game._id, updates: gameUpdates } : null }
       };
     }
 
-    target.alive = false;
-    await target.save();
-    await GameLog.create({
+    await createGameLog({
       gameId: game._id,
       message: `Executed: ${target.name} (${playersVotingForTop}/${totalAlive} players, ${votesFor} weighted votes)`
     });
@@ -343,9 +362,11 @@ async function resolveExecutionVoting(game, players, GameLog) {
       const candidates = players.filter(p => p.alive && p.modifier !== 'Drunk' && p.modifier !== 'Sweetheart' && p._id.toString() !== target._id.toString());
       if (candidates.length > 0) {
         const victim = candidates[Math.floor(Math.random() * candidates.length)];
-        victim.modifier = 'Drunk';
-        await victim.save();
-        await GameLog.create({
+        playerUpdates.push({
+          id: victim._id,
+          updates: { modifier: 'Drunk' }
+        });
+        await createGameLog({
           gameId: game._id,
           message: `🍺 Sweetheart died... someone became Drunk!`
         });
@@ -356,9 +377,13 @@ async function resolveExecutionVoting(game, players, GameLog) {
 
   // Clear daily votes
   for (const p of alive) {
-    p.hasVoted = false;
-    p.voteFor = null;
-    await p.save();
+    if (!playerUpdates.find(u => u.id.toString() === p._id.toString())) {
+      playerUpdates.push({ id: p._id, updates: { has_voted: false, vote_for_id: null } });
+    } else {
+      const existing = playerUpdates.find(u => u.id.toString() === p._id.toString());
+      existing.updates.has_voted = false;
+      existing.updates.vote_for_id = null;
+    }
   }
 
   return {
@@ -367,7 +392,8 @@ async function resolveExecutionVoting(game, players, GameLog) {
     votesFor,
     votesAgainst,
     totalAlive,
-    playersVotingFor: playersVotingForTop
+    playersVotingFor: playersVotingForTop,
+    updates: { players: playerUpdates, game: gameUpdates ? { id: game._id, updates: gameUpdates } : null }
   };
 }
 

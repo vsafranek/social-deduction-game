@@ -1,7 +1,6 @@
 // electron/game/nightActionResolver.js
 
 const { ROLES } = require('../models/Role');
-const Player = require('../models/Player');
 
 /**
  * Helper functions
@@ -291,7 +290,7 @@ async function resolveNightActions(game, players) {
     toSave.add(puppetId);
 
     // Save puppet immediately to ensure changes persist
-    await puppet.save();
+    // puppet.save() - will be saved by route handler
 
     // Update both idMap and players array with modified puppet
     updatePlayerInMemory(puppet);
@@ -1299,12 +1298,14 @@ async function resolveNightActions(game, players) {
       }
 
       // Check if mayor died - remove mayor status
-      if (game.mayor && game.mayor.toString() === p._id.toString()) {
+      const currentMayorId = game.mayor_id || game.mayor;
+      if (currentMayorId && currentMayorId.toString() === p._id.toString()) {
         p.voteWeight = 1; // Remove mayor vote weight
-        game.mayor = null; // No new mayor can be elected
+        game.mayor_id = null; // No new mayor can be elected
+        game.mayor = null; // Also set for compatibility
         toSave.add(p._id.toString());
         console.log(`  🏛️ Mayor ${p.name} was killed - mayor status removed`);
-        // Note: game.save() will be called by the route handler after night resolution
+        // Note: game updates will be applied by the route handler after night resolution
       }
     } else {
       // Player was saved
@@ -1470,10 +1471,9 @@ async function resolveNightActions(game, players) {
     }
   }
 
-  // PHASE 7: Save all
-  console.log('💾 [NightResolver] Phase 7: Saving players...');
+  // PHASE 7: Players will be saved by route handler
+  console.log('💾 [NightResolver] Phase 7: Players modified (will be saved by route handler)...');
   for (const p of players) {
-    await p.save();
     console.log(`  ✓ ${p.name}: ${p.nightAction?.results?.length || 0} results`);
   }
 
