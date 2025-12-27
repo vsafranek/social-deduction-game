@@ -1,47 +1,52 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { gameApi } from '../api/gameApi';
-import TopBar from './TopBar/TopBar';
-import ConnectionDropdown from './ConnectionDropdown/ConnectionDropdown';
-import LobbyLayout from './Lobby/LobbyLayout';
-import GameArena from './GameArena/GameArena';
-import GameStartLoadingScreen from './GameArena/GameStartLoadingScreen';
-import DevMultiPlayerTool from './DevMultiPlayerTool/DevMultiPlayerTool';
-import NightResultsStories from '../player/components/NightResultsStories/NightResultsStories';
-import ConfirmModal from './components/ConfirmModal/ConfirmModal';
-import './ModeratorView.css';
+import React, { useEffect, useState, useRef } from "react";
+import { gameApi } from "../api/gameApi";
+import TopBar from "./TopBar/TopBar";
+import ConnectionDropdown from "./ConnectionDropdown/ConnectionDropdown";
+import LobbyLayout from "./Lobby/LobbyLayout";
+import GameArena from "./GameArena/GameArena";
+import GameStartLoadingScreen from "./GameArena/GameStartLoadingScreen";
+import DevMultiPlayerTool from "./DevMultiPlayerTool/DevMultiPlayerTool";
+import NightResultsStories from "../player/components/NightResultsStories/NightResultsStories";
+import ConfirmModal from "./components/ConfirmModal/ConfirmModal";
+import "./ModeratorView.css";
 
-const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
 
 const TEST_STORIES_DATA = [
-  'killed:Testovací Hráč',
-  'poisoned_killed:Zemřel na otravu',
-  'attacked:Neznámý Útočník',
-  'healed:Byl jsi zachráněn',
-  'jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen',
-  'jailer_blocked:Zadržel Test Hráč - pokusil se odejít',
-  'jailer_home:Zadržel Test Hráč - zůstal doma',
-  'guardian_prevented:Zastaven stráží',
-  'guardian_stopped:Zastavil jsi návštěvníka u Test Hráč',
-  'guardian_quiet:Nikdo nepřišel k Test Hráč',
-  'success:Tvá akce byla úspěšná',
-  'visited:Někdo tě navštívil',
-  'lookout_visitors:U Test Hráč navštívili: Hráč1, Hráč2',
-  'lookout_quiet:U Test Hráč nikdo nebyl',
-  'tracker_followed:Test Hráč navštívil Cíl',
-  'tracker_stayed:Test Hráč zůstal doma',
-  'investigate:Cíl je: MAFIA',
-  'autopsy:Příčina smrti: Nůž',
-  'safe:Klidná noc',
-  'doctor_saved:Úspěšně jsi zachránil Test Hráč',
-  'doctor_quiet:Chránil jsi Test Hráč, ale služby nebyly potřeba',
-  'consig:Role cíle je: DETEKTIV',
-  'hunter_kill:Zabil Test Hráč',
-  'hunter_success:Zastřelil jsi vlkodlaka',
-  'hunter_guilt:Zabil jsi nevinného a zemřel z viny',
-  'failed:Akce selhala - cíl není dostupný'
+  "killed:Testovací Hráč",
+  "poisoned_killed:Zemřel na otravu",
+  "attacked:Neznámý Útočník",
+  "healed:Byl jsi zachráněn",
+  "jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen",
+  "jailer_blocked:Zadržel Test Hráč - pokusil se odejít",
+  "jailer_home:Zadržel Test Hráč - zůstal doma",
+  "guardian_prevented:Zastaven stráží",
+  "guardian_stopped:Zastavil jsi návštěvníka u Test Hráč",
+  "guardian_quiet:Nikdo nepřišel k Test Hráč",
+  "success:Tvá akce byla úspěšná",
+  "visited:Někdo tě navštívil",
+  "lookout_visitors:U Test Hráč navštívili: Hráč1, Hráč2",
+  "lookout_quiet:U Test Hráč nikdo nebyl",
+  "tracker_followed:Test Hráč navštívil Cíl",
+  "tracker_stayed:Test Hráč zůstal doma",
+  "investigate:Cíl je: MAFIA",
+  "autopsy:Příčina smrti: Nůž",
+  "safe:Klidná noc",
+  "doctor_saved:Úspěšně jsi zachránil Test Hráč",
+  "doctor_quiet:Chránil jsi Test Hráč, ale služby nebyly potřeba",
+  "consig:Role cíle je: DETEKTIV",
+  "hunter_kill:Zabil Test Hráč",
+  "hunter_success:Zastřelil jsi vlkodlaka",
+  "hunter_guilt:Zabil jsi nevinného a zemřel z viny",
+  "failed:Akce selhala - cíl není dostupný",
 ];
 
-function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, onSettings }) {
+function ModeratorView({
+  onReturnToMenu,
+  onGameReady,
+  showLoadingScreen = true,
+  onSettings,
+}) {
   const [gameId, setGameId] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [connectionInfo, setConnectionInfo] = useState(null);
@@ -52,7 +57,9 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
   const [showTestStories, setShowTestStories] = useState(false);
   const [showGameStartLoading, setShowGameStartLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [gameReadyForLoadingScreen, setGameReadyForLoadingScreen] = useState(false);
+  const [gameReadyForLoadingScreen, setGameReadyForLoadingScreen] =
+    useState(false);
+  const [isStartingGame, setIsStartingGame] = useState(false);
   const previousPhaseRef = useRef(null);
   const gameReadyNotifiedRef = useRef(false);
 
@@ -75,7 +82,22 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
       const previousPhase = previousPhaseRef.current;
 
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:62',message:'Phase change tracking',data:{currentPhase,previousPhase,showGameStartLoading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch(
+        "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "ModeratorView.jsx:62",
+            message: "Phase change tracking",
+            data: { currentPhase, previousPhase, showGameStartLoading },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "A",
+          }),
+        }
+      ).catch(() => {});
       // #endregion
 
       // Initialize previousPhase on first load
@@ -85,9 +107,27 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
       }
 
       // If transitioning from lobby to night/day, show loading screen
-      if (previousPhase === 'lobby' && (currentPhase === 'night' || currentPhase === 'day')) {
+      if (
+        previousPhase === "lobby" &&
+        (currentPhase === "night" || currentPhase === "day")
+      ) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:74',message:'Setting showGameStartLoading to true',data:{previousPhase,currentPhase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        fetch(
+          "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              location: "ModeratorView.jsx:74",
+              message: "Setting showGameStartLoading to true",
+              data: { previousPhase, currentPhase },
+              timestamp: Date.now(),
+              sessionId: "debug-session",
+              runId: "run1",
+              hypothesisId: "B",
+            }),
+          }
+        ).catch(() => {});
         // #endregion
         setShowGameStartLoading(true);
         // Game is ready when phase changes from lobby to night/day
@@ -101,7 +141,13 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
   // If game is ready and parent is showing loading screen, notify it to hide
   // This must be before any conditional returns to follow Rules of Hooks
   useEffect(() => {
-    if (!loading && gameState && !showLoadingScreen && onGameReady && !gameReadyNotifiedRef.current) {
+    if (
+      !loading &&
+      gameState &&
+      !showLoadingScreen &&
+      onGameReady &&
+      !gameReadyNotifiedRef.current
+    ) {
       // Notify parent immediately that game is ready (only once)
       // The loading screen will handle the timing of when to hide
       gameReadyNotifiedRef.current = true;
@@ -112,34 +158,34 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
   const initializeGame = async () => {
     try {
       setLoading(true);
-      const healthResponse = await fetch('/api/health');
+      const healthResponse = await fetch("/api/health");
       if (!healthResponse.ok) {
         throw new Error(`Health check failed: ${healthResponse.status}`);
       }
       const health = await healthResponse.json();
       const { ip, port } = health;
-      
+
       const result = await gameApi.createGame(ip, port);
       if (result.error) {
         throw new Error(result.error);
       }
-      
+
       setGameId(result.gameId);
       setConnectionInfo({
         ip,
         port,
         roomCode: result.roomCode,
-        url: `http://${ip}:${port}?room=${result.roomCode}`
+        url: `http://${ip}:${port}?room=${result.roomCode}`,
       });
-      
+
       // Wait a moment for game to be created, then fetch state
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
       await fetchGameState();
       setLoading(false);
-      
+
       // Don't notify parent here - let useEffect handle it after state is set
     } catch (error) {
-      console.error('❌ Chyba při vytváření hry:', error);
+      console.error("❌ Chyba při vytváření hry:", error);
       setError(error.message);
       setLoading(false);
     }
@@ -151,36 +197,118 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
       const data = await gameApi.getGameState(gameId);
       setGameState(data);
     } catch (error) {
-      console.error('❌ Chyba při načítání stavu:', error);
+      console.error("❌ Chyba při načítání stavu:", error);
     }
   };
 
   const handleDevPlayersConnected = async (players) => {
-    console.log('✅ Dev hráči připojeni:', players);
-    await new Promise(resolve => setTimeout(resolve, 300));
+    console.log("✅ Dev hráči připojeni:", players);
+    await new Promise((resolve) => setTimeout(resolve, 300));
     await fetchGameState();
   };
 
-  const startGame = async (finalRoleConfig, modifierConfig, timers, roleConfiguration) => {
+  const startGame = async (
+    finalRoleConfig,
+    modifierConfig,
+    timers,
+    roleConfiguration
+  ) => {
     try {
+      setIsStartingGame(true);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:145',message:'startGame called',data:{gameId,hasFinalRoleConfig:!!finalRoleConfig,hasRoleConfiguration:!!roleConfiguration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      fetch(
+        "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "ModeratorView.jsx:145",
+            message: "startGame called",
+            data: {
+              gameId,
+              hasFinalRoleConfig: !!finalRoleConfig,
+              hasRoleConfiguration: !!roleConfiguration,
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "G",
+          }),
+        }
+      ).catch(() => {});
       // #endregion
-      await gameApi.startGameWithConfig(gameId, finalRoleConfig, modifierConfig, timers, roleConfiguration);
+      await gameApi.startGameWithConfig(
+        gameId,
+        finalRoleConfig,
+        modifierConfig,
+        timers,
+        roleConfiguration
+      );
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:148',message:'startGameWithConfig completed, fetching state',data:{gameId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      fetch(
+        "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "ModeratorView.jsx:148",
+            message: "startGameWithConfig completed, fetching state",
+            data: { gameId },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "G",
+          }),
+        }
+      ).catch(() => {});
       // #endregion
       await fetchGameState();
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:149',message:'fetchGameState completed after startGame',data:{gameId,currentPhase:gameState?.game?.phase,hasRoleConfig:!!gameState?.game?.roleConfiguration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      fetch(
+        "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "ModeratorView.jsx:149",
+            message: "fetchGameState completed after startGame",
+            data: {
+              gameId,
+              currentPhase: gameState?.game?.phase,
+              hasRoleConfig: !!gameState?.game?.roleConfiguration,
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "G",
+          }),
+        }
+      ).catch(() => {});
       // #endregion
+      setIsStartingGame(false);
       return true;
     } catch (error) {
-      console.error('Chyba při startu hry:', error);
+      console.error("Chyba při startu hry:", error);
+      setIsStartingGame(false);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:151',message:'startGame error',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      fetch(
+        "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "ModeratorView.jsx:151",
+            message: "startGame error",
+            data: { error: error.message },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "G",
+          }),
+        }
+      ).catch(() => {});
       // #endregion
-      alert(error.message || 'Nepodařilo se spustit hru');
+      alert(error.message || "Nepodařilo se spustit hru");
       return false;
     }
   };
@@ -190,7 +318,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
       await gameApi.endNight(gameId);
       await fetchGameState();
     } catch (error) {
-      console.error('Chyba při ukončení noci:', error);
+      console.error("Chyba při ukončení noci:", error);
     }
   };
 
@@ -198,11 +326,15 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
     try {
       const result = await gameApi.endDay(gameId);
       if (result.winner) {
-        alert(result.winner === 'town' ? '🎉 The Order wins!' : '🎉 The Shadows win!');
+        alert(
+          result.winner === "town"
+            ? "🎉 The Order wins!"
+            : "🎉 The Shadows win!"
+        );
       }
       await fetchGameState();
     } catch (error) {
-      console.error('Chyba při ukončení dne:', error);
+      console.error("Chyba při ukončení dne:", error);
     }
   };
 
@@ -214,25 +346,29 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
   // Actually return to menu - end lobby (kick all players) and delete game from database
   const handleReturnToMenu = async () => {
     setShowConfirmModal(false);
-    
+
     if (gameId) {
       try {
-        console.log('🚪 Ending lobby and kicking all players...');
+        console.log("🚪 Ending lobby and kicking all players...");
         const result = await gameApi.endLobby(gameId);
-        console.log(`✅ Lobby ended: ${result.playersKicked || 0} players kicked, game deleted`);
+        console.log(
+          `✅ Lobby ended: ${
+            result.playersKicked || 0
+          } players kicked, game deleted`
+        );
       } catch (error) {
         // Log error but don't block return to menu
-        console.error('⚠️ Failed to end lobby:', error);
+        console.error("⚠️ Failed to end lobby:", error);
         // Fallback to regular delete if end-lobby fails
         try {
           await gameApi.deleteGame(gameId);
-          console.log('✅ Game deleted (fallback)');
+          console.log("✅ Game deleted (fallback)");
         } catch (deleteError) {
-          console.error('⚠️ Failed to delete game (fallback):', deleteError);
+          console.error("⚠️ Failed to delete game (fallback):", deleteError);
         }
       }
     }
-    
+
     // Always call onReturnToMenu even if delete failed
     if (onReturnToMenu) {
       onReturnToMenu();
@@ -247,12 +383,14 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
         // Use async IIFE to handle async cleanup
         (async () => {
           try {
-            console.log('🗑️ Cleaning up: deleting game from database on unmount...');
+            console.log(
+              "🗑️ Cleaning up: deleting game from database on unmount..."
+            );
             await gameApi.deleteGame(gameId);
-            console.log('✅ Game deleted successfully on unmount');
+            console.log("✅ Game deleted successfully on unmount");
           } catch (error) {
             // Log error but don't throw (cleanup functions shouldn't throw)
-            console.error('⚠️ Failed to delete game on unmount:', error);
+            console.error("⚠️ Failed to delete game on unmount:", error);
           }
         })();
       }
@@ -289,22 +427,65 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
       </div>
     );
   }
-  
+
   // Game is loaded, show content
 
-  const isInLobby = gameState?.game?.phase === 'lobby';
+  const isInLobby = gameState?.game?.phase === "lobby";
+
+  // Show loading screen when starting game
+  if (isStartingGame) {
+    return (
+      <div className="moderator-loading-container">
+        <div className="moderator-loading-bar-container">
+          <div className="moderator-loading-bar" />
+        </div>
+        <p className="moderator-loading-text">Spouštím hru...</p>
+      </div>
+    );
+  }
 
   // Show game start loading screen
   if (showGameStartLoading) {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:267',message:'Rendering GameStartLoadingScreen',data:{showGameStartLoading,gameReadyForLoadingScreen,currentPhase:gameState?.game?.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch("http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "ModeratorView.jsx:267",
+        message: "Rendering GameStartLoadingScreen",
+        data: {
+          showGameStartLoading,
+          gameReadyForLoadingScreen,
+          currentPhase: gameState?.game?.phase,
+        },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "run1",
+        hypothesisId: "D",
+      }),
+    }).catch(() => {});
     // #endregion
     return (
-      <GameStartLoadingScreen 
+      <GameStartLoadingScreen
         gameName={gameState?.game?.name}
         onComplete={() => {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModeratorView.jsx:271',message:'GameStartLoadingScreen onComplete called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          fetch(
+            "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                location: "ModeratorView.jsx:271",
+                message: "GameStartLoadingScreen onComplete called",
+                data: {},
+                timestamp: Date.now(),
+                sessionId: "debug-session",
+                runId: "run1",
+                hypothesisId: "D",
+              }),
+            }
+          ).catch(() => {});
           // #endregion
           setShowGameStartLoading(false);
           setGameReadyForLoadingScreen(false);
@@ -318,11 +499,13 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
     <div className="moderator-view">
       {/* TopBar - pouze v lobby */}
       {isInLobby && (
-        <TopBar 
-          gameState={gameState} 
+        <TopBar
+          gameState={gameState}
           onConnectionClick={() => setShowConnectionBox(!showConnectionBox)}
           onDevToggle={setShowDevPanel}
-          onTestStories={IS_DEVELOPMENT ? () => setShowTestStories(true) : undefined}
+          onTestStories={
+            IS_DEVELOPMENT ? () => setShowTestStories(true) : undefined
+          }
           onReturnToMenu={handleReturnToMenuClick}
           onSettings={onSettings}
         />
@@ -337,7 +520,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
 
       {/* DEV TOOL - zobrazí se pouze v dev módu a v lobby */}
       {isInLobby && (
-        <DevMultiPlayerTool 
+        <DevMultiPlayerTool
           roomCode={connectionInfo?.roomCode}
           onPlayersConnected={handleDevPlayersConnected}
           isVisible={showDevPanel}
@@ -362,7 +545,7 @@ function ModeratorView({ onReturnToMenu, onGameReady, showLoadingScreen = true, 
 
       {/* Test Night Stories Overlay - development only */}
       {IS_DEVELOPMENT && showTestStories && (
-        <NightResultsStories 
+        <NightResultsStories
           results={TEST_STORIES_DATA}
           onComplete={() => setShowTestStories(false)}
           useLegacyStories={false}

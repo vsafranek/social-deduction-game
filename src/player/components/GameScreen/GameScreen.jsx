@@ -21,7 +21,8 @@ function GameScreen({
   onVote,
   error,
   onErrorDismiss,
-  onRefresh
+  onRefresh,
+  isVoting = false
 }) {
   const [showStories, setShowStories] = useState(false);
   const [storiesShown, setStoriesShown] = useState(false);
@@ -99,8 +100,10 @@ function GameScreen({
   };
 
   const handleVoteSubmit = async (targetId) => {
-    await onVote(targetId);
+    // Zavřít modal okamžitě pro lepší UX (optimistic update)
     setShowVotingModal(false);
+    // Zavolat onVote, který provede optimistic update
+    await onVote(targetId);
   };
 
   // Use server-side filtered avatars (no client-side filtering needed)
@@ -125,10 +128,16 @@ function GameScreen({
   };
 
   // Zjisti, jestli už hlasoval
-  const hasVoted = currentPlayer.hasVoted || currentPlayer.voteFor;
-  // Pokud hlasoval a má voteFor, najdi hráče, jinak null (skip nebo nehlasoval)
+  // hasVoted je true, pokud hráč hlasoval (nezávisle na tom, zda hlasoval pro někoho nebo skip)
+  const hasVoted = currentPlayer.hasVoted === true || currentPlayer.hasVoted === 1;
+  // Pokud hlasoval a má voteFor (není null), najdi hráče, jinak null (skip)
   const votedPlayer = hasVoted && currentPlayer.voteFor
-    ? gameState.players.find(p => p._id === currentPlayer.voteFor)
+    ? gameState.players.find(p => {
+        // Porovnat ID jako stringy pro spolehlivost
+        const playerId = p._id?.toString();
+        const voteForId = currentPlayer.voteFor?.toString();
+        return playerId === voteForId;
+      })
     : null;
 
   // Zobraz stories přes vše
@@ -288,6 +297,7 @@ function GameScreen({
           onVote={handleVoteSubmit}
           onClose={() => setShowVotingModal(false)}
           isMayorElection={gameState?.game?.round === 1 && !gameState?.game?.mayor}
+          isVoting={isVoting}
         />
       )}
 

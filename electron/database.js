@@ -28,7 +28,7 @@ const connectDB = async () => {
     console.log("🔌 Attempting Supabase connection to:", supabaseUrl);
 
     supabase = createClient(supabaseUrl, supabaseKey);
-
+    
     // Test connection
     const { data, error } = await supabase
       .from("games")

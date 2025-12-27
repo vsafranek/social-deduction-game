@@ -215,6 +215,16 @@ export const gameApi = {
   },
 
   /**
+   * Transition from voting_reveal phase to night
+   */
+  async votingRevealToNight(gameId) {
+    const res = await fetch(`${API_BASE}/game/${gameId}/voting-reveal-to-night`, {
+      method: 'POST'
+    });
+    return res.json();
+  },
+
+  /**
    * End current phase (auto-detect day/night)
    */
   async endPhase(gameId) {

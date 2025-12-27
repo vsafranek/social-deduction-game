@@ -24,7 +24,6 @@ const {
   createGameLog,
   findGameLogsByGameId,
   deleteGameLogsByGameId,
-  convertForResolvers,
 } = require("../db/helpers");
 const { ROLES, MODIFIERS } = require("../models/Role");
 const { resolveNightActions } = require("../game/nightActionResolver");
@@ -109,7 +108,7 @@ router.post("/create", async (req, res) => {
     });
 
     await createGameLog({
-      gameId: game.id,
+      game_id: game.id,
       message: `Game created. Room: ${roomCode}`,
     });
 
@@ -229,7 +228,7 @@ router.post("/join", async (req, res) => {
         location: "gameRoutes.js:182",
         message: "Searching for existing player",
         data: {
-          gameId: game._id.toString(),
+          gameId: game.id?.toString(),
           sessionId,
           searchQuery: "gameId+sessionId",
         },
@@ -252,8 +251,8 @@ router.post("/join", async (req, res) => {
         message: "Player search result",
         data: {
           playerFound: !!player,
-          playerId: player?._id?.toString(),
-          playerGameId: player?.gameId?.toString(),
+          playerId: player?.id?.toString(),
+          playerGameId: player?.game_id?.toString(),
         },
         timestamp: Date.now(),
         sessionId: "debug-session",
@@ -274,7 +273,7 @@ router.post("/join", async (req, res) => {
           body: JSON.stringify({
             location: "gameRoutes.js:195",
             message: "Creating new player",
-            data: { gameId: game._id.toString(), sessionId, name },
+            data: { gameId: game.id?.toString(), sessionId, name },
             timestamp: Date.now(),
             sessionId: "debug-session",
             runId: "run1",
@@ -286,12 +285,18 @@ router.post("/join", async (req, res) => {
 
       const avatar = await assignUniqueAvatar(game.id);
       player = await createPlayer({
-        gameId: game.id,
-        sessionId,
+        game_id: game.id,
+        session_id: sessionId,
         name,
         role: null,
         avatar,
       });
+
+      // Validate player was created successfully
+      if (!player || !player.id) {
+        console.error("Failed to create player:", player);
+        return res.status(500).json({ error: "Failed to create player" });
+      }
 
       // #region agent log
       fetch(
@@ -301,8 +306,8 @@ router.post("/join", async (req, res) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             location: "gameRoutes.js:200",
-            message: "Before player.save()",
-            data: { playerId: player._id?.toString(), sessionId },
+            message: "Player created",
+            data: { playerId: player.id, sessionId },
             timestamp: Date.now(),
             sessionId: "debug-session",
             runId: "run1",
@@ -312,26 +317,7 @@ router.post("/join", async (req, res) => {
       ).catch(() => {});
       // #endregion
 
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "gameRoutes.js:203",
-            message: "Player saved successfully",
-            data: { playerId: player._id.toString() },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "C",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
-
-      await createGameLog({ gameId: game.id, message: `${name} joined.` });
+      await createGameLog({ game_id: game.id, message: `${name} joined.` });
     } else {
       // Existující hráč - pokud nemá avatar, přiřaď mu náhodný volný
       if (!player.avatar || !player.avatar.trim()) {
@@ -343,6 +329,11 @@ router.post("/join", async (req, res) => {
       }
     }
 
+    // Ensure both IDs are present and valid
+    if (!game?.id || !player?.id) {
+      console.error("Missing IDs:", { gameId: game?.id, playerId: player?.id });
+      return res.status(500).json({ error: "Failed to create/get player" });
+    }
     res.json({ success: true, gameId: game.id, playerId: player.id });
   } catch (e) {
     // #region agent log
@@ -471,7 +462,7 @@ router.delete("/:gameId/player/:playerId", async (req, res) => {
     const playerName = player.name;
     await deletePlayer(playerId);
     await createGameLog({
-      gameId,
+      game_id: gameId,
       message: `${playerName} was kicked from the game.`,
     });
 
@@ -577,12 +568,12 @@ router.post("/:gameId/vote", async (req, res) => {
     if (targetId) {
       const target = await findPlayerById(targetId);
       await createGameLog({
-        gameId,
+        game_id: gameId,
         message: `${player.name} voted for ${target?.name || "unknown"}.`,
       });
     } else {
       await createGameLog({
-        gameId,
+        game_id: gameId,
         message: `${player.name} skipped voting.`,
       });
     }
@@ -606,7 +597,7 @@ router.post("/:gameId/vote", async (req, res) => {
           timer_state: { phaseEndsAt: new Date(now + 3 * 1000) },
         });
         await createGameLog({
-          gameId,
+          game_id: gameId,
           message: "⏱️ All players skipped voting, day ends in 3s",
         });
         console.log("⏱️ All alive players skipped voting, ending day in 3s");
@@ -620,7 +611,7 @@ router.post("/:gameId/vote", async (req, res) => {
             timer_state: { phaseEndsAt: new Date(shortDeadline) },
           });
           await createGameLog({
-            gameId,
+            game_id: gameId,
             message: "⏱️ All voted, day ends in 10s",
           });
           console.log("⏱️ All alive players voted, shortening day to 10s");
@@ -899,9 +890,9 @@ router.post("/:gameId/start-config", async (req, res) => {
     await updateGame(gameId, gameUpdates);
     const updatedGame = await findGameById(gameId);
 
-    await createGameLog({ gameId, message: "--- GAME START ---" });
+    await createGameLog({ game_id: gameId, message: "--- GAME START ---" });
     await createGameLog({
-      gameId,
+      game_id: gameId,
       message: `Round ${updatedGame.round} - DAY (⏱ ${daySec}s)`,
     });
 
@@ -927,22 +918,19 @@ router.post("/:gameId/end-night", async (req, res) => {
       return res.status(400).json({ error: "Not in night phase" });
 
     let players = await findPlayersByGameId(gameId);
-    // Convert to resolver format (resolvers still use camelCase/_id)
-    const resolverGame = convertForResolvers(game);
-    const resolverPlayers = convertForResolvers(players);
-    await resolveNightActions(resolverGame, resolverPlayers);
+    // Resolvers now use PostgreSQL format directly
+    await resolveNightActions(game, players);
 
     // Batch save all players after night actions (resolver modifies them in memory)
-    // Convert back from resolver format to PostgreSQL format
-    const playerUpdates = resolverPlayers.map((p) => ({
-      id: p._id,
+    const playerUpdates = players.map((p) => ({
+      id: p.id,
       updates: {
         alive: p.alive,
         effects: p.effects,
-        night_action: p.nightAction || p.night_action,
-        role_data: p.roleData || p.role_data,
+        night_action: p.night_action,
+        role_data: p.role_data,
         modifier: p.modifier,
-        vote_weight: p.voteWeight || p.vote_weight,
+        vote_weight: p.vote_weight,
       },
     }));
 
@@ -951,13 +939,9 @@ router.post("/:gameId/end-night", async (req, res) => {
     }
 
     // Save game changes (e.g. if mayor was killed)
-    // Use resolverGame which has both mayor_id and mayor
-    if (
-      resolverGame.mayor_id !== undefined ||
-      resolverGame.mayor !== undefined
-    ) {
+    if (game.mayor_id !== undefined) {
       await updateGame(gameId, {
-        mayor_id: resolverGame.mayor_id || resolverGame.mayor || null,
+        mayor_id: game.mayor_id || null,
       });
     }
 
@@ -968,14 +952,20 @@ router.post("/:gameId/end-night", async (req, res) => {
     ]);
     players = updatedPlayers;
 
+    // evaluateVictory now uses PostgreSQL format directly
     const win = evaluateVictory(players);
     if (win) {
+      // win.players contains id from PostgreSQL format
+      const winnerIds = (win.players || []).map((id) => {
+        // If id is an object with toString, use toString, otherwise use as is
+        return id?.toString ? id.toString() : id;
+      });
       await updateGame(gameId, {
         phase: "end",
         winner: win.winner,
-        winner_player_ids: win.players || [],
+        winner_player_ids: winnerIds,
       });
-      await createGameLog({ gameId, message: `🏁 Victory: ${win.winner}` });
+      await createGameLog({ game_id: gameId, message: `🏁 Victory: ${win.winner}` });
       return res.json({
         success: true,
         phase: "end",
@@ -1003,13 +993,43 @@ router.post("/:gameId/end-night", async (req, res) => {
     const finalGame = await findGameById(gameId);
     updatedGame = finalGame;
     await createGameLog({
-      gameId,
+      game_id: gameId,
       message: `Round ${updatedGame.round} - DAY (⏱ ${daySec}s)`,
     });
 
     res.json({ success: true });
   } catch (e) {
     console.error("end-night error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/:gameId/voting-reveal-to-night", async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    if (!ensureUUID(gameId))
+      return res.status(400).json({ error: "Invalid game id" });
+    const game = await findGameById(gameId);
+    if (!game) return res.status(404).json({ error: "Game not found" });
+
+    if (game.phase !== "voting_reveal")
+      return res.status(400).json({ error: "Not in voting_reveal phase" });
+
+    const nightSec = Number(game.timers?.nightSeconds ?? 90);
+    const newRound = (game.round || 0) + 1;
+    await updateGame(gameId, {
+      phase: "night",
+      round: newRound,
+      timer_state: { phaseEndsAt: endInMs(nightSec) },
+    });
+    await createGameLog({
+      game_id: gameId,
+      message: `Round ${newRound} - NIGHT (⏱ ${nightSec}s)`,
+    });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("voting-reveal-to-night error:", e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -1026,14 +1046,8 @@ router.post("/:gameId/end-day", async (req, res) => {
       return res.status(400).json({ error: "Not in day phase" });
 
     let players = await findPlayersByGameId(gameId);
-    // Convert to resolver format (resolvers still use camelCase/_id)
-    const resolverGame = convertForResolvers(game);
-    const resolverPlayers = convertForResolvers(players);
-    const votingResult = await resolveDayVoting(
-      resolverGame,
-      resolverPlayers,
-      createGameLog
-    );
+    // Resolvers now use PostgreSQL format directly
+    const votingResult = await resolveDayVoting(game, players, createGameLog);
 
     // Apply updates from voting resolver - use batch update for players
     if (votingResult.updates) {
@@ -1041,22 +1055,61 @@ router.post("/:gameId/end-day", async (req, res) => {
         votingResult.updates.players &&
         votingResult.updates.players.length > 0
       ) {
-        await updatePlayersBatch(
-          votingResult.updates.players.map((pu) => ({
-            id: pu.id,
-            updates: pu.updates,
-          }))
-        );
+        console.log('📝 Applying player updates:', votingResult.updates.players.length);
+        const batchUpdates = votingResult.updates.players.map((pu) => ({
+          id: pu.id,
+          updates: pu.updates,
+        }));
+        console.log('📝 Batch updates:', JSON.stringify(batchUpdates, null, 2));
+        await updatePlayersBatch(batchUpdates);
+        console.log('✅ Player updates applied');
       }
       if (votingResult.updates.game) {
-        await updateGame(
+        console.log('📝 Applying game updates:', JSON.stringify(votingResult.updates.game.updates, null, 2));
+        const updatedGame = await updateGame(
           votingResult.updates.game.id,
           votingResult.updates.game.updates
         );
+        console.log('✅ Game updates applied');
+        console.log('📊 Updated game mayor_id:', updatedGame?.mayor_id);
       }
     }
 
     players = await findPlayersByGameId(gameId);
+    console.log('📊 Players after update:', players.map(p => ({ 
+      name: p.name, 
+      alive: p.alive, 
+      id: p.id,
+      vote_weight: p.vote_weight,
+      modifier: p.modifier
+    })));
+    
+    // Verify mayor was set correctly
+    if (votingResult.mayorElected && votingResult.mayorId) {
+      const mayorId = votingResult.mayorId?.toString ? votingResult.mayorId.toString() : votingResult.mayorId;
+      const mayorPlayer = players.find(p => p.id.toString() === mayorId);
+      const updatedGame = await findGameById(gameId);
+      console.log('🔍 Checking mayor election:');
+      console.log('  Mayor ID from result:', mayorId);
+      console.log('  Mayor player found:', mayorPlayer ? mayorPlayer.name : 'NOT FOUND');
+      console.log('  Mayor vote_weight:', mayorPlayer?.vote_weight);
+      console.log('  Game mayor_id:', updatedGame?.mayor_id);
+      console.log('  Game mayor_id matches:', updatedGame?.mayor_id?.toString() === mayorId);
+    }
+
+    // Verify execution was applied correctly
+    if (votingResult.executed) {
+      const executedId = votingResult.executed?.toString ? votingResult.executed.toString() : votingResult.executed;
+      const executedPlayer = players.find(p => p.id.toString() === executedId);
+      console.log('🔍 Checking executed player:', { executedId, found: !!executedPlayer, alive: executedPlayer?.alive });
+      if (executedPlayer && executedPlayer.alive) {
+        console.error('⚠️ Executed player is still alive! Force updating...', executedPlayer);
+        // Force update
+        await updatePlayer(executedPlayer.id, { alive: false });
+        players = await findPlayersByGameId(gameId);
+        console.log('✅ Force updated executed player');
+      }
+    }
 
     // ✅ Check if Jester won (was executed)
     console.log("🔍 Voting result:", JSON.stringify(votingResult, null, 2));
@@ -1070,7 +1123,7 @@ router.post("/:gameId/end-day", async (req, res) => {
         winner_player_ids: jester ? [jester.id] : [],
       });
       await createGameLog({
-        gameId,
+        game_id: gameId,
         message: `🏁 Victory: Jester ${jester?.name || "unknown"} wins!`,
       });
       console.log("🎭 Game ended - Jester wins!");
@@ -1082,17 +1135,18 @@ router.post("/:gameId/end-day", async (req, res) => {
       });
     }
 
+    // evaluateVictory now uses PostgreSQL format directly
     const win = evaluateVictory(players);
     if (win) {
       game.phase = "end";
       game.winner = win.winner;
-      game.winnerPlayerIds = win.players || [];
+      game.winner_player_ids = win.players || [];
       await updateGame(gameId, {
         phase: "end",
         winner: win.winner,
         winner_player_ids: win.players || [],
       });
-      await createGameLog({ gameId, message: `🏁 Victory: ${win.winner}` });
+      await createGameLog({ game_id: gameId, message: `🏁 Victory: ${win.winner}` });
       return res.json({
         success: true,
         phase: "end",
@@ -1101,6 +1155,7 @@ router.post("/:gameId/end-day", async (req, res) => {
       });
     }
 
+    // Go directly to night (voting_reveal was removed)
     const nightSec = Number(game.timers?.nightSeconds ?? 90);
     const newRound = (game.round || 0) + 1;
     await updateGame(gameId, {
@@ -1109,11 +1164,10 @@ router.post("/:gameId/end-day", async (req, res) => {
       timer_state: { phaseEndsAt: endInMs(nightSec) },
     });
     await createGameLog({
-      gameId,
+      game_id: gameId,
       message: `Round ${newRound} - NIGHT (⏱ ${nightSec}s)`,
     });
-
-    res.json({ success: true });
+    res.json({ success: true, phase: "night" });
   } catch (e) {
     console.error("end-day error:", e);
     res.status(500).json({ error: e.message });
@@ -1124,7 +1178,7 @@ router.post("/:gameId/end-day", async (req, res) => {
 router.post("/:gameId/reset-to-lobby", async (req, res) => {
   try {
     const { gameId } = req.params;
-    if (!ensureObjectId(gameId))
+    if (!ensureUUID(gameId))
       return res.status(400).json({ error: "Invalid game id" });
 
     const game = await findGameById(gameId);
@@ -1158,7 +1212,7 @@ router.post("/:gameId/reset-to-lobby", async (req, res) => {
     });
 
     await createGameLog({
-      gameId,
+      game_id: gameId,
       message: "🔄 Game reset to lobby by moderator",
     });
     console.log("✅ Game reset to lobby");
@@ -1173,7 +1227,7 @@ router.post("/:gameId/reset-to-lobby", async (req, res) => {
 router.post("/:gameId/end-phase", async (req, res) => {
   try {
     const { gameId } = req.params;
-    if (!ensureObjectId(gameId)) {
+    if (!ensureUUID(gameId)) {
       return res.status(400).json({ error: "Invalid game id" });
     }
 
@@ -1190,17 +1244,71 @@ router.post("/:gameId/end-phase", async (req, res) => {
       console.log("📋 Processing day voting...");
 
       let players = await findPlayersByGameId(gameId);
-      // Convert to resolver format (resolvers still use camelCase/_id)
-      const resolverGame = convertForResolvers(game);
-      const resolverPlayers = convertForResolvers(players);
-      const votingResult = await resolveDayVoting(
-        resolverGame,
-        resolverPlayers,
-        createGameLog
-      );
+      // Resolvers now use PostgreSQL format directly
+      const votingResult = await resolveDayVoting(game, players, createGameLog);
 
-      // Reload players after voting
+      // Apply updates from voting resolver - use batch update for players
+      if (votingResult.updates) {
+        if (
+          votingResult.updates.players &&
+          votingResult.updates.players.length > 0
+        ) {
+          console.log('📝 Applying player updates:', votingResult.updates.players.length);
+          const batchUpdates = votingResult.updates.players.map((pu) => ({
+            id: pu.id,
+            updates: pu.updates,
+          }));
+          console.log('📝 Batch updates:', JSON.stringify(batchUpdates, null, 2));
+          await updatePlayersBatch(batchUpdates);
+          console.log('✅ Player updates applied');
+        }
+        if (votingResult.updates.game) {
+          console.log('📝 Applying game updates:', JSON.stringify(votingResult.updates.game.updates, null, 2));
+          const updatedGame = await updateGame(
+            votingResult.updates.game.id,
+            votingResult.updates.game.updates
+          );
+          console.log('✅ Game updates applied');
+          console.log('📊 Updated game mayor_id:', updatedGame?.mayor_id);
+        }
+      }
+
+      // Reload players after voting and applying updates
       players = await findPlayersByGameId(gameId);
+      console.log('📊 Players after update:', players.map(p => ({ 
+        name: p.name, 
+        alive: p.alive, 
+        id: p.id,
+        vote_weight: p.vote_weight,
+        modifier: p.modifier
+      })));
+      
+      // Verify mayor was set correctly
+      if (votingResult.mayorElected && votingResult.mayorId) {
+        const mayorId = votingResult.mayorId?.toString ? votingResult.mayorId.toString() : votingResult.mayorId;
+        const mayorPlayer = players.find(p => p.id.toString() === mayorId);
+        const updatedGame = await findGameById(gameId);
+        console.log('🔍 Checking mayor election:');
+        console.log('  Mayor ID from result:', mayorId);
+        console.log('  Mayor player found:', mayorPlayer ? mayorPlayer.name : 'NOT FOUND');
+        console.log('  Mayor vote_weight:', mayorPlayer?.vote_weight);
+        console.log('  Game mayor_id:', updatedGame?.mayor_id);
+        console.log('  Game mayor_id matches:', updatedGame?.mayor_id?.toString() === mayorId);
+      }
+
+      // Verify execution was applied correctly
+      if (votingResult.executed) {
+        const executedId = votingResult.executed?.toString ? votingResult.executed.toString() : votingResult.executed;
+        const executedPlayer = players.find(p => p.id.toString() === executedId);
+        console.log('🔍 Checking executed player:', { executedId, found: !!executedPlayer, alive: executedPlayer?.alive });
+        if (executedPlayer && executedPlayer.alive) {
+          console.error('⚠️ Executed player is still alive! Force updating...', executedPlayer);
+          // Force update
+          await updatePlayer(executedPlayer.id, { alive: false });
+          players = await findPlayersByGameId(gameId);
+          console.log('✅ Force updated executed player');
+        }
+      }
 
       // ✅ Check if Jester won (was executed)
       if (votingResult && votingResult.jesterWin === true) {
@@ -1209,14 +1317,14 @@ router.post("/:gameId/end-phase", async (req, res) => {
         console.log("🎭 Found Jester:", jester ? jester.name : "not found");
         game.phase = "end";
         game.winner = "custom";
-        game.winnerPlayerIds = jester ? [jester._id] : [];
+        game.winner_player_ids = jester ? [jester.id] : [];
         await updateGame(gameId, {
           phase: "end",
           winner: "custom",
           winner_player_ids: jester ? [jester.id] : [],
         });
         await createGameLog({
-          gameId,
+          game_id: gameId,
           message: `🏁 Victory: Jester ${jester?.name || "unknown"} wins!`,
         });
         console.log("🎭 Game ended - Jester wins!");
@@ -1239,15 +1347,19 @@ router.post("/:gameId/end-phase", async (req, res) => {
       });
       console.log("✅ Night actions reset complete");
 
-      // Check victory
+      // Check victory - convert to resolver format
       const win = evaluateVictory(players);
       if (win) {
+        // Convert player IDs from resolver format (_id) to PostgreSQL format (id)
+        const winnerIds = (win.players || []).map((id) => {
+          return id?.toString ? id.toString() : id;
+        });
         await updateGame(gameId, {
           phase: "end",
           winner: win.winner,
-          winner_player_ids: win.players || [],
+          winner_player_ids: winnerIds,
         });
-        await createGameLog({ gameId, message: `🏁 Victory: ${win.winner}` });
+        await createGameLog({ game_id: gameId, message: `🏁 Victory: ${win.winner}` });
         console.log(`✅ Victory: ${win.winner}`);
         return res.json({
           success: true,
@@ -1271,7 +1383,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
       });
       const newRound = (game.round || 0) + 1;
       await createGameLog({
-        gameId,
+        game_id: gameId,
         message: `Round ${newRound} - NIGHT (⏱ ${nightSec}s)`,
       });
       console.log(`✅ [END-PHASE] Day → Night (Round ${newRound})`);
@@ -1280,22 +1392,19 @@ router.post("/:gameId/end-phase", async (req, res) => {
       console.log("🌙 Processing night actions...");
 
       let players = await findPlayersByGameId(gameId);
-      // Convert to resolver format (resolvers still use camelCase/_id)
-      const resolverGame = convertForResolvers(game);
-      const resolverPlayers = convertForResolvers(players);
-      await resolveNightActions(resolverGame, resolverPlayers);
+      // Resolvers now use PostgreSQL format directly
+      await resolveNightActions(game, players);
 
       // Batch save all players after night actions (resolver modifies them in memory)
-      // Convert back from resolver format to PostgreSQL format
-      const playerUpdates = resolverPlayers.map((p) => ({
-        id: p._id,
+      const playerUpdates = players.map((p) => ({
+        id: p.id,
         updates: {
           alive: p.alive,
           effects: p.effects,
-          night_action: p.nightAction || p.night_action,
-          role_data: p.roleData || p.role_data,
+          night_action: p.night_action,
+          role_data: p.role_data,
           modifier: p.modifier,
-          vote_weight: p.voteWeight || p.vote_weight,
+          vote_weight: p.vote_weight,
         },
       }));
 
@@ -1304,28 +1413,28 @@ router.post("/:gameId/end-phase", async (req, res) => {
       }
 
       // Save game changes (e.g. if mayor was killed)
-      // Use resolverGame which has both mayor_id and mayor
-      if (
-        resolverGame.mayor_id !== undefined ||
-        resolverGame.mayor !== undefined
-      ) {
+      if (game.mayor_id !== undefined) {
         await updateGame(gameId, {
-          mayor_id: resolverGame.mayor_id || resolverGame.mayor || null,
+          mayor_id: game.mayor_id || null,
         });
       }
 
       // Reload players for victory check
       players = await findPlayersByGameId(gameId);
 
-      // Check victory
+      // Check victory - convert to resolver format
       const win = evaluateVictory(players);
       if (win) {
+        // Convert player IDs from resolver format (_id) to PostgreSQL format (id)
+        const winnerIds = (win.players || []).map((id) => {
+          return id?.toString ? id.toString() : id;
+        });
         await updateGame(gameId, {
           phase: "end",
           winner: win.winner,
-          winner_player_ids: win.players || [],
+          winner_player_ids: winnerIds,
         });
-        await createGameLog({ gameId, message: `🏁 Victory: ${win.winner}` });
+        await createGameLog({ game_id: gameId, message: `🏁 Victory: ${win.winner}` });
         console.log(`✅ Victory: ${win.winner}`);
         return res.json({
           success: true,
@@ -1339,9 +1448,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
       const daySec = Number((game.timers || {}).daySeconds ?? 150);
       await updateGame(gameId, {
         phase: "day",
-        timer_state: {
-          phaseEndsAt: new Date(Date.now() + daySec * 1000),
-        },
+        timer_state: { phaseEndsAt: endInMs(daySec) },
       });
 
       // ✅ RESET hlasování pro nový den - batch update
@@ -1353,7 +1460,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
       console.log("✅ Votes reset complete");
 
       await createGameLog({
-        gameId,
+        game_id: gameId,
         message: `Round ${game.round} - DAY (⏱ ${daySec}s)`,
       });
       console.log(`✅ [END-PHASE] Night → Day (Round ${game.round})`);
@@ -1361,7 +1468,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
 
     let finalGame = await findGameById(gameId);
     await createGameLog({
-      gameId,
+      game_id: gameId,
       message: `🔄 Phase ended: ${currentPhase} → ${finalGame.phase}`,
     });
 
@@ -1374,7 +1481,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
       success: true,
       phase: finalGame.phase,
       round: finalGame.round,
-      phaseEndsAt: (finalGame.timer_state || finalGame.timerState)?.phaseEndsAt,
+      phaseEndsAt: finalGame.timer_state?.phaseEndsAt,
       winner: finalGame.winner || null,
     });
   } catch (e) {
@@ -1498,8 +1605,7 @@ router.post("/:gameId/set-night-action", async (req, res) => {
       });
     }
     const updatedPlayer = await findPlayerById(playerId);
-    const nightAction =
-      updatedPlayer.night_action || updatedPlayer.nightAction || {};
+    const nightAction = updatedPlayer.night_action || {};
     console.log(
       `✓ ${updatedPlayer.name} set action: ${nightAction.action} → ${targetId}${
         puppetId ? ` (puppet: ${puppetId})` : ""

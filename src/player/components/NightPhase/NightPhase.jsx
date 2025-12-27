@@ -50,7 +50,7 @@ function NightPhase({ player, players, onAction }) {
 
   // Pro dual role - get current action info
   const currentActionInfo = isDualRole 
-    ? actionInfo.actions[selectedMode]
+    ? actionInfo?.actions?.[selectedMode]
     : actionInfo;
 
   // Handler pro otevření modalu
@@ -85,13 +85,29 @@ function NightPhase({ player, players, onAction }) {
     );
   }
 
+  // Kontrola, zda currentActionInfo existuje
+  if (!currentActionInfo) {
+    console.error('❌ currentActionInfo is undefined for role:', player.role, 'selectedMode:', selectedMode);
+    return (
+      <div className="night-phase inactive">
+        <div className="night-header">
+          <h3>🌙 Noc</h3>
+          <p>Chybí informace o akci</p>
+        </div>
+        <div className="night-info">
+          <p>🌙 Nemůže se zobrazit noční akce. Kontaktuj moderátora.</p>
+        </div>
+      </div>
+    );
+  }
+
   // Pokud už hráč potvrdil akci
   if (actionDone) {
     return (
-      <div className={`action-confirmed ${currentActionInfo.color}`}>
-        <span>{currentActionInfo.icon}</span>
+      <div className={`action-confirmed ${currentActionInfo.color || ''}`}>
+        <span>{currentActionInfo.icon || '🌙'}</span>
         <p>Tvá akce byla provedena</p>
-        <small>{currentActionInfo.verb} - potvrzeno</small>
+        <small>{currentActionInfo.verb || 'Akce'} - potvrzeno</small>
       </div>
     );
   }
@@ -101,8 +117,8 @@ function NightPhase({ player, players, onAction }) {
   return (
     <div className="night-phase">
       <div className="night-header">
-        <h3>🌙 Noc - {currentActionInfo.icon} {currentActionInfo.verb}</h3>
-        <p>{currentActionInfo.description}</p>
+        <h3>🌙 Noc - {currentActionInfo.icon || '🌙'} {currentActionInfo.verb || 'Akce'}</h3>
+        <p>{currentActionInfo.description || 'Noční akce'}</p>
         
         {/* Uses counter for dual roles */}
         {isDualRole && selectedMode !== 'kill' && (

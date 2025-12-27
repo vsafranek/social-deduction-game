@@ -9,116 +9,6 @@ function ensureUUID(id) {
   return uuidRegex.test(id.toString());
 }
 
-// Normalize input data to PostgreSQL format (accept both camelCase and snake_case)
-function normalizeToPostgres(obj) {
-  if (!obj) return null;
-  const result = { ...obj };
-
-  // Convert common MongoDB-style fields to PostgreSQL if present
-  if (result._id !== undefined) {
-    result.id = result._id;
-    delete result._id;
-  }
-  if (result.gameId !== undefined) {
-    result.game_id = result.gameId;
-    delete result.gameId;
-  }
-  if (result.sessionId !== undefined) {
-    result.session_id = result.sessionId;
-    delete result.sessionId;
-  }
-  if (result.hasVoted !== undefined) {
-    result.has_voted = result.hasVoted;
-    delete result.hasVoted;
-  }
-  if (result.voteFor !== undefined) {
-    result.vote_for_id = result.voteFor;
-    delete result.voteFor;
-  }
-  if (result.voteWeight !== undefined) {
-    result.vote_weight = result.voteWeight;
-    delete result.voteWeight;
-  }
-  if (result.roleData !== undefined) {
-    result.role_data = result.roleData;
-    delete result.roleData;
-  }
-  if (result.roleHidden !== undefined) {
-    result.role_hidden = result.roleHidden;
-    delete result.roleHidden;
-  }
-  if (result.nightAction !== undefined) {
-    result.night_action = result.nightAction;
-    delete result.nightAction;
-  }
-  if (result.victoryConditions !== undefined) {
-    result.victory_conditions = result.victoryConditions;
-    delete result.victoryConditions;
-  }
-  if (result.roomCode !== undefined) {
-    result.room_code = result.roomCode;
-    delete result.roomCode;
-  }
-  if (result.mayor !== undefined) {
-    result.mayor_id = result.mayor;
-    delete result.mayor;
-  }
-  if (result.timerState !== undefined) {
-    result.timer_state = result.timerState;
-    delete result.timerState;
-  }
-  if (result.winnerPlayerIds !== undefined) {
-    result.winner_player_ids = result.winnerPlayerIds;
-    delete result.winnerPlayerIds;
-  }
-  if (result.modifierConfiguration !== undefined) {
-    result.modifier_configuration = result.modifierConfiguration;
-    delete result.modifierConfiguration;
-  }
-  if (result.roleConfiguration !== undefined) {
-    result.role_configuration = result.roleConfiguration;
-    delete result.roleConfiguration;
-  }
-  if (result.createdAt !== undefined) {
-    delete result.createdAt; // Don't allow updating created_at
-  }
-  if (result.updatedAt !== undefined) {
-    delete result.updatedAt; // Don't allow updating updated_at
-  }
-
-  return result;
-}
-
-// Convert PostgreSQL format to resolver-compatible format (temporary bridge for resolvers)
-// This allows resolvers to continue using camelCase/_id until they're refactored
-function convertForResolvers(obj) {
-  if (!obj) return null;
-  if (Array.isArray(obj)) {
-    return obj.map(convertForResolvers);
-  }
-  return {
-    ...obj,
-    _id: obj.id,
-    gameId: obj.game_id,
-    sessionId: obj.session_id,
-    hasVoted: obj.has_voted,
-    voteFor: obj.vote_for_id,
-    voteWeight: obj.vote_weight,
-    roleData: obj.role_data,
-    roleHidden: obj.role_hidden,
-    nightAction: obj.night_action,
-    victoryConditions: obj.victory_conditions,
-    roomCode: obj.room_code,
-    mayor: obj.mayor_id,
-    timerState: obj.timer_state,
-    winnerPlayerIds: obj.winner_player_ids,
-    modifierConfiguration: obj.modifier_configuration,
-    roleConfiguration: obj.role_configuration,
-    createdAt: obj.created_at,
-    updatedAt: obj.updated_at,
-  };
-}
-
 // Helper to handle Supabase errors
 function handleSupabaseError(error, operation) {
   if (error) {
@@ -138,7 +28,13 @@ async function findGameById(id, fields = "*") {
     .from("games")
     .select(fields)
     .eq("id", id)
-    .single();
+    .maybeSingle(); // Use maybeSingle() instead of single() to handle cases where no row or multiple rows exist
+
+  // Handle specific error: if multiple rows exist, that's a data integrity issue
+  if (error && error.code === "PGRST116") {
+    // No rows found - this is OK, return null
+    return null;
+  }
 
   handleSupabaseError(error, "findGameById");
   return data || null;
@@ -158,14 +54,14 @@ async function findGameByRoomCode(roomCode, fields = "*") {
 
 async function createGame(gameData) {
   const supabase = getSupabase();
-  const normalizedData = normalizeToPostgres({
+  const dataToInsert = {
     ...gameData,
-    id: gameData.id || gameData._id || uuidv4(),
-  });
+    id: gameData.id || uuidv4(),
+  };
 
   const { data, error } = await supabase
     .from("games")
-    .insert(normalizedData)
+    .insert(dataToInsert)
     .select()
     .single();
 
@@ -178,13 +74,13 @@ async function updateGame(id, updateData) {
     throw new Error("Invalid game ID format");
   }
   const supabase = getSupabase();
-  const normalizedData = normalizeToPostgres(updateData);
-  delete normalizedData.id; // Don't allow updating id
-  delete normalizedData._id;
+  const dataToUpdate = { ...updateData };
+  delete dataToUpdate.id; // Don't allow updating id
+  delete dataToUpdate._id;
 
   const { data, error } = await supabase
     .from("games")
-    .update(normalizedData)
+    .update(dataToUpdate)
     .eq("id", id)
     .select()
     .single();
@@ -277,16 +173,15 @@ async function findPlayerByGameAndSession(gameId, sessionId, fields = "*") {
 
 async function createPlayer(playerData) {
   const supabase = getSupabase();
-  const normalizedData = normalizeToPostgres({
+  const dataToInsert = {
     ...playerData,
-    id: playerData.id || playerData._id || uuidv4(),
-    game_id: playerData.game_id || playerData.gameId,
-  });
-  delete normalizedData.gameId; // Ensure only game_id is present
+    id: playerData.id || uuidv4(),
+    game_id: playerData.game_id,
+  };
 
   const { data, error } = await supabase
     .from("players")
-    .insert(normalizedData)
+    .insert(dataToInsert)
     .select()
     .single();
 
@@ -299,18 +194,18 @@ async function updatePlayer(id, updateData) {
     throw new Error("Invalid player ID format");
   }
   const supabase = getSupabase();
-  const normalizedData = normalizeToPostgres(updateData);
+  const dataToUpdate = { ...updateData };
 
   // Remove fields that shouldn't be updated directly
-  delete normalizedData._id;
-  delete normalizedData.id;
-  delete normalizedData.gameId;
-  delete normalizedData.game_id; // Don't allow changing game_id
-  delete normalizedData.created_at; // Don't allow updating created_at
+  delete dataToUpdate._id;
+  delete dataToUpdate.id;
+  delete dataToUpdate.gameId;
+  delete dataToUpdate.game_id; // Don't allow changing game_id
+  delete dataToUpdate.created_at; // Don't allow updating created_at
 
   const { data, error } = await supabase
     .from("players")
-    .update(normalizedData)
+    .update(dataToUpdate)
     .eq("id", id)
     .select()
     .single();
@@ -350,18 +245,18 @@ async function updatePlayersByGameId(gameId, updateData) {
     throw new Error("Invalid game ID format");
   }
   const supabase = getSupabase();
-  const normalizedData = normalizeToPostgres(updateData);
+  const dataToUpdate = { ...updateData };
 
   // Remove fields that shouldn't be updated directly
-  delete normalizedData._id;
-  delete normalizedData.id;
-  delete normalizedData.gameId;
-  delete normalizedData.game_id; // Don't allow changing game_id
-  delete normalizedData.created_at; // Don't allow updating created_at
+  delete dataToUpdate._id;
+  delete dataToUpdate.id;
+  delete dataToUpdate.gameId;
+  delete dataToUpdate.game_id; // Don't allow changing game_id
+  delete dataToUpdate.created_at; // Don't allow updating created_at
 
   const { data, error } = await supabase
     .from("players")
-    .update(normalizedData)
+    .update(dataToUpdate)
     .eq("game_id", gameId)
     .select();
 
@@ -388,18 +283,18 @@ async function updatePlayersBatch(updates) {
   // Use Promise.all for parallel updates (Supabase doesn't support batch updates with different values)
   // This is still more efficient than sequential updates
   const updatePromises = updates.map(async ({ id, updates: updateData }) => {
-    const normalizedData = normalizeToPostgres(updateData);
+    const dataToUpdate = { ...updateData };
 
     // Remove fields that shouldn't be updated directly
-    delete normalizedData._id;
-    delete normalizedData.id;
-    delete normalizedData.gameId;
-    delete normalizedData.game_id; // Don't allow changing game_id
-    delete normalizedData.created_at; // Don't allow updating created_at
+    delete dataToUpdate._id;
+    delete dataToUpdate.id;
+    delete dataToUpdate.gameId;
+    delete dataToUpdate.game_id; // Don't allow changing game_id
+    delete dataToUpdate.created_at; // Don't allow updating created_at
 
     const { data, error } = await supabase
       .from("players")
-      .update(normalizedData)
+      .update(dataToUpdate)
       .eq("id", id)
       .select()
       .single();
@@ -419,24 +314,21 @@ async function updatePlayersBatch(updates) {
 
 async function createGameLog(logData) {
   const supabase = getSupabase();
-  // Extract game_id before normalization to ensure it's preserved
-  const gameId = logData.game_id || logData.gameId;
+  // Extract game_id from logData
+  const gameId = logData.game_id;
   if (!gameId) {
-    throw new Error("game_id or gameId is required for createGameLog");
+    throw new Error("game_id is required for createGameLog");
   }
 
-  const normalizedData = normalizeToPostgres({
+  const dataToInsert = {
     ...logData,
-    id: logData.id || logData._id || uuidv4(),
-  });
-
-  // Ensure game_id is set (normalizeToPostgres converts gameId to game_id, but we want to be explicit)
-  normalizedData.game_id = gameId;
-  delete normalizedData.gameId; // Ensure only game_id is present
+    id: logData.id || uuidv4(),
+    game_id: gameId,
+  };
 
   const { data, error } = await supabase
     .from("game_logs")
-    .insert(normalizedData)
+    .insert(dataToInsert)
     .select()
     .single();
 
@@ -494,5 +386,4 @@ module.exports = {
   createGameLog,
   findGameLogsByGameId,
   deleteGameLogsByGameId,
-  convertForResolvers,
 };

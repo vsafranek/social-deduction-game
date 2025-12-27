@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import './VotingModal.css';
 
-function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
+function VotingModal({ players, onVote, onClose, isMayorElection = false, isVoting = false }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const SKIP_VALUE = 'skip';
 
@@ -50,7 +50,8 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
               <button
                 key={player._id}
                 className={`player-vote-item ${selectedPlayer === player._id ? 'selected' : ''}`}
-                onClick={() => setSelectedPlayer(player._id)}
+                onClick={() => !isVoting && setSelectedPlayer(player._id)}
+                disabled={isVoting}
               >
                 <div className="player-vote-avatar">
                   {player.avatar ? (
@@ -125,7 +126,8 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
             {/* Tlačítko pro přeskočení */}
             <button
               className={`player-vote-item skip-vote-item ${selectedPlayer === SKIP_VALUE ? 'selected' : ''}`}
-              onClick={() => setSelectedPlayer(SKIP_VALUE)}
+              onClick={() => !isVoting && setSelectedPlayer(SKIP_VALUE)}
+              disabled={isVoting}
             >
               <div className="player-vote-avatar">
                 <div className="vote-avatar-fallback" style={{ display: 'flex' }}>
@@ -149,15 +151,16 @@ function VotingModal({ players, onVote, onClose, isMayorElection = false }) {
           <button 
             className="cancel-vote-button" 
             onClick={onClose}
+            disabled={isVoting}
           >
             Zrušit
           </button>
           <button 
             className="confirm-vote-button" 
             onClick={handleVote}
-            disabled={!selectedPlayer}
+            disabled={!selectedPlayer || isVoting}
           >
-            {selectedPlayer === SKIP_VALUE ? 'Přeskočit' : 'Potvrdit hlas'}
+            {isVoting ? '⏳ Odesílám...' : (selectedPlayer === SKIP_VALUE ? 'Přeskočit' : 'Potvrdit hlas')}
           </button>
         </div>
       </div>

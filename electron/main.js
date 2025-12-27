@@ -67,6 +67,26 @@ app.whenReady().then(async () => {
       res.json({ status: "ok", ip: LOCAL_IP, port: PORT });
     });
 
+    // Debug/telemetry ingest endpoint (silently accepts and discards data)
+    expressApp.post("/ingest/:id", (req, res) => {
+      // Silently accept telemetry/debug data (no-op)
+      res.status(200).json({ status: "ok" });
+    });
+
+    // Separate Express app for ingest endpoint on port 7242
+    const ingestApp = express();
+    ingestApp.use(cors());
+    ingestApp.use(bodyParser.json());
+    ingestApp.post("/ingest/:id", (req, res) => {
+      // Silently accept telemetry/debug data (no-op)
+      res.status(200).json({ status: "ok" });
+    });
+    
+    const INGEST_PORT = 7242;
+    ingestApp.listen(INGEST_PORT, "127.0.0.1", () => {
+      console.log(`🔍 Debug ingest endpoint: http://127.0.0.1:${INGEST_PORT}/ingest/:id`);
+    });
+
     // Vite proxy in development
     if (isDev) {
       console.log("🔧 Development mode - setting up Vite proxy...");
