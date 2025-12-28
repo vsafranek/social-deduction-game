@@ -47,54 +47,36 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
   // Reset trigger when server phase changes
   useEffect(() => {
     countdownZeroTriggeredRef.current = false;
-    // transitionTriggeredRef se NERESETUJE zde - resetuje se až po dokončení animace
-    // Tím zajistíme, že animace se spustí i když se fáze změní přes onRefresh()
+    // Reset transitionTriggeredRef když se fáze změní, aby se mohla spustit nová animace
+    const prevPhase = previousPhaseRef.current;
+    if (prevPhase !== null && prevPhase !== phase) {
+      transitionTriggeredRef.current = false;
+    }
+  }, [phase]);
+
+  // Inicializace previousPhaseRef při prvním renderu
+  useEffect(() => {
+    if (previousPhaseRef.current === null && phase) {
+      previousPhaseRef.current = phase;
+    }
   }, [phase]);
 
   // Hlavní useEffect pro spuštění přechodové animace při změně fáze
   useEffect(() => {
     const prevPhase = previousPhaseRef.current;
 
-    // Pokud se fáze změnila z day/night na day/night, spusť animaci
-    if (
-      prevPhase !== null &&
-      prevPhase !== phase &&
-      (prevPhase === "day" || prevPhase === "night") &&
-      (phase === "day" || phase === "night") &&
-      !transitionTriggeredRef.current
-    ) {
-      console.log(`🎬 [TRANSITION] Phase changed: ${prevPhase} → ${phase}`);
+    // Aktualizovat previousPhaseRef pouze když se fáze skutečně změní
+    if (prevPhase !== phase) {
+      // Pokud se fáze změnila z day/night na day/night, spusť animaci
+      if (
+        prevPhase !== null &&
+        (prevPhase === "day" || prevPhase === "night") &&
+        (phase === "day" || phase === "night") &&
+        !transitionTriggeredRef.current
+      ) {
+        console.log(`🎬 [TRANSITION] Phase changed: ${prevPhase} → ${phase}`);
 
-      // Zruš předchozí timeouty, pokud existují
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-        transitionTimeoutRef.current = null;
-      }
-      if (transitionEndTimeoutRef.current) {
-        clearTimeout(transitionEndTimeoutRef.current);
-        transitionEndTimeoutRef.current = null;
-      }
-
-      // Zruš předchozí animaci, pokud existuje
-      setTransition(null);
-
-      // Krátká pauza před spuštěním nové animace (aby se stihla zrušit předchozí)
-      transitionTimeoutRef.current = setTimeout(() => {
-        transitionTriggeredRef.current = true;
-        setTransition({ from: prevPhase, to: phase });
-
-        // Trackovaný timeout pro ukončení animace
-        transitionEndTimeoutRef.current = setTimeout(() => {
-          setTransition(null);
-          transitionTriggeredRef.current = false;
-          transitionEndTimeoutRef.current = null;
-        }, 2500);
-
-        transitionTimeoutRef.current = null;
-      }, 50);
-
-      // Cleanup funkce pro zrušení všech timeoutů při změně fáze nebo unmountu
-      return () => {
+        // Zruš předchozí timeouty, pokud existují
         if (transitionTimeoutRef.current) {
           clearTimeout(transitionTimeoutRef.current);
           transitionTimeoutRef.current = null;
@@ -103,22 +85,45 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
           clearTimeout(transitionEndTimeoutRef.current);
           transitionEndTimeoutRef.current = null;
         }
-      };
-    }
 
-    // Handle end phase - zobrazit end screen okamžitě
-    if (
-      prevPhase !== null &&
-      prevPhase !== phase &&
-      phase === "end" &&
-      !endScreenTriggeredRef.current
-    ) {
-      console.log(`🎬 [END SCREEN] Phase changed: ${prevPhase} → ${phase}`);
-      endScreenTriggeredRef.current = true;
-      setShowEndScreen(true);
-    } else if (phase !== "end") {
-      // Reset end screen when leaving end phase
-      if (prevPhase === "end") {
+        // Zruš předchozí animaci, pokud existuje
+        setTransition(null);
+
+        // Krátká pauza před spuštěním nové animace (aby se stihla zrušit předchozí)
+        transitionTimeoutRef.current = setTimeout(() => {
+          transitionTriggeredRef.current = true;
+          setTransition({ from: prevPhase, to: phase });
+
+          // Trackovaný timeout pro ukončení animace
+          transitionEndTimeoutRef.current = setTimeout(() => {
+            setTransition(null);
+            transitionTriggeredRef.current = false;
+            transitionEndTimeoutRef.current = null;
+          }, 2500);
+
+          transitionTimeoutRef.current = null;
+        }, 50);
+      } else {
+        // Pokud se fáze změnila na "end" nebo jinou fázi, zruš všechny pending timeouts
+        if (transitionTimeoutRef.current) {
+          clearTimeout(transitionTimeoutRef.current);
+          transitionTimeoutRef.current = null;
+        }
+        if (transitionEndTimeoutRef.current) {
+          clearTimeout(transitionEndTimeoutRef.current);
+          transitionEndTimeoutRef.current = null;
+        }
+        // Zruš předchozí animaci, pokud existuje
+        setTransition(null);
+      }
+
+      // Handle end phase - zobrazit end screen okamžitě
+      if (phase === "end" && !endScreenTriggeredRef.current) {
+        console.log(`🎬 [END SCREEN] Phase changed: ${prevPhase} → ${phase}`);
+        endScreenTriggeredRef.current = true;
+        setShowEndScreen(true);
+      } else if (phase !== "end" && prevPhase === "end") {
+        // Reset end screen when leaving end phase
         endScreenTriggeredRef.current = false;
         setShowEndScreen(false);
         if (endScreenTimeoutRef.current) {
@@ -126,10 +131,24 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
           endScreenTimeoutRef.current = null;
         }
       }
+
+      // Aktualizovat previousPhaseRef až po zpracování změny fáze
+      previousPhaseRef.current = phase;
     }
 
-    previousPhaseRef.current = phase;
-  }, [phase, gameState]);
+    // Cleanup funkce pro zrušení všech timeoutů při změně fáze nebo unmountu
+    // Musí být vždy vrácena, ne jen uvnitř podmínky pro animaci
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
+      if (transitionEndTimeoutRef.current) {
+        clearTimeout(transitionEndTimeoutRef.current);
+        transitionEndTimeoutRef.current = null;
+      }
+    };
+  }, [phase]); // Odstraněna závislost na gameState - phase se mění nezávisle
 
   // Frontend countdown (pouze pokud není end)
   useEffect(() => {
@@ -156,24 +175,8 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
 
         console.log(`⏰ [COUNTDOWN] Hit 0: ${phase} → ${nextPhase}`);
 
-        // Okamžitě spusť přechodovou animaci na základě očekávané změny fáze
-        if (
-          (phase === "day" || phase === "night") &&
-          (nextPhase === "day" || nextPhase === "night")
-        ) {
-          transitionTriggeredRef.current = true;
-          setTransition({ from: phase, to: nextPhase });
-
-          const timeoutId = setTimeout(() => {
-            if (mounted) {
-              setTransition(null);
-              transitionTriggeredRef.current = false;
-            }
-          }, 2500);
-
-          // Cleanup timeout při unmountu
-          // Poznámka: timeout se vyčistí automaticky při změně fáze přes hlavní useEffect
-        }
+        // NESPOUŠTĚT transition zde - necháme to na hlavní useEffect, který se spustí
+        // když se fáze skutečně změní. Tím se zabrání duplicitnímu zobrazení.
 
         // Zavolej endPhase a aktualizuj stav
         gameApi

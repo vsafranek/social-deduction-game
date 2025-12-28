@@ -2,7 +2,7 @@
 import React from "react";
 import "./PlayerToken.css";
 
-function PlayerToken({ player, phase, votes, style }) {
+function PlayerToken({ player, phase, votes, isMayor, style }) {
   // Get details version path of avatar
   const getDetailAvatarPath = (avatarPath) => {
     if (!avatarPath) return null;
@@ -25,11 +25,14 @@ function PlayerToken({ player, phase, votes, style }) {
 
   return (
     <div
-      className={`player-token ${!player.alive ? "dead" : ""}`}
+      className={`player-token ${!player.alive ? "dead" : ""} ${
+        isMayor ? "mayor" : ""
+      }`}
       style={style}
       title={player.name}
     >
       {!player.alive && <div className="death-shroud">💀</div>}
+      {isMayor && player.alive && <div className="mayor-crown">⭐</div>}
 
       <div className="player-avatar">
         <div className="avatar-ring"></div>

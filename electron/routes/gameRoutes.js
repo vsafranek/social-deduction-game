@@ -965,7 +965,10 @@ router.post("/:gameId/end-night", async (req, res) => {
         winner: win.winner,
         winner_player_ids: winnerIds,
       });
-      await createGameLog({ game_id: gameId, message: `🏁 Victory: ${win.winner}` });
+      await createGameLog({
+        game_id: gameId,
+        message: `🏁 Victory: ${win.winner}`,
+      });
       return res.json({
         success: true,
         phase: "end",
@@ -1055,59 +1058,87 @@ router.post("/:gameId/end-day", async (req, res) => {
         votingResult.updates.players &&
         votingResult.updates.players.length > 0
       ) {
-        console.log('📝 Applying player updates:', votingResult.updates.players.length);
+        console.log(
+          "📝 Applying player updates:",
+          votingResult.updates.players.length
+        );
         const batchUpdates = votingResult.updates.players.map((pu) => ({
           id: pu.id,
           updates: pu.updates,
         }));
-        console.log('📝 Batch updates:', JSON.stringify(batchUpdates, null, 2));
+        console.log("📝 Batch updates:", JSON.stringify(batchUpdates, null, 2));
         await updatePlayersBatch(batchUpdates);
-        console.log('✅ Player updates applied');
+        console.log("✅ Player updates applied");
       }
       if (votingResult.updates.game) {
-        console.log('📝 Applying game updates:', JSON.stringify(votingResult.updates.game.updates, null, 2));
+        console.log(
+          "📝 Applying game updates:",
+          JSON.stringify(votingResult.updates.game.updates, null, 2)
+        );
         const updatedGame = await updateGame(
           votingResult.updates.game.id,
           votingResult.updates.game.updates
         );
-        console.log('✅ Game updates applied');
-        console.log('📊 Updated game mayor_id:', updatedGame?.mayor_id);
+        console.log("✅ Game updates applied");
+        console.log("📊 Updated game mayor_id:", updatedGame?.mayor_id);
       }
     }
 
     players = await findPlayersByGameId(gameId);
-    console.log('📊 Players after update:', players.map(p => ({ 
-      name: p.name, 
-      alive: p.alive, 
-      id: p.id,
-      vote_weight: p.vote_weight,
-      modifier: p.modifier
-    })));
-    
+    console.log(
+      "📊 Players after update:",
+      players.map((p) => ({
+        name: p.name,
+        alive: p.alive,
+        id: p.id,
+        vote_weight: p.vote_weight,
+        modifier: p.modifier,
+      }))
+    );
+
     // Verify mayor was set correctly
     if (votingResult.mayorElected && votingResult.mayorId) {
-      const mayorId = votingResult.mayorId?.toString ? votingResult.mayorId.toString() : votingResult.mayorId;
-      const mayorPlayer = players.find(p => p.id.toString() === mayorId);
+      const mayorId = votingResult.mayorId?.toString
+        ? votingResult.mayorId.toString()
+        : votingResult.mayorId;
+      const mayorPlayer = players.find((p) => p.id.toString() === mayorId);
       const updatedGame = await findGameById(gameId);
-      console.log('🔍 Checking mayor election:');
-      console.log('  Mayor ID from result:', mayorId);
-      console.log('  Mayor player found:', mayorPlayer ? mayorPlayer.name : 'NOT FOUND');
-      console.log('  Mayor vote_weight:', mayorPlayer?.vote_weight);
-      console.log('  Game mayor_id:', updatedGame?.mayor_id);
-      console.log('  Game mayor_id matches:', updatedGame?.mayor_id?.toString() === mayorId);
+      console.log("🔍 Checking mayor election:");
+      console.log("  Mayor ID from result:", mayorId);
+      console.log(
+        "  Mayor player found:",
+        mayorPlayer ? mayorPlayer.name : "NOT FOUND"
+      );
+      console.log("  Mayor vote_weight:", mayorPlayer?.vote_weight);
+      console.log("  Game mayor_id:", updatedGame?.mayor_id);
+      console.log(
+        "  Game mayor_id matches:",
+        updatedGame?.mayor_id?.toString() === mayorId
+      );
     }
 
     // Verify execution was applied correctly
     if (votingResult.executed) {
-      const executedId = votingResult.executed?.toString ? votingResult.executed.toString() : votingResult.executed;
-      const executedPlayer = players.find(p => p.id.toString() === executedId);
-      console.log('🔍 Checking executed player:', { executedId, found: !!executedPlayer, alive: executedPlayer?.alive });
+      const executedId = votingResult.executed?.toString
+        ? votingResult.executed.toString()
+        : votingResult.executed;
+      const executedPlayer = players.find(
+        (p) => p.id.toString() === executedId
+      );
+      console.log("🔍 Checking executed player:", {
+        executedId,
+        found: !!executedPlayer,
+        alive: executedPlayer?.alive,
+      });
       if (executedPlayer && executedPlayer.alive) {
-        console.error('⚠️ Executed player is still alive! Force updating...', executedPlayer);
+        console.error(
+          "⚠️ Executed player is still alive! Force updating...",
+          executedPlayer
+        );
         // Force update
         await updatePlayer(executedPlayer.id, { alive: false });
         players = await findPlayersByGameId(gameId);
-        console.log('✅ Force updated executed player');
+        console.log("✅ Force updated executed player");
       }
     }
 
@@ -1146,7 +1177,10 @@ router.post("/:gameId/end-day", async (req, res) => {
         winner: win.winner,
         winner_player_ids: win.players || [],
       });
-      await createGameLog({ game_id: gameId, message: `🏁 Victory: ${win.winner}` });
+      await createGameLog({
+        game_id: gameId,
+        message: `🏁 Victory: ${win.winner}`,
+      });
       return res.json({
         success: true,
         phase: "end",
@@ -1253,60 +1287,91 @@ router.post("/:gameId/end-phase", async (req, res) => {
           votingResult.updates.players &&
           votingResult.updates.players.length > 0
         ) {
-          console.log('📝 Applying player updates:', votingResult.updates.players.length);
+          console.log(
+            "📝 Applying player updates:",
+            votingResult.updates.players.length
+          );
           const batchUpdates = votingResult.updates.players.map((pu) => ({
             id: pu.id,
             updates: pu.updates,
           }));
-          console.log('📝 Batch updates:', JSON.stringify(batchUpdates, null, 2));
+          console.log(
+            "📝 Batch updates:",
+            JSON.stringify(batchUpdates, null, 2)
+          );
           await updatePlayersBatch(batchUpdates);
-          console.log('✅ Player updates applied');
+          console.log("✅ Player updates applied");
         }
         if (votingResult.updates.game) {
-          console.log('📝 Applying game updates:', JSON.stringify(votingResult.updates.game.updates, null, 2));
+          console.log(
+            "📝 Applying game updates:",
+            JSON.stringify(votingResult.updates.game.updates, null, 2)
+          );
           const updatedGame = await updateGame(
             votingResult.updates.game.id,
             votingResult.updates.game.updates
           );
-          console.log('✅ Game updates applied');
-          console.log('📊 Updated game mayor_id:', updatedGame?.mayor_id);
+          console.log("✅ Game updates applied");
+          console.log("📊 Updated game mayor_id:", updatedGame?.mayor_id);
         }
       }
 
       // Reload players after voting and applying updates
       players = await findPlayersByGameId(gameId);
-      console.log('📊 Players after update:', players.map(p => ({ 
-        name: p.name, 
-        alive: p.alive, 
-        id: p.id,
-        vote_weight: p.vote_weight,
-        modifier: p.modifier
-      })));
-      
+      console.log(
+        "📊 Players after update:",
+        players.map((p) => ({
+          name: p.name,
+          alive: p.alive,
+          id: p.id,
+          vote_weight: p.vote_weight,
+          modifier: p.modifier,
+        }))
+      );
+
       // Verify mayor was set correctly
       if (votingResult.mayorElected && votingResult.mayorId) {
-        const mayorId = votingResult.mayorId?.toString ? votingResult.mayorId.toString() : votingResult.mayorId;
-        const mayorPlayer = players.find(p => p.id.toString() === mayorId);
+        const mayorId = votingResult.mayorId?.toString
+          ? votingResult.mayorId.toString()
+          : votingResult.mayorId;
+        const mayorPlayer = players.find((p) => p.id.toString() === mayorId);
         const updatedGame = await findGameById(gameId);
-        console.log('🔍 Checking mayor election:');
-        console.log('  Mayor ID from result:', mayorId);
-        console.log('  Mayor player found:', mayorPlayer ? mayorPlayer.name : 'NOT FOUND');
-        console.log('  Mayor vote_weight:', mayorPlayer?.vote_weight);
-        console.log('  Game mayor_id:', updatedGame?.mayor_id);
-        console.log('  Game mayor_id matches:', updatedGame?.mayor_id?.toString() === mayorId);
+        console.log("🔍 Checking mayor election:");
+        console.log("  Mayor ID from result:", mayorId);
+        console.log(
+          "  Mayor player found:",
+          mayorPlayer ? mayorPlayer.name : "NOT FOUND"
+        );
+        console.log("  Mayor vote_weight:", mayorPlayer?.vote_weight);
+        console.log("  Game mayor_id:", updatedGame?.mayor_id);
+        console.log(
+          "  Game mayor_id matches:",
+          updatedGame?.mayor_id?.toString() === mayorId
+        );
       }
 
       // Verify execution was applied correctly
       if (votingResult.executed) {
-        const executedId = votingResult.executed?.toString ? votingResult.executed.toString() : votingResult.executed;
-        const executedPlayer = players.find(p => p.id.toString() === executedId);
-        console.log('🔍 Checking executed player:', { executedId, found: !!executedPlayer, alive: executedPlayer?.alive });
+        const executedId = votingResult.executed?.toString
+          ? votingResult.executed.toString()
+          : votingResult.executed;
+        const executedPlayer = players.find(
+          (p) => p.id.toString() === executedId
+        );
+        console.log("🔍 Checking executed player:", {
+          executedId,
+          found: !!executedPlayer,
+          alive: executedPlayer?.alive,
+        });
         if (executedPlayer && executedPlayer.alive) {
-          console.error('⚠️ Executed player is still alive! Force updating...', executedPlayer);
+          console.error(
+            "⚠️ Executed player is still alive! Force updating...",
+            executedPlayer
+          );
           // Force update
           await updatePlayer(executedPlayer.id, { alive: false });
           players = await findPlayersByGameId(gameId);
-          console.log('✅ Force updated executed player');
+          console.log("✅ Force updated executed player");
         }
       }
 
@@ -1359,7 +1424,10 @@ router.post("/:gameId/end-phase", async (req, res) => {
           winner: win.winner,
           winner_player_ids: winnerIds,
         });
-        await createGameLog({ game_id: gameId, message: `🏁 Victory: ${win.winner}` });
+        await createGameLog({
+          game_id: gameId,
+          message: `🏁 Victory: ${win.winner}`,
+        });
         console.log(`✅ Victory: ${win.winner}`);
         return res.json({
           success: true,
@@ -1371,17 +1439,17 @@ router.post("/:gameId/end-phase", async (req, res) => {
 
       // Switch to night
       const nightSec = Number(game.timers?.nightSeconds ?? 90);
+      const newRound = (game.round || 0) + 1;
       game.phase = "night";
-      game.round = (game.round || 0) + 1;
+      game.round = newRound;
       game.timer_state = {
         phaseEndsAt: new Date(Date.now() + nightSec * 1000),
       };
       await updateGame(gameId, {
         phase: "night",
-        round: (game.round || 0) + 1,
+        round: newRound,
         timer_state: { phaseEndsAt: endInMs(nightSec) },
       });
-      const newRound = (game.round || 0) + 1;
       await createGameLog({
         game_id: gameId,
         message: `Round ${newRound} - NIGHT (⏱ ${nightSec}s)`,
@@ -1434,7 +1502,10 @@ router.post("/:gameId/end-phase", async (req, res) => {
           winner: win.winner,
           winner_player_ids: winnerIds,
         });
-        await createGameLog({ game_id: gameId, message: `🏁 Victory: ${win.winner}` });
+        await createGameLog({
+          game_id: gameId,
+          message: `🏁 Victory: ${win.winner}`,
+        });
         console.log(`✅ Victory: ${win.winner}`);
         return res.json({
           success: true,

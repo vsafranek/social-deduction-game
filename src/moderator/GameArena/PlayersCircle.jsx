@@ -1,7 +1,7 @@
 // src/components/moderator/GameArena/PlayersCircle.jsx
-import React, { useMemo } from 'react';
-import PlayerToken from './PlayerToken';
-import './PlayersCircle.css';
+import React, { useMemo } from "react";
+import PlayerToken from "./PlayerToken";
+import "./PlayersCircle.css";
 
 function PlayersCircle({ players, phase, game }) {
   const total = players.length;
@@ -9,7 +9,7 @@ function PlayersCircle({ players, phase, game }) {
   // spočítej počet hlasů pro každého cíle (jen pro denní fázi)
   // Respektuje voteWeight (starosta má 2 hlasy)
   const voteMap = useMemo(() => {
-    if (phase !== 'day') return {};
+    if (phase !== "day") return {};
     const map = {};
     for (const p of players) {
       if (p.alive && p.voteFor) {
@@ -38,7 +38,9 @@ function PlayersCircle({ players, phase, game }) {
         const x = centerX + radiusPx * Math.cos(angle);
         const y = centerY + radiusPx * Math.sin(angle);
 
-        const votes = phase === 'day' ? (voteMap[String(p._id)] || 0) : 0;
+        const votes = phase === "day" ? voteMap[String(p._id)] || 0 : 0;
+        const isMayor =
+          game?.mayor && game.mayor.toString() === p._id.toString();
 
         return (
           <PlayerToken
@@ -46,6 +48,7 @@ function PlayersCircle({ players, phase, game }) {
             player={p}
             phase={phase}
             votes={votes}
+            isMayor={isMayor}
             style={{ left: `${x}px`, top: `${y}px` }}
           />
         );

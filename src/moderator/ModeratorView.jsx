@@ -325,13 +325,7 @@ function ModeratorView({
   const endDay = async () => {
     try {
       const result = await gameApi.endDay(gameId);
-      if (result.winner) {
-        alert(
-          result.winner === "town"
-            ? "🎉 The Order wins!"
-            : "🎉 The Shadows win!"
-        );
-      }
+      // Winner is displayed in GameEndScreen component when phase becomes "end"
       await fetchGameState();
     } catch (error) {
       console.error("Chyba při ukončení dne:", error);
