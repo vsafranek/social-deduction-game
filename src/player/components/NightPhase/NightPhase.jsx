@@ -5,7 +5,25 @@ import { getRoleInfo } from '../../../data/roleInfo';
 import './NightPhase.css';
 
 function NightPhase({ player, players, onAction }) {
-  const [selectedMode, setSelectedMode] = useState('kill');
+  // Determine default mode based on role
+  const getDefaultMode = (role) => {
+    const roleInfo = getRoleInfo(role);
+    const actionInfo = roleInfo?.nightAction;
+    if (actionInfo?.dual && actionInfo?.actions) {
+      // For Poisoner, default to 'poison' (unlimited use)
+      if (role === 'Poisoner') {
+        return 'poison';
+      }
+      // For other dual roles, default to 'kill' if available, otherwise first action
+      if (actionInfo.actions['kill']) {
+        return 'kill';
+      }
+      return Object.keys(actionInfo.actions)[0];
+    }
+    return 'kill';
+  };
+
+  const [selectedMode, setSelectedMode] = useState(() => getDefaultMode(player.role));
   const [actionDone, setActionDone] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
 
@@ -13,9 +31,9 @@ function NightPhase({ player, players, onAction }) {
   useEffect(() => {
     console.log('🔄 NightPhase reset for player:', player.name);
     setActionDone(false);
-    setSelectedMode('kill');
+    setSelectedMode(getDefaultMode(player.role));
     setShowActionModal(false);
-  }, [player._id]);
+  }, [player._id, player.role]);
 
   // Zkontroluj, jestli už hráč má akci nastavenou
   useEffect(() => {
@@ -30,6 +48,7 @@ function NightPhase({ player, players, onAction }) {
   const roleInfo = getRoleInfo(player.role);
   const actionInfo = roleInfo?.nightAction;
   const isDualRole = actionInfo?.dual;
+  const isPoisoner = player.role === 'Poisoner';
   
   // Pro dual role - pokud není usesRemaining nastaveno, použij maxUses z role definice
   let usesRemaining = 0;
@@ -37,9 +56,10 @@ function NightPhase({ player, players, onAction }) {
     if (player.roleData?.usesRemaining != null) {
       usesRemaining = player.roleData.usesRemaining;
     } else {
-      // Pokud není inicializováno, použij maxUses z role definice (defaultně 3)
-      // Toto by se mělo inicializovat při start-config, ale pro jistotu použijeme fallback
-      usesRemaining = 3; // Default maxUses pro dual roles
+      // Pokud není inicializováno, použij maxUses z role definice
+      // Pro Poisoner: maxUses = 1 (only for strong_poison)
+      // Pro ostatní dual role: defaultně 3
+      usesRemaining = isPoisoner ? 1 : 3;
     }
   }
 
@@ -121,14 +141,20 @@ function NightPhase({ player, players, onAction }) {
         <p>{currentActionInfo.description || 'Noční akce'}</p>
         
         {/* Uses counter for dual roles */}
-        {isDualRole && selectedMode !== 'kill' && (
+        {isDualRole && !isPoisoner && selectedMode !== 'kill' && (
           <div className="uses-remaining">
             ⚡ Speciální akce: {usesRemaining}x
           </div>
         )}
-        {isDualRole && selectedMode === 'kill' && (
+        {isDualRole && !isPoisoner && selectedMode === 'kill' && (
           <div className="uses-remaining" style={{ opacity: 0.6 }}>
             ⚡ Sekundární akce: {usesRemaining}x
+          </div>
+        )}
+        {/* For Poisoner: show counter only for strong_poison */}
+        {isDualRole && isPoisoner && selectedMode === 'strong_poison' && (
+          <div className="uses-remaining">
+            ⚡ Silný jed: {usesRemaining}x
           </div>
         )}
       </div>
@@ -137,7 +163,11 @@ function NightPhase({ player, players, onAction }) {
       {isDualRole && (
         <div className="action-mode-selector">
           {Object.entries(actionInfo.actions).map(([mode, info]) => {
-            const isDisabled = mode !== 'kill' && usesRemaining <= 0;
+            // For Poisoner: disable only strong_poison when usesRemaining <= 0
+            // For other dual roles: disable all actions except 'kill' when usesRemaining <= 0
+            const isDisabled = isPoisoner
+              ? mode === 'strong_poison' && usesRemaining <= 0
+              : mode !== 'kill' && usesRemaining <= 0;
             
             return (
               <button
