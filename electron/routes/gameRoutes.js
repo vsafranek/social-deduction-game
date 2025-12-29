@@ -1089,14 +1089,14 @@ router.post("/:gameId/end-day", async (req, res) => {
     console.log(
       "📊 Players after update:",
       players.map((p) => ({
-        name: p.name,
-        alive: p.alive,
-        id: p.id,
-        vote_weight: p.vote_weight,
+      name: p.name, 
+      alive: p.alive, 
+      id: p.id,
+      vote_weight: p.vote_weight,
         modifier: p.modifier,
       }))
     );
-
+    
     // Verify mayor was set correctly
     if (votingResult.mayorElected && votingResult.mayorId) {
       const mayorId = votingResult.mayorId?.toString

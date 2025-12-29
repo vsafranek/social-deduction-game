@@ -86,7 +86,7 @@ const ROLES = {
     team: 'good',
     description: 'Can kill at night - if kills an innocent, dies from guilt',
     actionType: 'hunter_kill',
-    nightPriority: 7,
+    nightPriority: 10, // After Doctor (9) - Hunter goes out after doctors
     canUseEveryNight: true,
     visitsTarget: true,
     defaultAffiliations: ['good'],
