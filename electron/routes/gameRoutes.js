@@ -1019,15 +1019,16 @@ router.post("/:gameId/voting-reveal-to-night", async (req, res) => {
       return res.status(400).json({ error: "Not in voting_reveal phase" });
 
     const nightSec = Number(game.timers?.nightSeconds ?? 90);
-    const newRound = (game.round || 0) + 1;
+    // Noc má stejné číslo jako poslední den - kolo se nezvyšuje
+    const currentRound = game.round || 0;
     await updateGame(gameId, {
       phase: "night",
-      round: newRound,
+      round: currentRound,
       timer_state: { phaseEndsAt: endInMs(nightSec) },
     });
     await createGameLog({
       game_id: gameId,
-      message: `Round ${newRound} - NIGHT (⏱ ${nightSec}s)`,
+      message: `Round ${currentRound} - NIGHT (⏱ ${nightSec}s)`,
     });
 
     res.json({ success: true });
@@ -1191,15 +1192,16 @@ router.post("/:gameId/end-day", async (req, res) => {
 
     // Go directly to night (voting_reveal was removed)
     const nightSec = Number(game.timers?.nightSeconds ?? 90);
-    const newRound = (game.round || 0) + 1;
+    // Noc má stejné číslo jako poslední den - kolo se nezvyšuje
+    const currentRound = game.round || 0;
     await updateGame(gameId, {
       phase: "night",
-      round: newRound,
+      round: currentRound,
       timer_state: { phaseEndsAt: endInMs(nightSec) },
     });
     await createGameLog({
       game_id: gameId,
-      message: `Round ${newRound} - NIGHT (⏱ ${nightSec}s)`,
+      message: `Round ${currentRound} - NIGHT (⏱ ${nightSec}s)`,
     });
     res.json({ success: true, phase: "night" });
   } catch (e) {
@@ -1439,22 +1441,23 @@ router.post("/:gameId/end-phase", async (req, res) => {
 
       // Switch to night
       const nightSec = Number(game.timers?.nightSeconds ?? 90);
-      const newRound = (game.round || 0) + 1;
+      // Noc má stejné číslo jako poslední den - kolo se nezvyšuje
+      const currentRound = game.round || 0;
       game.phase = "night";
-      game.round = newRound;
+      game.round = currentRound;
       game.timer_state = {
         phaseEndsAt: new Date(Date.now() + nightSec * 1000),
       };
       await updateGame(gameId, {
         phase: "night",
-        round: newRound,
+        round: currentRound,
         timer_state: { phaseEndsAt: endInMs(nightSec) },
       });
       await createGameLog({
         game_id: gameId,
-        message: `Round ${newRound} - NIGHT (⏱ ${nightSec}s)`,
+        message: `Round ${currentRound} - NIGHT (⏱ ${nightSec}s)`,
       });
-      console.log(`✅ [END-PHASE] Day → Night (Round ${newRound})`);
+      console.log(`✅ [END-PHASE] Day → Night (Round ${currentRound})`);
     } else if (currentPhase === "night") {
       // Night → Day: process night actions
       console.log("🌙 Processing night actions...");
@@ -1517,10 +1520,14 @@ router.post("/:gameId/end-phase", async (req, res) => {
 
       // Switch to day
       const daySec = Number((game.timers || {}).daySeconds ?? 150);
+      // Nový den = nové kolo - kolo se zvyšuje při přechodu night → day
+      const newRound = (game.round || 0) + 1;
       await updateGame(gameId, {
         phase: "day",
+        round: newRound,
         timer_state: { phaseEndsAt: endInMs(daySec) },
       });
+      game.round = newRound;
 
       // ✅ RESET hlasování pro nový den - batch update
       console.log("🧹 Resetting votes for new day...");
@@ -1532,9 +1539,9 @@ router.post("/:gameId/end-phase", async (req, res) => {
 
       await createGameLog({
         game_id: gameId,
-        message: `Round ${game.round} - DAY (⏱ ${daySec}s)`,
+        message: `Round ${newRound} - DAY (⏱ ${daySec}s)`,
       });
-      console.log(`✅ [END-PHASE] Night → Day (Round ${game.round})`);
+      console.log(`✅ [END-PHASE] Night → Day (Round ${newRound})`);
     }
 
     let finalGame = await findGameById(gameId);
