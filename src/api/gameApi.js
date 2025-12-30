@@ -287,6 +287,110 @@ export const gameApi = {
     }
     
     return res.json();
+  },
+
+  /**
+   * Subscribe to real-time game state updates via Server-Sent Events
+   * @param {string} gameId - Game ID
+   * @param {function} onUpdate - Callback function called when game state updates
+   * @param {function} onError - Optional callback function called when connection errors occur
+   * @returns {function} - Unsubscribe function
+   */
+  subscribeToGameState(gameId, onUpdate, onError) {
+    const eventSource = new EventSource(`${API_BASE}/game/${gameId}/stream`);
+    let hasReceivedInitialData = false;
+    let errorTimeout = null;
+    let connectionLostTimeout = null;
+    let consecutiveErrors = 0;
+    let hasNotifiedConsecutiveErrors = false; // Flag to prevent multiple onError calls
+    const MAX_CONSECUTIVE_ERRORS = 3;
+    const CONNECTION_LOST_TIMEOUT = 10000; // 10 seconds
+    
+    eventSource.onmessage = (event) => {
+      try {
+        // Skip keepalive messages
+        if (event.data.trim() === ': keepalive') {
+          return;
+        }
+        
+        hasReceivedInitialData = true;
+        consecutiveErrors = 0; // Reset error count on successful message
+        hasNotifiedConsecutiveErrors = false; // Reset notification flag on successful message
+        
+        if (errorTimeout) {
+          clearTimeout(errorTimeout);
+          errorTimeout = null;
+        }
+        if (connectionLostTimeout) {
+          clearTimeout(connectionLostTimeout);
+          connectionLostTimeout = null;
+        }
+        
+        const gameState = JSON.parse(event.data);
+        onUpdate(gameState);
+      } catch (err) {
+        console.error('Error parsing SSE message:', err);
+        if (onError) {
+          onError(new Error(`Failed to parse SSE message: ${err.message}`));
+        }
+      }
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      consecutiveErrors++;
+      
+      // If connection is closed and we never received initial data, it's likely a 404 or other error
+      if (eventSource.readyState === EventSource.CLOSED && !hasReceivedInitialData) {
+        // Wait a bit to see if it's just a temporary connection issue
+        if (!errorTimeout) {
+          errorTimeout = setTimeout(() => {
+            if (!hasReceivedInitialData) {
+              console.error('SSE connection failed - game may not exist');
+              if (onError) {
+                onError(new Error('Game not found or connection failed'));
+              }
+            }
+          }, 2000); // Wait 2 seconds before reporting error
+        }
+      } else if (eventSource.readyState === EventSource.CLOSED && hasReceivedInitialData) {
+        // Connection was closed after receiving data - might be reconnecting
+        console.warn('SSE connection closed, attempting to reconnect...');
+        
+        // If connection stays closed for too long, notify the error handler
+        if (!connectionLostTimeout) {
+          connectionLostTimeout = setTimeout(() => {
+            if (eventSource.readyState === EventSource.CLOSED) {
+              console.error('SSE connection lost and failed to reconnect');
+              if (onError) {
+                onError(new Error('Connection lost and failed to reconnect'));
+              }
+            }
+          }, CONNECTION_LOST_TIMEOUT);
+        }
+      } else if (eventSource.readyState === EventSource.CONNECTING && hasReceivedInitialData) {
+        // Connection is reconnecting after receiving data
+        // If we have too many consecutive errors, notify the error handler (only once)
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS && !hasNotifiedConsecutiveErrors) {
+          console.error('SSE connection has too many consecutive errors');
+          hasNotifiedConsecutiveErrors = true; // Prevent multiple notifications
+          if (onError) {
+            onError(new Error('Connection unstable - too many errors'));
+          }
+        }
+      }
+    };
+    
+    // Return unsubscribe function
+    return () => {
+      if (errorTimeout) {
+        clearTimeout(errorTimeout);
+      }
+      if (connectionLostTimeout) {
+        clearTimeout(connectionLostTimeout);
+      }
+      eventSource.close();
+    };
   }
 };
 

@@ -48,6 +48,7 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
   const endScreenTriggeredRef = useRef(false);
   const endScreenTimeoutRef = useRef(null);
   const previousPlayersRef = useRef(null);
+  const currentPhaseRef = useRef(phase);
   const previousMayorIdRef = useRef(null);
 
   // Reset trigger when server phase changes
@@ -165,8 +166,14 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
         }
       }
 
-      // Detekce DeathReveal při přechodu night → day
-      if (prevPhase === "night" && phase === "day" && prevPlayers) {
+      // Detekce DeathReveal při přechodu night → day NEBO night → end
+      // - night → day: klasický přechod do dne
+      // - night → end: hra končí hned po noci, chceme ukázat, kdo zemřel poslední noc
+      if (
+        prevPhase === "night" &&
+        (phase === "day" || phase === "end") &&
+        prevPlayers
+      ) {
         const newlyDead = currentPlayers.filter((p) => {
           const prevPlayer = prevPlayers.find((pp) => pp._id === p._id);
           return prevPlayer && prevPlayer.alive && !p.alive;
@@ -360,41 +367,51 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
     };
   }, [phaseEndsAt, phase, gameState.game._id]);
 
-  // Periodic sync
+  // Update phase ref whenever phase changes (without recreating SSE subscription)
   useEffect(() => {
-    let mounted = true;
-    let syncInterval = null;
+    currentPhaseRef.current = phase;
+  }, [phase]);
 
-    const doSync = async () => {
+  // Real-time game state updates via Server-Sent Events
+  useEffect(() => {
+    if (!gameState?.game?._id) return;
+
+    console.log("🔄 Starting SSE subscription for GameArena");
+
+    // Subscribe to real-time game state updates
+    const unsubscribe = gameApi.subscribeToGameState(gameState.game._id, async (freshState) => {
       try {
-        const freshState = await gameApi.getGameState(gameState.game._id);
-
-        if (freshState.game.phase !== phase) {
+        // Use ref to get current phase value without causing subscription recreation
+        const currentPhase = currentPhaseRef.current;
+        if (freshState.game.phase !== currentPhase) {
           console.log(
-            `🔄 [SYNC] Phase changed: ${phase} → ${freshState.game.phase}`
+            `🔄 [SYNC] Phase changed: ${currentPhase} → ${freshState.game.phase}`
           );
 
           // Animace se spustí automaticky přes hlavní useEffect při změně fáze
 
-          if (onRefresh) await onRefresh();
+          if (onRefresh) {
+            try {
+              await onRefresh();
+            } catch (refreshError) {
+              console.error("❌ Error in onRefresh callback:", refreshError);
+            }
+          }
         }
       } catch (e) {
-        console.error("❌ Sync error:", e);
+        console.error("❌ Error processing game state update:", e);
       }
-    };
-
-    syncInterval = setInterval(doSync, 2000);
-    doSync();
+    });
 
     return () => {
-      mounted = false;
-      if (syncInterval) clearInterval(syncInterval);
+      console.log("🔄 Cleaning up SSE subscription");
+      unsubscribe();
       if (endScreenTimeoutRef.current) {
         clearTimeout(endScreenTimeoutRef.current);
         endScreenTimeoutRef.current = null;
       }
     };
-  }, [gameState.game._id, onRefresh, gameState.players, phase]);
+  }, [gameState.game._id, onRefresh]);
 
   const handleReturnToLobby = async () => {
     await gameApi.resetToLobby(gameState.game._id);

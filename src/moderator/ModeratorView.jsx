@@ -68,11 +68,20 @@ function ModeratorView({
   }, []);
 
   useEffect(() => {
-    if (gameId) {
-      fetchGameState();
-      const interval = setInterval(fetchGameState, 2000);
-      return () => clearInterval(interval);
-    }
+    if (!gameId) return;
+
+    console.log("🔄 Starting SSE subscription for moderator view");
+
+    // Subscribe to real-time game state updates
+    const unsubscribe = gameApi.subscribeToGameState(gameId, (data) => {
+      setGameState(data);
+    });
+
+    // Cleanup on unmount or when gameId changes
+    return () => {
+      console.log("🔄 Cleaning up SSE subscription");
+      unsubscribe();
+    };
   }, [gameId]);
 
   // Track phase changes to show loading screen when transitioning from lobby to game

@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const fs = require("fs");
 const path = require("path");
+const gameStateEmitter = require("./gameStateEmitter");
 
 const {
   ensureUUID,
@@ -12,6 +13,7 @@ const {
   updateGame,
   deleteGame,
   findGameWithPlayers,
+  getGameStateComplete,
   findPlayerById,
   findPlayersByGameId,
   findPlayerByGameAndSession,
@@ -334,6 +336,10 @@ router.post("/join", async (req, res) => {
       console.error("Missing IDs:", { gameId: game?.id, playerId: player?.id });
       return res.status(500).json({ error: "Failed to create/get player" });
     }
+    
+    // Emit game state update to SSE clients so lobby shows new player
+    await emitGameStateUpdate(game.id);
+    
     res.json({ success: true, gameId: game.id, playerId: player.id });
   } catch (e) {
     // #region agent log
@@ -466,6 +472,9 @@ router.delete("/:gameId/player/:playerId", async (req, res) => {
       message: `${playerName} was kicked from the game.`,
     });
 
+    // Emit game state update to SSE clients so lobby reflects player removal
+    await emitGameStateUpdate(gameId);
+
     res.json({
       success: true,
       message: `Player ${playerName} has been removed`,
@@ -476,59 +485,152 @@ router.delete("/:gameId/player/:playerId", async (req, res) => {
   }
 });
 
-// Get public game state (no meta)
+// Helper function to format game state for response
+function formatGameStateResponse(game, players, logs) {
+  const publicPlayers = players.map((p) => ({
+    _id: p.id,
+    name: p.name,
+    role: p.role,
+    alive: p.alive,
+    hasVoted: p.has_voted,
+    voteFor: p.vote_for_id,
+    voteWeight: p.vote_weight || 1,
+    avatar: p.avatar,
+    nightResults: p.night_action?.results || [],
+    roleData: p.role_data || {}, // Přidej roleData pro sledování navštívených hráčů (Infected)
+  }));
+
+  // Convert roleConfiguration (JSONB) to object for JSON response
+  const roleConfigObj =
+    game.role_configuration || game.roleConfiguration || {};
+
+  return {
+    game: {
+      _id: game.id,
+      roomCode: game.room_code,
+      phase: game.phase,
+      round: game.round,
+      mayor: game.mayor_id,
+      timers: game.timers,
+      timerState: game.timer_state,
+      winner: game.winner,
+      winnerPlayerIds: game.winner_player_ids || game.winnerPlayerIds || [],
+      roleConfiguration: roleConfigObj,
+    },
+    players: publicPlayers,
+    logs: logs.map((l) => ({
+      _id: l.id,
+      message: l.message,
+      createdAt: l.created_at || l.createdAt, // Support both snake_case (DB) and camelCase (legacy)
+    })),
+  };
+}
+
+// Helper function to emit game state update to SSE clients
+async function emitGameStateUpdate(gameId) {
+  try {
+    const { game, players, logs } = await getGameStateComplete(gameId, 200);
+    if (game) {
+      const gameState = formatGameStateResponse(game, players, logs);
+      gameStateEmitter.emitGameStateUpdate(gameId, gameState);
+    }
+  } catch (err) {
+    console.error(`Error emitting game state update for ${gameId}:`, err);
+  }
+}
+
+// Get public game state (no meta) - optimized with parallel queries
 router.get("/:gameId/state", async (req, res) => {
   try {
     const { gameId } = req.params;
     if (!ensureUUID(gameId))
       return res.status(400).json({ error: "Invalid game id" });
 
-    const game = await findGameById(gameId);
+    // Load game, players, and logs in parallel for optimal performance
+    const { game, players, logs } = await getGameStateComplete(gameId, 200);
+    
     if (!game) return res.status(404).json({ error: "Game not found" });
 
-    const players = await findPlayersByGameId(gameId);
-    const logs = await findGameLogsByGameId(gameId, 200);
-
-    const publicPlayers = players.map((p) => ({
-      _id: p.id,
-      name: p.name,
-      role: p.role,
-      alive: p.alive,
-      hasVoted: p.has_voted,
-      voteFor: p.vote_for_id,
-      voteWeight: p.vote_weight || 1,
-      avatar: p.avatar,
-      nightResults: p.night_action?.results || [],
-      roleData: p.role_data || {}, // Přidej roleData pro sledování navštívených hráčů (Infected)
-    }));
-
-    // Convert roleConfiguration (JSONB) to object for JSON response
-    const roleConfigObj =
-      game.role_configuration || game.roleConfiguration || {};
-
-    res.json({
-      game: {
-        _id: game.id,
-        roomCode: game.room_code,
-        phase: game.phase,
-        round: game.round,
-        mayor: game.mayor_id,
-        timers: game.timers,
-        timerState: game.timer_state,
-        winner: game.winner,
-        winnerPlayerIds: game.winner_player_ids || game.winnerPlayerIds || [],
-        roleConfiguration: roleConfigObj,
-      },
-      players: publicPlayers,
-      logs: logs.map((l) => ({
-        _id: l.id,
-        message: l.message,
-        createdAt: l.createdAt,
-      })),
-    });
+    const response = formatGameStateResponse(game, players, logs);
+    res.json(response);
   } catch (e) {
     console.error("state error:", e);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// Server-Sent Events endpoint for real-time game state updates
+router.get("/:gameId/stream", async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    if (!ensureUUID(gameId)) {
+      return res.status(400).json({ error: "Invalid game id" });
+    }
+
+    // Verify game exists
+    const game = await findGameById(gameId);
+    if (!game) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+
+    // Set SSE headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+    // Send initial game state
+    const { game: initialGame, players, logs } = await getGameStateComplete(gameId, 200);
+    if (initialGame) {
+      const initialState = formatGameStateResponse(initialGame, players, logs);
+      res.write(`data: ${JSON.stringify(initialState)}\n\n`);
+    }
+
+    // Declare keepAliveInterval before subscription so it's available in unsubscribe callback
+    let keepAliveInterval = null;
+
+    // Subscribe to game state updates immediately after sending initial state
+    // This prevents race condition where updates could be missed between initial state and subscription
+    const unsubscribe = gameStateEmitter.subscribe(gameId, async (gameState) => {
+      try {
+        res.write(`data: ${JSON.stringify(gameState)}\n\n`);
+      } catch (err) {
+        console.error("Error writing SSE data:", err);
+        if (keepAliveInterval) {
+          clearInterval(keepAliveInterval);
+        }
+        unsubscribe();
+        res.end();
+      }
+    });
+
+    // Send keepalive every 30 seconds
+    keepAliveInterval = setInterval(() => {
+      try {
+        res.write(": keepalive\n\n");
+      } catch (err) {
+        if (keepAliveInterval) {
+          clearInterval(keepAliveInterval);
+        }
+        unsubscribe();
+        res.end();
+      }
+    }, 30000);
+
+    // Handle client disconnect - single handler for cleanup
+    req.on("close", () => {
+      console.log(`SSE client disconnected for game ${gameId}`);
+      clearInterval(keepAliveInterval);
+      unsubscribe();
+      res.end();
+    });
+  } catch (e) {
+    console.error("SSE stream error:", e);
+    if (!res.headersSent) {
+      res.status(500).json({ error: e.message });
+    } else {
+      res.end();
+    }
   }
 });
 
@@ -620,6 +722,9 @@ router.post("/:gameId/vote", async (req, res) => {
     }
 
     res.json({ success: true });
+    
+    // Emit game state update to SSE clients
+    await emitGameStateUpdate(gameId);
   } catch (e) {
     console.error("vote error:", e);
     res.status(500).json({ error: e.message });
@@ -897,6 +1002,10 @@ router.post("/:gameId/start-config", async (req, res) => {
     });
 
     console.log("✅ Game started with role assignments and modifiers");
+    
+    // Emit game state update to SSE clients so players transition from lobby to game
+    await emitGameStateUpdate(gameId);
+    
     res.json({ success: true });
   } catch (e) {
     console.error("start-config error:", e);
@@ -969,6 +1078,10 @@ router.post("/:gameId/end-night", async (req, res) => {
         game_id: gameId,
         message: `🏁 Victory: ${win.winner}`,
       });
+      
+      // Emit game state update to SSE clients so players see end screen
+      await emitGameStateUpdate(gameId);
+      
       return res.json({
         success: true,
         phase: "end",
@@ -1001,6 +1114,9 @@ router.post("/:gameId/end-night", async (req, res) => {
     });
 
     res.json({ success: true });
+    
+    // Emit game state update to SSE clients
+    await emitGameStateUpdate(gameId);
   } catch (e) {
     console.error("end-night error:", e);
     res.status(500).json({ error: e.message });
@@ -1159,6 +1275,10 @@ router.post("/:gameId/end-day", async (req, res) => {
         message: `🏁 Victory: Jester ${jester?.name || "unknown"} wins!`,
       });
       console.log("🎭 Game ended - Jester wins!");
+      
+      // Emit game state update to SSE clients so players see end screen
+      await emitGameStateUpdate(gameId);
+      
       return res.json({
         success: true,
         phase: "end",
@@ -1182,6 +1302,10 @@ router.post("/:gameId/end-day", async (req, res) => {
         game_id: gameId,
         message: `🏁 Victory: ${win.winner}`,
       });
+      
+      // Emit game state update to SSE clients so players see end screen
+      await emitGameStateUpdate(gameId);
+      
       return res.json({
         success: true,
         phase: "end",
@@ -1204,6 +1328,9 @@ router.post("/:gameId/end-day", async (req, res) => {
       message: `Round ${currentRound} - NIGHT (⏱ ${nightSec}s)`,
     });
     res.json({ success: true, phase: "night" });
+    
+    // Emit game state update to SSE clients
+    await emitGameStateUpdate(gameId);
   } catch (e) {
     console.error("end-day error:", e);
     res.status(500).json({ error: e.message });
@@ -1252,6 +1379,10 @@ router.post("/:gameId/reset-to-lobby", async (req, res) => {
       message: "🔄 Game reset to lobby by moderator",
     });
     console.log("✅ Game reset to lobby");
+    
+    // Emit game state update to SSE clients so players return to lobby
+    await emitGameStateUpdate(gameId);
+    
     res.json({ success: true });
   } catch (e) {
     console.error("reset-to-lobby error:", e);
@@ -1395,6 +1526,10 @@ router.post("/:gameId/end-phase", async (req, res) => {
           message: `🏁 Victory: Jester ${jester?.name || "unknown"} wins!`,
         });
         console.log("🎭 Game ended - Jester wins!");
+        
+        // Emit game state update to SSE clients so players see end screen
+        await emitGameStateUpdate(gameId);
+        
         return res.json({
           success: true,
           phase: "end",
@@ -1431,6 +1566,10 @@ router.post("/:gameId/end-phase", async (req, res) => {
           message: `🏁 Victory: ${win.winner}`,
         });
         console.log(`✅ Victory: ${win.winner}`);
+        
+        // Emit game state update to SSE clients so players see end screen
+        await emitGameStateUpdate(gameId);
+        
         return res.json({
           success: true,
           phase: "end",
@@ -1510,6 +1649,10 @@ router.post("/:gameId/end-phase", async (req, res) => {
           message: `🏁 Victory: ${win.winner}`,
         });
         console.log(`✅ Victory: ${win.winner}`);
+        
+        // Emit game state update to SSE clients so players see end screen
+        await emitGameStateUpdate(gameId);
+        
         return res.json({
           success: true,
           phase: "end",
@@ -1562,6 +1705,9 @@ router.post("/:gameId/end-phase", async (req, res) => {
       phaseEndsAt: finalGame.timer_state?.phaseEndsAt,
       winner: finalGame.winner || null,
     });
+    
+    // Emit game state update to SSE clients
+    await emitGameStateUpdate(gameId);
   } catch (e) {
     console.error("❌ end-phase error:", e);
     console.error("Stack:", e.stack);
@@ -1742,6 +1888,9 @@ router.patch("/:gameId/player/:playerId/avatar", async (req, res) => {
     // Update avatar
     const updatedPlayer = await updatePlayer(playerId, { avatar });
 
+    // Emit game state update to SSE clients so lobby shows updated avatar
+    await emitGameStateUpdate(gameId);
+
     res.json({ success: true, avatar: updatedPlayer.avatar });
   } catch (e) {
     console.error("update avatar error:", e);
@@ -1792,7 +1941,5 @@ router.get("/avatars/available", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
-module.exports = router;
 
 module.exports = router;

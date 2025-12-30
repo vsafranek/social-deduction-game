@@ -107,7 +107,7 @@ function PlayerToken({ player, phase, votes, isMayor, style }) {
 
       {/* badge s počtem hlasů během dne - vpravo nahoře nad avatarem */}
       {phase === "day" && player.alive && votes > 0 && (
-        <div className="vote-badge">🗳️ {votes}</div>
+        <div className="vote-badge">{votes}</div>
       )}
 
       {/* veřejné info bez meta */}

@@ -265,9 +265,9 @@ function ModifierSettings({ playersCount, modifierConfig, setModifierConfig, onS
           >
             {!canStart
               ? (playersCount < 3
-                ? `⏳ Minimum 3 players (${playersCount || 0}/3)`
-                : `⚠️ Roles don't match (${totalRolesForValidation || 0} roles / ${playersCount || 0} players)`)
-              : '🚀 Start Game'
+                ? `Minimum 3 players (${playersCount || 0}/3)`
+                : `Roles don't match (${totalRolesForValidation || 0} roles / ${playersCount || 0} players)`)
+              : 'Start Game'
             }
           </button>
         </div>
