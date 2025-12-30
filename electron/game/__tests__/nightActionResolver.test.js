@@ -215,7 +215,7 @@ describe('nightActionResolver', () => {
 
       // Target should be protected and not die
       expect(target.alive).toBe(true);
-      expect(target.nightAction.results).toContain('attacked:Útok');
+      expect(target.nightAction.results).toContain('attacked_killer:Napaden vrahem');
       expect(target.nightAction.results).toContain('healed:Zachráněn');
       expect(doctor.nightAction.results.some(r => r.includes('Zachránil'))).toBe(true);
     });
@@ -902,7 +902,7 @@ describe('nightActionResolver', () => {
       await resolveNightActions({}, [doctor, cleaner, target]);
 
       expect(target.alive).toBe(true);
-      expect(target.nightAction.results).toContain('attacked:Útok');
+      expect(target.nightAction.results).toContain('attacked_killer:Napaden vrahem');
       expect(target.nightAction.results).toContain('healed:Zachráněn');
     });
 

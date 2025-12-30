@@ -15,7 +15,7 @@ const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
 const TEST_STORIES_DATA = [
   "killed:Testovací Hráč",
   "poisoned_killed:Zemřel na otravu",
-  "attacked:Neznámý Útočník",
+  "attacked_killer:Neznámý Útočník",
   "healed:Byl jsi zachráněn",
   "jailer_prevented:Pokusil jsi se odejít, ale byl jsi zadržen",
   "jailer_blocked:Zadržel Test Hráč - pokusil se odejít",

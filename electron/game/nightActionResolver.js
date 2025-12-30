@@ -1506,9 +1506,19 @@ async function resolveNightActions(game, players) {
       }
     } else {
       // Player was saved
-      p.night_action.results.push("attacked:Útok");
+      // Check if attack was from Hunter or from killer (evil role)
+      const wasHunterAttack = pending.some((e) => e.meta?.hunter === true);
+      if (wasHunterAttack) {
+        p.night_action.results.push("attacked_hunter:Napaden lovcem");
+      } else {
+        p.night_action.results.push("attacked_killer:Napaden vrahem");
+      }
       p.night_action.results.push("healed:Zachráněn");
-      console.log(`  💚 ${p.name} was attacked but saved`);
+      console.log(
+        `  💚 ${p.name} was attacked but saved${
+          wasHunterAttack ? " (by Hunter)" : " (by killer)"
+        }`
+      );
     }
 
     removeEffects(p, (e) => e.type === "pendingKill");
@@ -1539,11 +1549,12 @@ async function resolveNightActions(game, players) {
     const target = idMap.get(targetId);
     if (!doctor || !target) continue;
 
-    // Check if target was attacked and saved (has 'attacked:' and 'healed:' results)
+    // Check if target was attacked and saved (has 'attacked_killer:' or 'attacked_hunter:' and 'healed:' results)
     // or was poisoned and cured (has 'healed:Vyléčen z otravy' result)
     const targetResults = target.night_action?.results || [];
     const wasAttackedAndSaved =
-      targetResults.some((r) => r.startsWith("attacked:")) &&
+      (targetResults.some((r) => r.startsWith("attacked_killer:")) ||
+        targetResults.some((r) => r.startsWith("attacked_hunter:"))) &&
       targetResults.some((r) => r.startsWith("healed:"));
     const wasPoisonedAndCured = targetResults.some(
       (r) => r === "healed:Vyléčen z otravy"
@@ -1581,12 +1592,14 @@ async function resolveNightActions(game, players) {
     const wasKilledByThisHunter =
       killInfo && killSourceId === normalizedHunterId && killInfo.wasHunterKill;
 
-    // Check if target was attacked but saved (has attacked/healed results)
+    // Check if target was attacked but saved (has attacked_killer/attacked_hunter AND healed results)
+    // Must have BOTH attack result AND heal result (not just either one)
+    const targetResults = target.night_action?.results || [];
     const wasAttackedButSaved =
       target.alive &&
-      (target.night_action?.results || []).some(
-        (r) => r.startsWith("attacked:") || r.startsWith("healed:")
-      );
+      (targetResults.some((r) => r.startsWith("attacked_killer:")) ||
+        targetResults.some((r) => r.startsWith("attacked_hunter:"))) &&
+      targetResults.some((r) => r.startsWith("healed:"));
 
     if (wasKilledByThisHunter && !target.alive) {
       // Target died from this Hunter's attack
