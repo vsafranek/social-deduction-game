@@ -76,6 +76,7 @@ function PlayersList({ players, gameId, onRefresh }) {
               <div key={p._id} className="player-item">
                 {hasAvatar ? (
                   <img
+                    key={`${p._id}-${p.avatar}`}
                     src={detailAvatarPath || p.avatar}
                     alt={p.name}
                     className="player-avatar-img"

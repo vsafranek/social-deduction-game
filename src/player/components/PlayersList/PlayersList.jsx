@@ -16,6 +16,21 @@ function PlayersList({
   const handleSelect = onSelectPlayer || onSelect;
   const selected = selectedPlayer || selectedPlayerId;
 
+  // Get details version path of avatar
+  const getDetailAvatarPath = (avatarPath) => {
+    if (!avatarPath) return null;
+
+    // Extract filename and extension
+    // avatarPath is like "/avatars/meercat.jpg"
+    const pathParts = avatarPath.split("/");
+    const filename = pathParts[pathParts.length - 1];
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/i, "");
+    const originalExt = filename.match(/\.[^/.]+$/i)?.[0] || "";
+
+    // Construct detail path: /avatars/meercat_detail.jpg
+    return `/avatars/${nameWithoutExt}_detail${originalExt}`;
+  };
+
   if (players.length === 0) {
     return (
       <div className="players-list-empty">
@@ -53,13 +68,68 @@ function PlayersList({
           <div className="player-avatar">
             {player.avatar && player.avatar.trim() ? (
               <img 
-                src={player.avatar} 
+                key={`${player._id}-${player.avatar}`}
+                src={getDetailAvatarPath(player.avatar) || player.avatar} 
                 alt={player.name}
                 className="avatar-img"
                 onError={(e) => {
-                  e.target.style.display = 'none';
-                  if (e.target.nextSibling) {
-                    e.target.nextSibling.style.display = 'flex';
+                  const img = e.target;
+                  const currentSrc = img.src;
+
+                  // Track attempts using data attribute to prevent infinite loops
+                  const currentAttempts = parseInt(
+                    img.dataset.errorAttempts || "0",
+                    10
+                  );
+                  const attempts = currentAttempts + 1;
+                  img.dataset.errorAttempts = attempts.toString();
+
+                  // Prevent infinite loops - max 3 attempts:
+                  // 1. detail original extension (attempt 1)
+                  // 2. detail alternate case extension (attempt 2)
+                  // 3. normal avatar (attempt 3) - if this fails, show fallback
+                  if (attempts >= 4) {
+                    // Max attempts exceeded, show fallback
+                    img.style.display = "none";
+                    const fallback = img.nextSibling;
+                    if (fallback) {
+                      fallback.style.display = "flex";
+                    }
+                    return;
+                  }
+
+                  if (currentSrc.includes("_detail")) {
+                    // We're trying a detail variant
+                    const pathParts = currentSrc.split("_detail");
+                    const basePath = pathParts[0];
+                    const ext = pathParts[1];
+
+                    // Try alternate case only on first attempt (attempt 1 -> attempt 2)
+                    if (
+                      attempts === 1 &&
+                      ext === ext.toLowerCase() &&
+                      ext !== ext.toUpperCase()
+                    ) {
+                      // First attempt failed with lowercase, try uppercase
+                      img.src = `${basePath}_detail${ext.toUpperCase()}`;
+                    } else if (
+                      attempts === 1 &&
+                      ext === ext.toUpperCase() &&
+                      ext !== ext.toLowerCase()
+                    ) {
+                      // First attempt failed with uppercase, try lowercase
+                      img.src = `${basePath}_detail${ext.toLowerCase()}`;
+                    } else {
+                      // All detail variants exhausted (attempt 2+), fallback to normal avatar
+                      img.src = player.avatar;
+                    }
+                  } else {
+                    // Normal avatar failed (attempt 3), hide broken image and show fallback immediately
+                    img.style.display = "none";
+                    const fallback = img.nextSibling;
+                    if (fallback) {
+                      fallback.style.display = "flex";
+                    }
                   }
                 }}
               />
