@@ -4,6 +4,22 @@ import PlayerToken from "./PlayerToken";
 import "./PlayersCircle.css";
 
 function PlayersCircle({ players, phase, game }) {
+  // Log players data for debugging
+  React.useEffect(() => {
+    console.log("👥 [PlayersCircle] Rendering players count:", players?.length);
+    if (players) {
+      players.forEach((p, idx) => {
+        console.log(`👥 [PlayersCircle] Player ${idx + 1}:`, {
+          _id: p._id,
+          name: p.name,
+          avatar: p.avatar || '❌ MISSING',
+          alive: p.alive,
+          hasAvatar: !!(p.avatar && p.avatar.trim())
+        });
+      });
+    }
+  }, [players]);
+
   const total = players.length;
 
   // spočítej počet hlasů pro každého cíle (jen pro denní fázi)

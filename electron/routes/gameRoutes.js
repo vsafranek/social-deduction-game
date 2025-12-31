@@ -145,9 +145,9 @@ function getAllAvailableAvatars() {
   return avatars;
 }
 
-// Helper function to assign unique avatar with retry logic to prevent race conditions
-// Selects a random free avatar from available avatars
-async function assignUniqueAvatar(gameId, maxRetries = 5) {
+// Helper function to assign random avatar - simplified to prevent database overload
+// No database calls - just returns random avatar to prevent blocking
+function assignRandomAvatar() {
   // Get all available avatars from filesystem
   const allAvatars = getAllAvailableAvatars();
 
@@ -156,47 +156,11 @@ async function assignUniqueAvatar(gameId, maxRetries = 5) {
     return null;
   }
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    // Vždy znovu načti aktuální stav hráčů, aby se zabránilo race condition
-    const existingPlayers = await findPlayersByGameId(gameId);
-    const usedAvatars = new Set(
-      existingPlayers.map((p) => p.avatar).filter(Boolean)
-    );
-
-    // Najdi volné avatary
-    const freeAvatars = allAvatars.filter((avatar) => !usedAvatars.has(avatar));
-
-    if (freeAvatars.length > 0) {
-      // Vyber náhodný volný avatar
-      const randomIndex = Math.floor(Math.random() * freeAvatars.length);
-      const selectedAvatar = freeAvatars[randomIndex];
-
-      // Double-check že avatar stále není používán (race condition protection)
-      const stillAvailable = existingPlayers.find(
-        (p) => p.avatar === selectedAvatar
-      );
-
-      if (!stillAvailable) {
-        console.log(`✅ Assigned random avatar: ${selectedAvatar}`);
-        return selectedAvatar;
-      }
-      // Pokud je už používán, pokračuj v dalším pokusu
-    }
-
-    // Pokud jsou všechny použité a není to poslední pokus, počkej chvíli a zkus znovu
-    if (attempt < maxRetries - 1) {
-      // Krátká pauza před dalším pokusem (umožní dokončit souběžné save operace)
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      continue;
-    }
-  }
-
-  // Fallback: pokud všechny pokusy selhaly, vrať náhodný z dostupných (může být duplicitní)
+  // Simply return random avatar - duplicates are acceptable to prevent database overload
   const randomIndex = Math.floor(Math.random() * allAvatars.length);
-  console.warn(
-    `⚠️ All avatars in use, returning random: ${allAvatars[randomIndex]}`
-  );
-  return allAvatars[randomIndex];
+  const selectedAvatar = allAvatars[randomIndex];
+  console.log(`✅ Assigned random avatar: ${selectedAvatar}`);
+  return selectedAvatar;
 }
 
 // Join by room code
@@ -285,7 +249,7 @@ router.post("/join", async (req, res) => {
       ).catch(() => {});
       // #endregion
 
-      const avatar = await assignUniqueAvatar(game.id);
+      const avatar = assignRandomAvatar();
       player = await createPlayer({
         game_id: game.id,
         session_id: sessionId,
@@ -319,11 +283,14 @@ router.post("/join", async (req, res) => {
       ).catch(() => {});
       // #endregion
 
-      await createGameLog({ game_id: game.id, message: `${name} joined.` });
+      // Create game log asynchronously to not block join response
+      createGameLog({ game_id: game.id, message: `${name} joined.` }).catch(err => {
+        console.error(`Error creating game log for join:`, err);
+      });
     } else {
       // Existující hráč - pokud nemá avatar, přiřaď mu náhodný volný
       if (!player.avatar || !player.avatar.trim()) {
-        const avatar = await assignUniqueAvatar(game.id);
+        const avatar = assignRandomAvatar();
         player = await updatePlayer(player.id, { avatar });
         console.log(
           `✅ Assigned avatar to existing player ${player.name}: ${avatar}`
@@ -337,8 +304,9 @@ router.post("/join", async (req, res) => {
       return res.status(500).json({ error: "Failed to create/get player" });
     }
     
-    // Emit game state update to SSE clients so lobby shows new player
-    await emitGameStateUpdate(game.id);
+    // Don't emit game state update here - SSE stream clients will fetch updates automatically
+    // This prevents database overload when multiple players join simultaneously
+    // Clients subscribe to SSE stream which provides real-time updates
     
     res.json({ success: true, gameId: game.id, playerId: player.id });
   } catch (e) {
@@ -526,16 +494,55 @@ function formatGameStateResponse(game, players, logs) {
   };
 }
 
-// Helper function to emit game state update to SSE clients
-async function emitGameStateUpdate(gameId) {
+// Debounce map for game state updates - prevents too many rapid updates
+const gameStateUpdateDebounce = new Map();
+
+// Helper function to emit game state update to SSE clients with debouncing
+async function emitGameStateUpdate(gameId, immediate = false) {
+  // If immediate, clear any pending debounce and emit right away
+  if (immediate) {
+    const timeout = gameStateUpdateDebounce.get(gameId);
+    if (timeout) {
+      clearTimeout(timeout);
+      gameStateUpdateDebounce.delete(gameId);
+    }
+    await doEmitGameStateUpdate(gameId);
+    return;
+  }
+
+  // Otherwise, use debouncing to batch rapid updates
+  const existingTimeout = gameStateUpdateDebounce.get(gameId);
+  if (existingTimeout) {
+    clearTimeout(existingTimeout);
+  }
+
+  const timeout = setTimeout(async () => {
+    gameStateUpdateDebounce.delete(gameId);
+    await doEmitGameStateUpdate(gameId);
+  }, 200); // 200ms debounce - batches rapid updates
+
+  gameStateUpdateDebounce.set(gameId, timeout);
+}
+
+// Actual implementation of game state update emission
+async function doEmitGameStateUpdate(gameId) {
   try {
     const { game, players, logs } = await getGameStateComplete(gameId, 200);
     if (game) {
+      console.log(`📤 Emitting game state for ${gameId}: phase=${game.phase}, players=${players.length}`);
       const gameState = formatGameStateResponse(game, players, logs);
+      console.log(`📤 Formatted game state: ${gameState.players.length} players`);
+      gameState.players.forEach(p => {
+        console.log(`  - ${p.name}: avatar=${p.avatar || 'MISSING'}`);
+      });
       gameStateEmitter.emitGameStateUpdate(gameId, gameState);
+      console.log(`✅ Game state emitted to SSE clients`);
+    } else {
+      console.error(`❌ No game found for ${gameId}`);
     }
   } catch (err) {
     console.error(`Error emitting game state update for ${gameId}:`, err);
+    console.error(err.stack);
   }
 }
 
@@ -567,7 +574,7 @@ router.get("/:gameId/stream", async (req, res) => {
       return res.status(400).json({ error: "Invalid game id" });
     }
 
-    // Verify game exists
+    // Verify game exists (lightweight check)
     const game = await findGameById(gameId);
     if (!game) {
       return res.status(404).json({ error: "Game not found" });
@@ -650,7 +657,7 @@ router.post("/:gameId/vote", async (req, res) => {
     if (game.phase !== "day")
       return res.status(400).json({ error: "Voting only during day" });
 
-    const player = await findPlayerById(playerId);
+    const player = await findPlayerById(playerId, "*");
     if (!player || player.game_id?.toString() !== gameId) {
       return res.status(404).json({ error: "Player not found" });
     }
@@ -668,7 +675,7 @@ router.post("/:gameId/vote", async (req, res) => {
 
     // Zaznamenej zprávu o hlasování
     if (targetId) {
-      const target = await findPlayerById(targetId);
+      const target = await findPlayerById(targetId, "*");
       await createGameLog({
         game_id: gameId,
         message: `${player.name} voted for ${target?.name || "unknown"}.`,
@@ -681,7 +688,7 @@ router.post("/:gameId/vote", async (req, res) => {
     }
 
     // Zkontroluj, zda všichni živí odhlasovali
-    const allPlayers = await findPlayersByGameId(gameId);
+    const allPlayers = await findPlayersByGameId(gameId, "*");
     const alivePlayers = allPlayers.filter((p) => p.alive);
     const allVoted = alivePlayers.every((p) => p.has_voted);
 
@@ -721,6 +728,9 @@ router.post("/:gameId/vote", async (req, res) => {
       }
     }
 
+    // Emit game state update to SSE clients so votes are visible
+    await emitGameStateUpdate(gameId);
+    
     res.json({ success: true });
     
     // Emit game state update to SSE clients
@@ -1003,8 +1013,19 @@ router.post("/:gameId/start-config", async (req, res) => {
 
     console.log("✅ Game started with role assignments and modifiers");
     
+    // Ensure we have fresh data before emitting - reload game state to get all players with avatars
+    console.log("🔄 Reloading game state after start...");
+    const { game: finalGame, players: finalPlayers, logs: finalLogs } = await getGameStateComplete(gameId, 200);
+    console.log(`📊 Loaded ${finalPlayers.length} players after start`);
+    finalPlayers.forEach(p => {
+      console.log(`  - ${p.name}: avatar=${p.avatar || 'MISSING'}, role=${p.role || 'MISSING'}`);
+    });
+    
     // Emit game state update to SSE clients so players transition from lobby to game
-    await emitGameStateUpdate(gameId);
+    // Use immediate=true for important phase transitions
+    console.log("📡 Emitting game state update...");
+    await emitGameStateUpdate(gameId, true);
+    console.log("✅ Game state update emitted");
     
     res.json({ success: true });
   } catch (e) {
@@ -1330,7 +1351,8 @@ router.post("/:gameId/end-day", async (req, res) => {
     res.json({ success: true, phase: "night" });
     
     // Emit game state update to SSE clients
-    await emitGameStateUpdate(gameId);
+    // Use immediate=true for important phase transitions
+    await emitGameStateUpdate(gameId, true);
   } catch (e) {
     console.error("end-day error:", e);
     res.status(500).json({ error: e.message });
@@ -1446,11 +1468,16 @@ router.post("/:gameId/end-phase", async (req, res) => {
           );
           console.log("✅ Game updates applied");
           console.log("📊 Updated game mayor_id:", updatedGame?.mayor_id);
+          // Reload game object to ensure we have the latest state
+          const reloadedGame = await findGameById(gameId, "*");
+          if (reloadedGame) {
+            Object.assign(game, reloadedGame);
+          }
         }
       }
 
       // Reload players after voting and applying updates
-      players = await findPlayersByGameId(gameId);
+      players = await findPlayersByGameId(gameId, "*");
       console.log(
         "📊 Players after update:",
         players.map((p) => ({
@@ -1503,7 +1530,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
           );
           // Force update
           await updatePlayer(executedPlayer.id, { alive: false });
-          players = await findPlayersByGameId(gameId);
+          players = await findPlayersByGameId(gameId, "*");
           console.log("✅ Force updated executed player");
         }
       }
@@ -1579,6 +1606,11 @@ router.post("/:gameId/end-phase", async (req, res) => {
       }
 
       // Switch to night
+      // Reload game to ensure we have the latest state (including mayor_id from voting)
+      const currentGameState = await findGameById(gameId, "*");
+      if (currentGameState) {
+        Object.assign(game, currentGameState);
+      }
       const nightSec = Number(game.timers?.nightSeconds ?? 90);
       // Noc má stejné číslo jako poslední den - kolo se nezvyšuje
       const currentRound = game.round || 0;
@@ -1601,7 +1633,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
       // Night → Day: process night actions
       console.log("🌙 Processing night actions...");
 
-      let players = await findPlayersByGameId(gameId);
+      let players = await findPlayersByGameId(gameId, "*");
       // Resolvers now use PostgreSQL format directly
       await resolveNightActions(game, players);
 
@@ -1630,7 +1662,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
       }
 
       // Reload players for victory check
-      players = await findPlayersByGameId(gameId);
+      players = await findPlayersByGameId(gameId, "*");
 
       // Check victory - convert to resolver format
       const win = evaluateVictory(players);
@@ -1698,6 +1730,13 @@ router.post("/:gameId/end-phase", async (req, res) => {
     );
 
     finalGame = await findGameById(gameId);
+    
+    // Emit game state update to SSE clients BEFORE sending response
+    // Use immediate=true for important phase transitions
+    console.log("📡 [END-PHASE] Emitting game state update...");
+    await emitGameStateUpdate(gameId, true);
+    console.log("✅ [END-PHASE] Game state update emitted");
+    
     res.json({
       success: true,
       phase: finalGame.phase,
@@ -1705,9 +1744,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
       phaseEndsAt: finalGame.timer_state?.phaseEndsAt,
       winner: finalGame.winner || null,
     });
-    
-    // Emit game state update to SSE clients
-    await emitGameStateUpdate(gameId);
+    await emitGameStateUpdate(gameId, true);
   } catch (e) {
     console.error("❌ end-phase error:", e);
     console.error("Stack:", e.stack);

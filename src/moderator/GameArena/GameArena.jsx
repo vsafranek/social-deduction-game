@@ -17,6 +17,39 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
   const [votingRevealData, setVotingRevealData] = useState(null); // { type: 'execution' | 'mayor_election', player: {} }
   const [deadPlayers, setDeadPlayers] = useState([]);
 
+  // Log when gameState prop changes
+  useEffect(() => {
+    console.log("🎮 [GameArena] gameState prop updated:", {
+      phase: gameState?.game?.phase,
+      round: gameState?.game?.round,
+      players: gameState?.players?.length,
+      playerAvatars: gameState?.players?.map(p => ({ name: p.name, avatar: p.avatar || 'MISSING' }))
+    });
+    if (gameState?.players) {
+      gameState.players.forEach((p, idx) => {
+        console.log(`🎮 [GameArena] Player ${idx + 1}:`, {
+          _id: p._id,
+          name: p.name,
+          avatar: p.avatar || '❌ MISSING',
+          role: p.role,
+          alive: p.alive,
+          hasAvatar: !!(p.avatar && p.avatar.trim())
+        });
+      });
+    }
+  }, [gameState]);
+
+  // Early return if gameState is not ready
+  if (!gameState || !gameState.game || !gameState.players) {
+    console.log("⏳ [GameArena] Waiting for gameState...", {
+      hasGameState: !!gameState,
+      hasGame: !!gameState?.game,
+      hasPlayers: !!gameState?.players,
+      playersCount: gameState?.players?.length
+    });
+    return null;
+  }
+
   const phase = gameState.game.phase;
   const phaseEndsAt = gameState.game?.timerState?.phaseEndsAt;
   const round = gameState.game?.round || 0;
@@ -29,14 +62,19 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
       // Oprava: přidáme dayVariants.length, aby se negativní hodnoty správně zpracovaly
       const index = (round - 1 + dayVariants.length) % dayVariants.length;
       const variant = dayVariants[index];
-      return `/backgrounds/day_${variant}.png`;
+      const bgPath = `/backgrounds/day_${variant}.png`;
+      console.log(`🖼️ [GameArena] Background image: ${bgPath} (phase: ${phase}, round: ${round})`);
+      return bgPath;
     } else if (phase === "night") {
       const nightVariants = [1, 2, 3, 4, 5];
       // Oprava: přidáme nightVariants.length, aby se negativní hodnoty správně zpracovaly
       const index = (round - 1 + nightVariants.length) % nightVariants.length;
       const variant = nightVariants[index];
-      return `/backgrounds/night_${variant}.png`;
+      const bgPath = `/backgrounds/night_${variant}.png`;
+      console.log(`🖼️ [GameArena] Background image: ${bgPath} (phase: ${phase}, round: ${round})`);
+      return bgPath;
     }
+    console.log(`🖼️ [GameArena] No background image (phase: ${phase})`);
     return null;
   }, [phase, round]);
 
@@ -344,16 +382,24 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
         // když se fáze skutečně změní. Tím se zabrání duplicitnímu zobrazení.
 
         // Zavolej endPhase a aktualizuj stav
+        console.log("🔄 [COUNTDOWN] Calling endPhase API...");
         gameApi
           .endPhase(gameState.game._id)
           .then((response) => {
-            if (mounted && response.success && onRefresh) {
-              // Okamžitě aktualizuj stav, aby se fáze změnila bez čekání na sync
-              onRefresh();
+            console.log("✅ [COUNTDOWN] endPhase response:", response);
+            if (mounted && response.success) {
+              // SSE update by měl přijít automaticky, ale pro jistotu zavoláme onRefresh
+              if (onRefresh) {
+                console.log("🔄 [COUNTDOWN] Calling onRefresh...");
+                onRefresh();
+              }
+            } else {
+              console.warn("⚠️ [COUNTDOWN] endPhase response not successful:", response);
             }
           })
           .catch((e) => {
-            console.error("❌ End-phase error:", e);
+            console.error("❌ [COUNTDOWN] End-phase error:", e);
+            console.error("❌ [COUNTDOWN] Error stack:", e.stack);
           });
       }
     };
@@ -458,7 +504,12 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
     <div
       className={`game-arena ${phaseClass}`}
       style={
-        backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}
+        backgroundImage ? { 
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center center',
+          backgroundRepeat: 'no-repeat'
+        } : {}
       }
     >
       <InGameModMenu

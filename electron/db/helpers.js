@@ -1,6 +1,5 @@
 const { getSupabase } = require("../database");
 const { randomUUID: uuidv4 } = require("crypto");
-const { cache, cacheHelpers } = require("./cache");
 
 // Helper to validate UUID
 function ensureUUID(id) {
@@ -20,36 +19,11 @@ function handleSupabaseError(error, operation) {
 
 // ===== GAMES =====
 
-async function findGameById(id, fields = "*", useCache = true) {
+async function findGameById(id, fields = "*") {
   if (!ensureUUID(id)) {
     throw new Error("Invalid game ID format");
   }
 
-  // Try cache first (only for default fields)
-  if (useCache && fields === "*") {
-    const cached = await cacheHelpers.getOrFetchGame(
-      id,
-      async () => {
-        const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from("games")
-          .select(fields)
-          .eq("id", id)
-          .maybeSingle();
-
-        if (error && error.code === "PGRST116") {
-          return null;
-        }
-
-        handleSupabaseError(error, "findGameById");
-        return data || null;
-      },
-      1000 // 1 second TTL
-    );
-    return cached;
-  }
-
-  // Direct query for custom fields or when cache is disabled
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("games")
@@ -66,19 +40,6 @@ async function findGameById(id, fields = "*", useCache = true) {
 }
 
 async function findGameByRoomCode(roomCode, fields = "*") {
-  const key = cacheHelpers.keys.gameByRoomCode(roomCode);
-  const cached = cache.get(key);
-  // Check for undefined to distinguish "key not in cache" from "cached value is null"
-  // cache.get() returns null for non-existent keys, but we need to check if key exists
-  // We'll use a special marker object to cache null values
-  if (cached !== null && fields === "*") {
-    // If cached is a special marker, return null; otherwise return cached value
-    if (cached === cacheHelpers.NULL_MARKER) {
-      return null;
-    }
-    return cached;
-  }
-
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("games")
@@ -91,15 +52,7 @@ async function findGameByRoomCode(roomCode, fields = "*") {
   }
 
   handleSupabaseError(error, "findGameByRoomCode");
-  const result = data || null;
-  
-  // Cache the result, even if it's null (use special marker to distinguish from "key not in cache")
-  if (fields === "*") {
-    const valueToCache = result === null ? cacheHelpers.NULL_MARKER : result;
-    cache.set(key, valueToCache, 2000); // 2 second TTL for room code lookups
-  }
-  
-  return result;
+  return data || null;
 }
 
 async function createGame(gameData) {
@@ -124,11 +77,6 @@ async function updateGame(id, updateData) {
     throw new Error("Invalid game ID format");
   }
   
-  // Get current game data to retrieve room_code for cache invalidation
-  // Use cache disabled to ensure we get fresh data
-  const currentGame = await findGameById(id, "room_code", false);
-  const roomCode = currentGame?.room_code || updateData.room_code;
-  
   const supabase = getSupabase();
   const dataToUpdate = { ...updateData };
   delete dataToUpdate.id; // Don't allow updating id
@@ -143,26 +91,6 @@ async function updateGame(id, updateData) {
 
   handleSupabaseError(error, "updateGame");
   
-  // Invalidate cache after update
-  if (data) {
-    cache.invalidateGame(id);
-    // Invalidate old room code cache if it exists
-    if (roomCode) {
-      const oldRoomCodeKey = cacheHelpers.keys.gameByRoomCode(roomCode);
-      cache.delete(oldRoomCodeKey);
-    }
-    // If room_code was updated, also invalidate the new room code cache
-    if (data.room_code && roomCode && data.room_code !== roomCode) {
-      const newRoomCodeKey = cacheHelpers.keys.gameByRoomCode(data.room_code);
-      cache.delete(newRoomCodeKey);
-    }
-    // If room_code exists but we didn't have old roomCode, invalidate it anyway
-    if (data.room_code && !roomCode) {
-      const roomCodeKey = cacheHelpers.keys.gameByRoomCode(data.room_code);
-      cache.delete(roomCodeKey);
-    }
-  }
-  
   return data;
 }
 
@@ -171,23 +99,10 @@ async function deleteGame(id) {
     throw new Error("Invalid game ID format");
   }
   
-  // Get current game data to retrieve room_code for cache invalidation
-  // Use cache disabled to ensure we get fresh data
-  const currentGame = await findGameById(id, "room_code", false);
-  const roomCode = currentGame?.room_code;
-  
   const supabase = getSupabase();
   const { error } = await supabase.from("games").delete().eq("id", id);
 
   handleSupabaseError(error, "deleteGame");
-  
-  // Invalidate cache after delete
-  cache.invalidateGame(id);
-  // Also invalidate room code cache if the game had a room code
-  if (roomCode) {
-    const roomCodeKey = cacheHelpers.keys.gameByRoomCode(roomCode);
-    cache.delete(roomCodeKey);
-  }
   
   return true;
 }
@@ -212,33 +127,15 @@ async function findGameWithPlayers(
 }
 
 // Load complete game state (game, players, logs) in parallel for optimal performance
-async function getGameStateComplete(gameId, logLimit = 200, useCache = true) {
+async function getGameStateComplete(gameId, logLimit = 200) {
   if (!ensureUUID(gameId)) {
     throw new Error("Invalid game ID format");
   }
 
-  // Try cache first
-  if (useCache) {
-    const cached = await cacheHelpers.getOrFetchGameState(
-      gameId,
-      async () => {
-        // Load game, players, and logs in parallel
-        const [game, players, logs] = await Promise.all([
-          findGameById(gameId, "*", false), // Disable cache to avoid double caching
-          findPlayersByGameId(gameId, "*", false),
-          findGameLogsByGameId(gameId, logLimit),
-        ]);
-        return { game, players, logs };
-      },
-      1000 // 1 second TTL
-    );
-    return cached;
-  }
-
-  // Load game, players, and logs in parallel without cache
+  // Load game, players, and logs in parallel
   const [game, players, logs] = await Promise.all([
-    findGameById(gameId, "*", false),
-    findPlayersByGameId(gameId, "*", false),
+    findGameById(gameId, "*"),
+    findPlayersByGameId(gameId, "*"),
     findGameLogsByGameId(gameId, logLimit),
   ]);
 
@@ -247,36 +144,11 @@ async function getGameStateComplete(gameId, logLimit = 200, useCache = true) {
 
 // ===== PLAYERS =====
 
-async function findPlayerById(id, fields = "*", useCache = true) {
+async function findPlayerById(id, fields = "*") {
   if (!ensureUUID(id)) {
     throw new Error("Invalid player ID format");
   }
 
-  // Try cache first (only for default fields)
-  if (useCache && fields === "*") {
-    const cached = await cacheHelpers.getOrFetchPlayer(
-      id,
-      async () => {
-        const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from("players")
-          .select(fields)
-          .eq("id", id)
-          .maybeSingle();
-
-        if (error && error.code === "PGRST116") {
-          return null;
-        }
-
-        handleSupabaseError(error, "findPlayerById");
-        return data || null;
-      },
-      1000 // 1 second TTL
-    );
-    return cached;
-  }
-
-  // Direct query for custom fields or when cache is disabled
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("players")
@@ -292,32 +164,11 @@ async function findPlayerById(id, fields = "*", useCache = true) {
   return data || null;
 }
 
-async function findPlayersByGameId(gameId, fields = "*", useCache = true) {
+async function findPlayersByGameId(gameId, fields = "*") {
   if (!ensureUUID(gameId)) {
     throw new Error("Invalid game ID format");
   }
 
-  // Try cache first (only for default fields)
-  if (useCache && fields === "*") {
-    const cached = await cacheHelpers.getOrFetchPlayers(
-      gameId,
-      async () => {
-        const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from("players")
-          .select(fields)
-          .eq("game_id", gameId)
-          .order("created_at", { ascending: true });
-
-        handleSupabaseError(error, "findPlayersByGameId");
-        return data || [];
-      },
-      1000 // 1 second TTL
-    );
-    return cached;
-  }
-
-  // Direct query for custom fields or when cache is disabled
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("players")
@@ -365,11 +216,6 @@ async function createPlayer(playerData) {
 
   handleSupabaseError(error, "createPlayer");
   
-  // Invalidate cache after create
-  if (data && data.game_id) {
-    cache.invalidateGame(data.game_id);
-  }
-  
   return data;
 }
 
@@ -396,14 +242,6 @@ async function updatePlayer(id, updateData) {
 
   handleSupabaseError(error, "updatePlayer");
   
-  // Invalidate cache after update
-  if (data) {
-    cache.invalidatePlayer(id);
-    if (data.game_id) {
-      cache.invalidateGame(data.game_id);
-    }
-  }
-  
   return data;
 }
 
@@ -412,20 +250,10 @@ async function deletePlayer(id) {
     throw new Error("Invalid player ID format");
   }
   
-  // Get player first to know which game to invalidate
-  const player = await findPlayerById(id, "game_id", false);
-  const gameId = player?.game_id;
-  
   const supabase = getSupabase();
   const { error } = await supabase.from("players").delete().eq("id", id);
 
   handleSupabaseError(error, "deletePlayer");
-  
-  // Invalidate cache after delete
-  cache.invalidatePlayer(id);
-  if (gameId) {
-    cache.invalidateGame(gameId);
-  }
   
   return true;
 }
@@ -441,9 +269,6 @@ async function deletePlayersByGameId(gameId) {
     .eq("game_id", gameId);
 
   handleSupabaseError(error, "deletePlayersByGameId");
-  
-  // Invalidate cache after delete
-  cache.invalidateGame(gameId);
   
   return true;
 }
@@ -470,9 +295,6 @@ async function updatePlayersByGameId(gameId, updateData) {
     .select();
 
   handleSupabaseError(error, "updatePlayersByGameId");
-  
-  // Invalidate cache after batch update
-  cache.invalidateGame(gameId);
   
   return data || [];
 }
@@ -548,19 +370,6 @@ async function updatePlayersBatch(updates, concurrencyLimit = 10) {
     allErrors.push(...errors);
   }
 
-  // Invalidate cache for all affected games from successfully updated players
-  // This ensures cache is invalidated even if some updates failed
-  const gameIds = new Set();
-  for (const result of allResults) {
-    if (result?.game_id) {
-      gameIds.add(result.game_id);
-    }
-  }
-  
-  for (const gameId of gameIds) {
-    cache.invalidateGame(gameId);
-  }
-
   // Throw error if any updates failed
   if (allErrors.length > 0) {
     // Combine all errors into a single error message
@@ -594,12 +403,6 @@ async function createGameLog(logData) {
     .single();
 
   handleSupabaseError(error, "createGameLog");
-  
-  // Invalidate game state cache when new log is created
-  if (data && gameId) {
-    cache.delete(cacheHelpers.keys.logs(gameId));
-    cache.delete(cacheHelpers.keys.gameState(gameId));
-  }
   
   return data;
 }

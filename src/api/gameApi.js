@@ -1,6 +1,12 @@
 // src/api/gameApi.js
 
-const API_BASE = window.location.origin + '/api';
+// Detect if running in Electron or web browser
+const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
+
+// Use localhost API for Electron, web origin for browser
+const API_BASE = isElectron 
+  ? 'http://localhost:3001/api'
+  : window.location.origin + '/api';
 
 export const gameApi = {
   // ==================
@@ -228,11 +234,24 @@ export const gameApi = {
    * End current phase (auto-detect day/night)
    */
   async endPhase(gameId) {
-    const res = await fetch(`${API_BASE}/game/${gameId}/end-phase`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    return res.json();
+    console.log(`🔄 [gameApi] Calling endPhase for gameId: ${gameId}`);
+    try {
+      const res = await fetch(`${API_BASE}/game/${gameId}/end-phase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`❌ [gameApi] endPhase failed: ${res.status} ${res.statusText}`, errorText);
+        throw new Error(`endPhase failed: ${res.status} ${res.statusText}`);
+      }
+      const data = await res.json();
+      console.log(`✅ [gameApi] endPhase response:`, data);
+      return data;
+    } catch (error) {
+      console.error(`❌ [gameApi] endPhase error:`, error);
+      throw error;
+    }
   },
 
   /**
@@ -327,7 +346,18 @@ export const gameApi = {
         }
         
         const gameState = JSON.parse(event.data);
-        onUpdate(gameState);
+        console.log('📥 [gameApi] Received SSE message:', {
+          phase: gameState?.game?.phase,
+          players: gameState?.players?.length,
+          playerAvatars: gameState?.players?.map(p => ({ name: p.name, avatar: p.avatar || 'MISSING' }))
+        });
+        console.log('📥 [gameApi] Calling onUpdate callback...');
+        if (onUpdate) {
+          onUpdate(gameState);
+          console.log('📥 [gameApi] onUpdate callback called');
+        } else {
+          console.warn('⚠️ [gameApi] onUpdate callback is not defined!');
+        }
       } catch (err) {
         console.error('Error parsing SSE message:', err);
         if (onError) {

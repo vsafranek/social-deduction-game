@@ -70,11 +70,21 @@ function ModeratorView({
   useEffect(() => {
     if (!gameId) return;
 
-    console.log("🔄 Starting SSE subscription for moderator view");
+    console.log("🔄 Starting SSE subscription for moderator view, gameId:", gameId);
 
     // Subscribe to real-time game state updates
     const unsubscribe = gameApi.subscribeToGameState(gameId, (data) => {
+      console.log("📥 [ModeratorView] Received SSE update:", {
+        phase: data?.game?.phase,
+        round: data?.game?.round,
+        players: data?.players?.length,
+        playerAvatars: data?.players?.map(p => ({ name: p.name, avatar: p.avatar || 'MISSING' }))
+      });
+      console.log("📥 [ModeratorView] Full gameState:", data);
       setGameState(data);
+      console.log("📥 [ModeratorView] setGameState called");
+    }, (error) => {
+      console.error("❌ [ModeratorView] SSE error:", error);
     });
 
     // Cleanup on unmount or when gameId changes

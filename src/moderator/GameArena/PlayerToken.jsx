@@ -23,6 +23,15 @@ function PlayerToken({ player, phase, votes, isMayor, style }) {
     ? getDetailAvatarPath(player.avatar)
     : null;
 
+  // Log avatar data for debugging
+  React.useEffect(() => {
+    console.log(`🖼️ [PlayerToken] ${player.name}:`, {
+      avatar: player.avatar || '❌ MISSING',
+      hasAvatar: !!hasAvatar,
+      detailAvatarPath: detailAvatarPath || 'N/A'
+    });
+  }, [player.avatar, player.name, hasAvatar, detailAvatarPath]);
+
   return (
     <div
       className={`player-token ${!player.alive ? "dead" : ""} ${
@@ -41,7 +50,11 @@ function PlayerToken({ player, phase, votes, isMayor, style }) {
             src={detailAvatarPath || player.avatar}
             alt={player.name}
             className="avatar-content avatar-image"
+            onLoad={() => {
+              console.log(`✅ [PlayerToken] ${player.name} avatar loaded: ${detailAvatarPath || player.avatar}`);
+            }}
             onError={(e) => {
+              console.error(`❌ [PlayerToken] ${player.name} avatar failed to load: ${detailAvatarPath || player.avatar}`, e);
               const img = e.target;
               const currentSrc = img.src;
 

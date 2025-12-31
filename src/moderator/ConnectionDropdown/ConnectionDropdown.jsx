@@ -1,4 +1,5 @@
 import React from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import './ConnectionDropdown.css';
 
 function ConnectionDropdown({ connectionInfo, onClose }) {
@@ -10,28 +11,38 @@ function ConnectionDropdown({ connectionInfo, onClose }) {
     });
   };
 
+  const webUrl = connectionInfo?.roomCode 
+    ? `https://shadows-of-gloaming.vercel.app/?room=${connectionInfo.roomCode}`
+    : 'https://shadows-of-gloaming.vercel.app/';
+
   return (
     <div className="connection-dropdown">
       <div className="connection-content">
         <h3>📱 Player Connection</h3>
         
-        <div className="url-display" onClick={() => copyToClipboard(connectionInfo.url)}>
-          {connectionInfo.url}
+        {/* Web URL Section */}
+        <div className="web-url-section">
+          <h4>🌐 Web Address</h4>
+          <div className="url-display web-url" onClick={() => copyToClipboard(webUrl)}>
+            {webUrl}
+          </div>
+          
+          {/* QR Code */}
+          <div className="qr-code-container">
+            <QRCodeSVG
+              value={webUrl}
+              size={200}
+              level="M"
+              includeMargin={true}
+            />
+            <p className="qr-hint">📱 Scan with your phone to join</p>
+          </div>
         </div>
-        <small className="copy-hint">👆 Click to copy</small>
         
         <div className="connection-info">
           <div className="info-row">
             <span className="info-label">Room Code:</span>
             <span className="info-value">{connectionInfo.roomCode}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">IP:</span>
-            <span className="info-value">{connectionInfo.ip}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">Port:</span>
-            <span className="info-value">{connectionInfo.port}</span>
           </div>
         </div>
 
