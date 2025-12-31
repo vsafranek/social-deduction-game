@@ -3,10 +3,30 @@
 // Detect if running in Electron or web browser
 const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
 
-// Use localhost API for Electron, web origin for browser
-const API_BASE = isElectron 
-  ? 'http://localhost:3001/api'
-  : window.location.origin + '/api';
+// Determine API base URL
+// Priority: 1. Environment variable (for production deployments like Vercel)
+//           2. Electron localhost (for Electron app)
+//           3. Same origin (for local development with Vite proxy)
+let API_BASE;
+if (import.meta.env.VITE_API_URL) {
+  // Use environment variable if set (for production deployments like Vercel)
+  // This should point to your external backend server where Express is running
+  API_BASE = import.meta.env.VITE_API_URL;
+} else if (isElectron) {
+  // Electron app - use localhost (backend runs locally in Electron)
+  API_BASE = 'http://localhost:3001/api';
+} else {
+  // Web browser - use same origin (Vite proxy will forward to backend in dev)
+  // In production (Vercel), VITE_API_URL should be set to your backend URL
+  API_BASE = window.location.origin + '/api';
+}
+
+console.log('🔌 API_BASE:', API_BASE);
+console.log('🔌 Environment:', {
+  isElectron,
+  VITE_API_URL: import.meta.env.VITE_API_URL,
+  origin: typeof window !== 'undefined' ? window.location.origin : 'N/A'
+});
 
 export const gameApi = {
   // ==================

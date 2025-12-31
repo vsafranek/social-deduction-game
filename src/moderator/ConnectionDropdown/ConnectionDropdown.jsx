@@ -11,9 +11,14 @@ function ConnectionDropdown({ connectionInfo, onClose }) {
     });
   };
 
+  // Determine web URL based on environment
   const webUrl = connectionInfo?.roomCode 
-    ? `https://shadows-of-gloaming.vercel.app/?room=${connectionInfo.roomCode}`
-    : 'https://shadows-of-gloaming.vercel.app/';
+    ? (isDevelopment 
+        ? `http://192.168.1.196:3001/?room=${connectionInfo.roomCode}`
+        : `https://shadows-of-gloaming.vercel.app/?room=${connectionInfo.roomCode}`)
+    : (isDevelopment 
+        ? 'http://192.168.1.196:3001/'
+        : 'https://shadows-of-gloaming.vercel.app/');
 
   return (
     <div className="connection-dropdown">
@@ -44,6 +49,14 @@ function ConnectionDropdown({ connectionInfo, onClose }) {
             <span className="info-label">Room Code:</span>
             <span className="info-value">{connectionInfo.roomCode}</span>
           </div>
+          {isDevelopment && (
+            <>
+              <div className="info-row">
+                <span className="info-label">Server:</span>
+                <span className="info-value">http://192.168.1.196:3001</span>
+              </div>
+            </>
+          )}
         </div>
 
         {isDevelopment && (

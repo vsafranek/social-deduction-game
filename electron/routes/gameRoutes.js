@@ -186,6 +186,20 @@ router.post("/join", async (req, res) => {
     const game = await findGameByRoomCode(roomCode);
     if (!game) return res.status(404).json({ error: "Game not found" });
 
+    // Normalize game.id to string (supports both id and _id for compatibility)
+    const gameId = game.id || game._id;
+    const gameIdStr =
+      gameId && typeof gameId.toString === "function"
+        ? gameId.toString()
+        : gameId
+        ? String(gameId)
+        : null;
+
+    if (!gameIdStr || !ensureUUID(gameIdStr)) {
+      console.error("Invalid game ID format:", gameId, gameIdStr);
+      return res.status(500).json({ error: "Invalid game ID format" });
+    }
+
     // #region agent log
     fetch("http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a", {
       method: "POST",
@@ -194,7 +208,7 @@ router.post("/join", async (req, res) => {
         location: "gameRoutes.js:182",
         message: "Searching for existing player",
         data: {
-          gameId: game.id?.toString(),
+          gameId: gameIdStr,
           sessionId,
           searchQuery: "gameId+sessionId",
         },
@@ -206,7 +220,7 @@ router.post("/join", async (req, res) => {
     }).catch(() => {});
     // #endregion
 
-    let player = await findPlayerByGameAndSession(game.id, sessionId);
+    let player = await findPlayerByGameAndSession(gameIdStr, sessionId);
 
     // #region agent log
     fetch("http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a", {
@@ -239,7 +253,7 @@ router.post("/join", async (req, res) => {
           body: JSON.stringify({
             location: "gameRoutes.js:195",
             message: "Creating new player",
-            data: { gameId: game.id?.toString(), sessionId, name },
+            data: { gameId: gameIdStr, sessionId, name },
             timestamp: Date.now(),
             sessionId: "debug-session",
             runId: "run1",
@@ -251,7 +265,7 @@ router.post("/join", async (req, res) => {
 
       const avatar = assignRandomAvatar();
       player = await createPlayer({
-        game_id: game.id,
+        game_id: gameIdStr,
         session_id: sessionId,
         name,
         role: null,
@@ -284,9 +298,11 @@ router.post("/join", async (req, res) => {
       // #endregion
 
       // Create game log asynchronously to not block join response
-      createGameLog({ game_id: game.id, message: `${name} joined.` }).catch(err => {
-        console.error(`Error creating game log for join:`, err);
-      });
+      createGameLog({ game_id: gameIdStr, message: `${name} joined.` }).catch(
+        (err) => {
+          console.error(`Error creating game log for join:`, err);
+        }
+      );
     } else {
       // Existující hráč - pokud nemá avatar, přiřaď mu náhodný volný
       if (!player.avatar || !player.avatar.trim()) {
@@ -299,16 +315,27 @@ router.post("/join", async (req, res) => {
     }
 
     // Ensure both IDs are present and valid
-    if (!game?.id || !player?.id) {
-      console.error("Missing IDs:", { gameId: game?.id, playerId: player?.id });
+    const playerId = player.id || player._id;
+    const playerIdStr =
+      playerId && typeof playerId.toString === "function"
+        ? playerId.toString()
+        : playerId
+        ? String(playerId)
+        : null;
+
+    if (!gameIdStr || !playerIdStr) {
+      console.error("Missing IDs:", {
+        gameId: gameIdStr,
+        playerId: playerIdStr,
+      });
       return res.status(500).json({ error: "Failed to create/get player" });
     }
-    
-    // Don't emit game state update here - SSE stream clients will fetch updates automatically
-    // This prevents database overload when multiple players join simultaneously
-    // Clients subscribe to SSE stream which provides real-time updates
-    
-    res.json({ success: true, gameId: game.id, playerId: player.id });
+
+    // Emit game state update so all clients (moderator and players) see the new player
+    // Use debounced update to batch rapid joins
+    await emitGameStateUpdate(gameIdStr);
+
+    res.json({ success: true, gameId: gameIdStr, playerId: playerIdStr });
   } catch (e) {
     // #region agent log
     fetch("http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a", {
@@ -469,8 +496,7 @@ function formatGameStateResponse(game, players, logs) {
   }));
 
   // Convert roleConfiguration (JSONB) to object for JSON response
-  const roleConfigObj =
-    game.role_configuration || game.roleConfiguration || {};
+  const roleConfigObj = game.role_configuration || game.roleConfiguration || {};
 
   return {
     game: {
@@ -529,11 +555,15 @@ async function doEmitGameStateUpdate(gameId) {
   try {
     const { game, players, logs } = await getGameStateComplete(gameId, 200);
     if (game) {
-      console.log(`📤 Emitting game state for ${gameId}: phase=${game.phase}, players=${players.length}`);
+      console.log(
+        `📤 Emitting game state for ${gameId}: phase=${game.phase}, players=${players.length}`
+      );
       const gameState = formatGameStateResponse(game, players, logs);
-      console.log(`📤 Formatted game state: ${gameState.players.length} players`);
-      gameState.players.forEach(p => {
-        console.log(`  - ${p.name}: avatar=${p.avatar || 'MISSING'}`);
+      console.log(
+        `📤 Formatted game state: ${gameState.players.length} players`
+      );
+      gameState.players.forEach((p) => {
+        console.log(`  - ${p.name}: avatar=${p.avatar || "MISSING"}`);
       });
       gameStateEmitter.emitGameStateUpdate(gameId, gameState);
       console.log(`✅ Game state emitted to SSE clients`);
@@ -555,7 +585,7 @@ router.get("/:gameId/state", async (req, res) => {
 
     // Load game, players, and logs in parallel for optimal performance
     const { game, players, logs } = await getGameStateComplete(gameId, 200);
-    
+
     if (!game) return res.status(404).json({ error: "Game not found" });
 
     const response = formatGameStateResponse(game, players, logs);
@@ -587,7 +617,11 @@ router.get("/:gameId/stream", async (req, res) => {
     res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
 
     // Send initial game state
-    const { game: initialGame, players, logs } = await getGameStateComplete(gameId, 200);
+    const {
+      game: initialGame,
+      players,
+      logs,
+    } = await getGameStateComplete(gameId, 200);
     if (initialGame) {
       const initialState = formatGameStateResponse(initialGame, players, logs);
       res.write(`data: ${JSON.stringify(initialState)}\n\n`);
@@ -598,18 +632,21 @@ router.get("/:gameId/stream", async (req, res) => {
 
     // Subscribe to game state updates immediately after sending initial state
     // This prevents race condition where updates could be missed between initial state and subscription
-    const unsubscribe = gameStateEmitter.subscribe(gameId, async (gameState) => {
-      try {
-        res.write(`data: ${JSON.stringify(gameState)}\n\n`);
-      } catch (err) {
-        console.error("Error writing SSE data:", err);
-        if (keepAliveInterval) {
-          clearInterval(keepAliveInterval);
+    const unsubscribe = gameStateEmitter.subscribe(
+      gameId,
+      async (gameState) => {
+        try {
+          res.write(`data: ${JSON.stringify(gameState)}\n\n`);
+        } catch (err) {
+          console.error("Error writing SSE data:", err);
+          if (keepAliveInterval) {
+            clearInterval(keepAliveInterval);
+          }
+          unsubscribe();
+          res.end();
         }
-        unsubscribe();
-        res.end();
       }
-    });
+    );
 
     // Send keepalive every 30 seconds
     keepAliveInterval = setInterval(() => {
@@ -730,9 +767,9 @@ router.post("/:gameId/vote", async (req, res) => {
 
     // Emit game state update to SSE clients so votes are visible
     await emitGameStateUpdate(gameId);
-    
+
     res.json({ success: true });
-    
+
     // Emit game state update to SSE clients
     await emitGameStateUpdate(gameId);
   } catch (e) {
@@ -1012,21 +1049,29 @@ router.post("/:gameId/start-config", async (req, res) => {
     });
 
     console.log("✅ Game started with role assignments and modifiers");
-    
+
     // Ensure we have fresh data before emitting - reload game state to get all players with avatars
     console.log("🔄 Reloading game state after start...");
-    const { game: finalGame, players: finalPlayers, logs: finalLogs } = await getGameStateComplete(gameId, 200);
+    const {
+      game: finalGame,
+      players: finalPlayers,
+      logs: finalLogs,
+    } = await getGameStateComplete(gameId, 200);
     console.log(`📊 Loaded ${finalPlayers.length} players after start`);
-    finalPlayers.forEach(p => {
-      console.log(`  - ${p.name}: avatar=${p.avatar || 'MISSING'}, role=${p.role || 'MISSING'}`);
+    finalPlayers.forEach((p) => {
+      console.log(
+        `  - ${p.name}: avatar=${p.avatar || "MISSING"}, role=${
+          p.role || "MISSING"
+        }`
+      );
     });
-    
+
     // Emit game state update to SSE clients so players transition from lobby to game
     // Use immediate=true for important phase transitions
     console.log("📡 Emitting game state update...");
     await emitGameStateUpdate(gameId, true);
     console.log("✅ Game state update emitted");
-    
+
     res.json({ success: true });
   } catch (e) {
     console.error("start-config error:", e);
@@ -1099,10 +1144,10 @@ router.post("/:gameId/end-night", async (req, res) => {
         game_id: gameId,
         message: `🏁 Victory: ${win.winner}`,
       });
-      
+
       // Emit game state update to SSE clients so players see end screen
       await emitGameStateUpdate(gameId);
-      
+
       return res.json({
         success: true,
         phase: "end",
@@ -1135,7 +1180,7 @@ router.post("/:gameId/end-night", async (req, res) => {
     });
 
     res.json({ success: true });
-    
+
     // Emit game state update to SSE clients
     await emitGameStateUpdate(gameId);
   } catch (e) {
@@ -1226,14 +1271,14 @@ router.post("/:gameId/end-day", async (req, res) => {
     console.log(
       "📊 Players after update:",
       players.map((p) => ({
-      name: p.name, 
-      alive: p.alive, 
-      id: p.id,
-      vote_weight: p.vote_weight,
+        name: p.name,
+        alive: p.alive,
+        id: p.id,
+        vote_weight: p.vote_weight,
         modifier: p.modifier,
       }))
     );
-    
+
     // Verify mayor was set correctly
     if (votingResult.mayorElected && votingResult.mayorId) {
       const mayorId = votingResult.mayorId?.toString
@@ -1296,10 +1341,10 @@ router.post("/:gameId/end-day", async (req, res) => {
         message: `🏁 Victory: Jester ${jester?.name || "unknown"} wins!`,
       });
       console.log("🎭 Game ended - Jester wins!");
-      
+
       // Emit game state update to SSE clients so players see end screen
       await emitGameStateUpdate(gameId);
-      
+
       return res.json({
         success: true,
         phase: "end",
@@ -1323,10 +1368,10 @@ router.post("/:gameId/end-day", async (req, res) => {
         game_id: gameId,
         message: `🏁 Victory: ${win.winner}`,
       });
-      
+
       // Emit game state update to SSE clients so players see end screen
       await emitGameStateUpdate(gameId);
-      
+
       return res.json({
         success: true,
         phase: "end",
@@ -1349,7 +1394,7 @@ router.post("/:gameId/end-day", async (req, res) => {
       message: `Round ${currentRound} - NIGHT (⏱ ${nightSec}s)`,
     });
     res.json({ success: true, phase: "night" });
-    
+
     // Emit game state update to SSE clients
     // Use immediate=true for important phase transitions
     await emitGameStateUpdate(gameId, true);
@@ -1401,10 +1446,10 @@ router.post("/:gameId/reset-to-lobby", async (req, res) => {
       message: "🔄 Game reset to lobby by moderator",
     });
     console.log("✅ Game reset to lobby");
-    
+
     // Emit game state update to SSE clients so players return to lobby
     await emitGameStateUpdate(gameId);
-    
+
     res.json({ success: true });
   } catch (e) {
     console.error("reset-to-lobby error:", e);
@@ -1553,10 +1598,10 @@ router.post("/:gameId/end-phase", async (req, res) => {
           message: `🏁 Victory: Jester ${jester?.name || "unknown"} wins!`,
         });
         console.log("🎭 Game ended - Jester wins!");
-        
+
         // Emit game state update to SSE clients so players see end screen
         await emitGameStateUpdate(gameId);
-        
+
         return res.json({
           success: true,
           phase: "end",
@@ -1593,10 +1638,10 @@ router.post("/:gameId/end-phase", async (req, res) => {
           message: `🏁 Victory: ${win.winner}`,
         });
         console.log(`✅ Victory: ${win.winner}`);
-        
+
         // Emit game state update to SSE clients so players see end screen
         await emitGameStateUpdate(gameId);
-        
+
         return res.json({
           success: true,
           phase: "end",
@@ -1681,10 +1726,10 @@ router.post("/:gameId/end-phase", async (req, res) => {
           message: `🏁 Victory: ${win.winner}`,
         });
         console.log(`✅ Victory: ${win.winner}`);
-        
+
         // Emit game state update to SSE clients so players see end screen
         await emitGameStateUpdate(gameId);
-        
+
         return res.json({
           success: true,
           phase: "end",
@@ -1730,13 +1775,13 @@ router.post("/:gameId/end-phase", async (req, res) => {
     );
 
     finalGame = await findGameById(gameId);
-    
+
     // Emit game state update to SSE clients BEFORE sending response
     // Use immediate=true for important phase transitions
     console.log("📡 [END-PHASE] Emitting game state update...");
     await emitGameStateUpdate(gameId, true);
     console.log("✅ [END-PHASE] Game state update emitted");
-    
+
     res.json({
       success: true,
       phase: finalGame.phase,
