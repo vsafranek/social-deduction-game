@@ -1,52 +1,129 @@
 // electron/routes/__tests__/gameRoutes.integration.test.js
-// Integration tests using Jest and Mongoose only (no supertest, no mongodb-memory-server)
+// Integration tests using Jest and Supabase
 
 // Load environment variables for tests
 require('dotenv').config({ path: '.env.test' });
 
-const mongoose = require('mongoose');
-const Game = require('../../models/Game');
-const Player = require('../../models/Player');
-const GameLog = require('../../models/GameLog');
+const { connectDB, getSupabase } = require('../../database');
+const {
+  createGame,
+  findGameById,
+  findGameByRoomCode,
+  createPlayer,
+  findPlayerById,
+  findPlayersByGameId,
+  findPlayerByGameAndSession,
+  updatePlayer,
+  createGameLog,
+  findGameLogsByGameId,
+  updateGame,
+  deleteGame,
+  deletePlayer
+} = require('../../db/helpers');
 
 // Mock console.log to reduce noise
 jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'error').mockImplementation(() => {});
 
 describe('GameRoutes Integration Tests', () => {
-  // Use test database from .env.test (loaded via database.js when NODE_ENV=test)
-  // Fallback to default test URI if MONGODB_URI not set
-  const TEST_DB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/social-deduction-game-test';
   let isConnected = false;
+  const testGameIds = [];
+  const testPlayerIds = [];
+  const testLogIds = [];
 
   beforeAll(async () => {
     try {
-      // Try to connect to test database
-      await mongoose.connect(TEST_DB_URI);
+      // Connect to Supabase test database with timeout
+      const connectPromise = connectDB();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 5000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
       isConnected = true;
-      console.log('Connected to test database');
+      console.log('Connected to Supabase test database');
     } catch (error) {
-      console.warn('Could not connect to test database, skipping integration tests');
+      console.warn('Could not connect to Supabase test database, skipping integration tests:', error.message);
       isConnected = false;
     }
-  });
+  }, 10000); // 10 second timeout for beforeAll
 
   afterAll(async () => {
     if (isConnected) {
-      await mongoose.connection.dropDatabase();
-      await mongoose.connection.close();
+      // Clean up test data (with timeout protection)
+      try {
+        const supabase = getSupabase();
+        
+        // Delete test logs in parallel
+        if (testLogIds.length > 0) {
+          await Promise.allSettled(
+            testLogIds.map(logId => 
+              supabase.from('game_logs').delete().eq('id', logId)
+            )
+          );
+        }
+        
+        // Delete test players in parallel
+        if (testPlayerIds.length > 0) {
+          await Promise.allSettled(
+            testPlayerIds.map(playerId => deletePlayer(playerId))
+          );
+        }
+        
+        // Delete test games in parallel
+        if (testGameIds.length > 0) {
+          await Promise.allSettled(
+            testGameIds.map(gameId => deleteGame(gameId))
+          );
+        }
+      } catch (error) {
+        // Ignore cleanup errors
+        console.warn('Cleanup error in afterAll (ignored):', error.message);
+      }
     }
     if (console.log.mockRestore) console.log.mockRestore();
     if (console.error.mockRestore) console.error.mockRestore();
-  });
+  }, 10000); // 10 second timeout for afterAll
 
   beforeEach(async () => {
-    if (!isConnected) return;
-    // Clean up database before each test
-    await Game.deleteMany({});
-    await Player.deleteMany({});
-    await GameLog.deleteMany({});
-  });
+    if (!isConnected) {
+      // Skip all tests if not connected
+      return;
+    }
+    // Clean up test data before each test (with timeout protection)
+    try {
+      const supabase = getSupabase();
+      
+      // Delete test logs in parallel
+      if (testLogIds.length > 0) {
+        await Promise.allSettled(
+          testLogIds.map(logId => 
+            supabase.from('game_logs').delete().eq('id', logId)
+          )
+        );
+        testLogIds.length = 0;
+      }
+      
+      // Delete test players in parallel
+      if (testPlayerIds.length > 0) {
+        await Promise.allSettled(
+          testPlayerIds.map(playerId => deletePlayer(playerId))
+        );
+        testPlayerIds.length = 0;
+      }
+      
+      // Delete test games in parallel
+      if (testGameIds.length > 0) {
+        await Promise.allSettled(
+          testGameIds.map(gameId => deleteGame(gameId))
+        );
+        testGameIds.length = 0;
+      }
+    } catch (error) {
+      // Ignore cleanup errors
+      console.warn('Cleanup error (ignored):', error.message);
+    }
+  }, 5000); // 5 second timeout for beforeEach
 
   describe('Game Model Operations', () => {
     test('should create a new game with room code', async () => {
@@ -56,24 +133,25 @@ describe('GameRoutes Integration Tests', () => {
       }
 
       const roomCode = (Math.floor(1000 + Math.random() * 9000)).toString();
-      const game = new Game({
-        roomCode,
+      const gameData = {
+        room_code: roomCode,
         phase: 'lobby',
         round: 0,
-        timerState: { phaseEndsAt: null }
-      });
+        timer_state: { phase_ends_at: null }
+      };
 
-      await game.save();
+      const game = await createGame(gameData);
+      testGameIds.push(game.id);
 
-      expect(game._id).toBeDefined();
-      expect(game.roomCode).toBe(roomCode);
+      expect(game.id).toBeDefined();
+      expect(game.room_code).toBe(roomCode);
       expect(game.phase).toBe('lobby');
       expect(game.round).toBe(0);
 
       // Verify game was saved
-      const found = await Game.findById(game._id);
+      const found = await findGameById(game.id);
       expect(found).toBeDefined();
-      expect(found.roomCode).toBe(roomCode);
+      expect(found.room_code).toBe(roomCode);
     });
 
     test('should find game by room code', async () => {
@@ -83,17 +161,19 @@ describe('GameRoutes Integration Tests', () => {
       }
 
       const roomCode = (Math.floor(1000 + Math.random() * 9000)).toString();
-      const game = new Game({
-        roomCode,
+      const gameData = {
+        room_code: roomCode,
         phase: 'lobby',
         round: 0,
-        timerState: { phaseEndsAt: null }
-      });
-      await game.save();
+        timer_state: { phase_ends_at: null }
+      };
 
-      const found = await Game.findOne({ roomCode });
+      const game = await createGame(gameData);
+      testGameIds.push(game.id);
+
+      const found = await findGameByRoomCode(roomCode);
       expect(found).toBeDefined();
-      expect(found._id.toString()).toBe(game._id.toString());
+      expect(found.id).toBe(game.id);
     });
   });
 
@@ -102,14 +182,15 @@ describe('GameRoutes Integration Tests', () => {
 
     beforeEach(async () => {
       if (!isConnected) return;
-      const game = new Game({
-        roomCode: '1234',
+      const gameData = {
+        room_code: '1234',
         phase: 'lobby',
         round: 0,
-        timerState: { phaseEndsAt: null }
-      });
-      await game.save();
-      gameId = game._id;
+        timer_state: { phase_ends_at: null }
+      };
+      const game = await createGame(gameData);
+      gameId = game.id;
+      testGameIds.push(gameId);
     });
 
     test('should create a new player', async () => {
@@ -118,22 +199,23 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const player = new Player({
-        gameId,
-        sessionId: 'session123',
+      const playerData = {
+        game_id: gameId,
+        session_id: 'session123',
         name: 'TestPlayer',
         avatar: '/avatars/1.png'
-      });
+      };
 
-      await player.save();
+      const player = await createPlayer(playerData);
+      testPlayerIds.push(player.id);
 
-      expect(player._id).toBeDefined();
+      expect(player.id).toBeDefined();
       expect(player.name).toBe('TestPlayer');
-      expect(player.sessionId).toBe('session123');
-      expect(player.gameId.toString()).toBe(gameId.toString());
+      expect(player.session_id).toBe('session123');
+      expect(player.game_id).toBe(gameId);
 
       // Verify player was saved
-      const found = await Player.findById(player._id);
+      const found = await findPlayerById(player.id);
       expect(found).toBeDefined();
       expect(found.name).toBe('TestPlayer');
     });
@@ -144,17 +226,19 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const player = new Player({
-        gameId,
-        sessionId: 'session123',
+      const playerData = {
+        game_id: gameId,
+        session_id: 'session123',
         name: 'TestPlayer',
         avatar: '/avatars/1.png'
-      });
-      await player.save();
+      };
 
-      const found = await Player.findOne({ sessionId: 'session123' });
+      const player = await createPlayer(playerData);
+      testPlayerIds.push(player.id);
+
+      const found = await findPlayerByGameAndSession(gameId, 'session123');
       expect(found).toBeDefined();
-      expect(found._id.toString()).toBe(player._id.toString());
+      expect(found.id).toBe(player.id);
     });
 
     test('should update player role', async () => {
@@ -163,18 +247,19 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const player = new Player({
-        gameId,
-        sessionId: 'session123',
+      const playerData = {
+        game_id: gameId,
+        session_id: 'session123',
         name: 'TestPlayer',
         avatar: '/avatars/1.png'
-      });
-      await player.save();
+      };
 
-      player.role = 'Cleaner';
-      await player.save();
+      const player = await createPlayer(playerData);
+      testPlayerIds.push(player.id);
 
-      const found = await Player.findById(player._id);
+      await updatePlayer(player.id, { role: 'Cleaner' });
+
+      const found = await findPlayerById(player.id);
       expect(found.role).toBe('Cleaner');
     });
   });
@@ -185,31 +270,33 @@ describe('GameRoutes Integration Tests', () => {
 
     beforeEach(async () => {
       if (!isConnected) return;
-      const game = new Game({
-        roomCode: '1234',
+      const gameData = {
+        room_code: '1234',
         phase: 'lobby',
         round: 0,
-        timers: { nightSeconds: 90, daySeconds: 150 },
-        timerState: { phaseEndsAt: null }
-      });
-      await game.save();
-      gameId = game._id;
+        timers: { night_seconds: 90, day_seconds: 150 },
+        timer_state: { phase_ends_at: null }
+      };
+      const game = await createGame(gameData);
+      gameId = game.id;
+      testGameIds.push(gameId);
 
       // Create players
       const players = [];
       for (let i = 0; i < 3; i++) {
-        const player = new Player({
-          gameId,
+        const playerData = {
+          game_id: gameId,
           name: `Player${i + 1}`,
-          sessionId: `session${i + 1}`,
+          session_id: `session${i + 1}`,
           role: i === 0 ? 'Cleaner' : 'Citizen',
           alive: true,
           avatar: `/avatars/${i + 1}.png`
-        });
-        await player.save();
+        };
+        const player = await createPlayer(playerData);
         players.push(player);
+        testPlayerIds.push(player.id);
       }
-      playerIds = players.map(p => p._id);
+      playerIds = players.map(p => p.id);
     });
 
     test('should get game state with players', async () => {
@@ -218,8 +305,8 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const game = await Game.findById(gameId);
-      const players = await Player.find({ gameId }).sort({ createdAt: 1 });
+      const game = await findGameById(gameId);
+      const players = await findPlayersByGameId(gameId);
 
       expect(game).toBeDefined();
       expect(players).toHaveLength(3);
@@ -234,12 +321,9 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const game = await Game.findById(gameId);
-      game.phase = 'day';
-      game.round = 1;
-      await game.save();
+      await updateGame(gameId, { phase: 'day', round: 1 });
 
-      const updated = await Game.findById(gameId);
+      const updated = await findGameById(gameId);
       expect(updated.phase).toBe('day');
       expect(updated.round).toBe(1);
     });
@@ -250,14 +334,14 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const player = await Player.findById(playerIds[0]);
-      player.hasVoted = true;
-      player.voteFor = playerIds[1];
-      await player.save();
+      await updatePlayer(playerIds[0], {
+        has_voted: true,
+        vote_for_id: playerIds[1]
+      });
 
-      const updated = await Player.findById(playerIds[0]);
-      expect(updated.hasVoted).toBe(true);
-      expect(updated.voteFor.toString()).toBe(playerIds[1].toString());
+      const updated = await findPlayerById(playerIds[0]);
+      expect(updated.has_voted).toBe(true);
+      expect(updated.vote_for_id).toBe(playerIds[1]);
     });
   });
 
@@ -266,14 +350,15 @@ describe('GameRoutes Integration Tests', () => {
 
     beforeEach(async () => {
       if (!isConnected) return;
-      const game = new Game({
-        roomCode: '1234',
+      const gameData = {
+        room_code: '1234',
         phase: 'lobby',
         round: 0,
-        timerState: { phaseEndsAt: null }
-      });
-      await game.save();
-      gameId = game._id;
+        timer_state: { phase_ends_at: null }
+      };
+      const game = await createGame(gameData);
+      gameId = game.id;
+      testGameIds.push(gameId);
     });
 
     test('should create game log', async () => {
@@ -282,16 +367,20 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const log = new GameLog({
-        gameId,
+      const logData = {
+        game_id: gameId,
         message: 'Test log message'
-      });
-      await log.save();
+      };
 
-      expect(log._id).toBeDefined();
+      const log = await createGameLog(logData);
+      testLogIds.push(log.id);
+
+      expect(log.id).toBeDefined();
       expect(log.message).toBe('Test log message');
 
-      const found = await GameLog.findById(log._id);
+      // Verify log was saved by finding logs for this game
+      const logs = await findGameLogsByGameId(gameId);
+      const found = logs.find(l => l.id === log.id);
       expect(found).toBeDefined();
       expect(found.message).toBe('Test log message');
     });
@@ -302,15 +391,18 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const log1 = new GameLog({ gameId, message: 'Log 1' });
-      const log2 = new GameLog({ gameId, message: 'Log 2' });
-      await log1.save();
-      await log2.save();
+      const log1 = await createGameLog({ game_id: gameId, message: 'Log 1' });
+      const log2 = await createGameLog({ game_id: gameId, message: 'Log 2' });
+      testLogIds.push(log1.id, log2.id);
 
-      const logs = await GameLog.find({ gameId }).sort({ createdAt: 1 });
-      expect(logs).toHaveLength(2);
-      expect(logs[0].message).toBe('Log 1');
-      expect(logs[1].message).toBe('Log 2');
+      const logs = await findGameLogsByGameId(gameId);
+      // Filter to only our test logs (there might be others)
+      const testLogs = logs.filter(l => [log1.id, log2.id].includes(l.id));
+      expect(testLogs.length).toBeGreaterThanOrEqual(2);
+      
+      const messages = testLogs.map(l => l.message).sort();
+      expect(messages).toContain('Log 1');
+      expect(messages).toContain('Log 2');
     });
   });
 
@@ -320,29 +412,31 @@ describe('GameRoutes Integration Tests', () => {
 
     beforeEach(async () => {
       if (!isConnected) return;
-      const game = new Game({
-        roomCode: '1234',
+      const gameData = {
+        room_code: '1234',
         phase: 'lobby',
         round: 0,
-        timers: { nightSeconds: 90, daySeconds: 150 },
-        timerState: { phaseEndsAt: null }
-      });
-      await game.save();
-      gameId = game._id;
+        timers: { night_seconds: 90, day_seconds: 150 },
+        timer_state: { phase_ends_at: null }
+      };
+      const game = await createGame(gameData);
+      gameId = game.id;
+      testGameIds.push(gameId);
 
       // Create 3 players
       const players = [];
       for (let i = 0; i < 3; i++) {
-        const player = new Player({
-          gameId,
+        const playerData = {
+          game_id: gameId,
           name: `Player${i + 1}`,
-          sessionId: `session${i + 1}`,
+          session_id: `session${i + 1}`,
           avatar: `/avatars/${i + 1}.png`
-        });
-        await player.save();
+        };
+        const player = await createPlayer(playerData);
         players.push(player);
+        testPlayerIds.push(player.id);
       }
-      playerIds = players.map(p => p._id);
+      playerIds = players.map(p => p.id);
     });
 
     test('should assign roles to players', async () => {
@@ -352,21 +446,19 @@ describe('GameRoutes Integration Tests', () => {
       }
 
       const assignments = {
-        [playerIds[0].toString()]: 'Citizen',
-        [playerIds[1].toString()]: 'Cleaner',
-        [playerIds[2].toString()]: 'Doctor'
+        [playerIds[0]]: 'Citizen',
+        [playerIds[1]]: 'Cleaner',
+        [playerIds[2]]: 'Doctor'
       };
 
       for (const [playerId, roleName] of Object.entries(assignments)) {
-        const player = await Player.findById(playerId);
-        player.role = roleName;
-        await player.save();
+        await updatePlayer(playerId, { role: roleName });
       }
 
-      const players = await Player.find({ gameId });
-      expect(players.find(p => p._id.toString() === playerIds[0].toString()).role).toBe('Citizen');
-      expect(players.find(p => p._id.toString() === playerIds[1].toString()).role).toBe('Cleaner');
-      expect(players.find(p => p._id.toString() === playerIds[2].toString()).role).toBe('Doctor');
+      const players = await findPlayersByGameId(gameId);
+      expect(players.find(p => p.id === playerIds[0]).role).toBe('Citizen');
+      expect(players.find(p => p.id === playerIds[1]).role).toBe('Cleaner');
+      expect(players.find(p => p.id === playerIds[2]).role).toBe('Doctor');
     });
 
     test('should reset game to lobby', async () => {
@@ -376,49 +468,52 @@ describe('GameRoutes Integration Tests', () => {
       }
 
       // Set game to day phase
-      const game = await Game.findById(gameId);
-      game.phase = 'day';
-      game.round = 2;
-      game.winner = 'good';
-      await game.save();
+      await updateGame(gameId, {
+        phase: 'day',
+        round: 2,
+        winner: 'good'
+      });
 
       // Set players to various states
-      const players = await Player.find({ gameId });
+      const players = await findPlayersByGameId(gameId);
       for (const p of players) {
-        p.alive = false;
-        p.role = 'Cleaner';
-        p.hasVoted = true;
-        p.voteFor = playerIds[0];
-        await p.save();
+        await updatePlayer(p.id, {
+          alive: false,
+          role: 'Cleaner',
+          has_voted: true,
+          vote_for_id: playerIds[0]
+        });
       }
 
       // Reset to lobby
-      game.phase = 'lobby';
-      game.round = 0;
-      game.winner = null;
-      game.winnerPlayerIds = [];
-      await game.save();
+      await updateGame(gameId, {
+        phase: 'lobby',
+        round: 0,
+        winner: null,
+        winner_player_ids: []
+      });
 
       for (const p of players) {
-        p.alive = true;
-        p.role = null;
-        p.hasVoted = false;
-        p.voteFor = null;
-        await p.save();
+        await updatePlayer(p.id, {
+          alive: true,
+          role: null,
+          has_voted: false,
+          vote_for_id: null
+        });
       }
 
       // Verify reset
-      const updatedGame = await Game.findById(gameId);
+      const updatedGame = await findGameById(gameId);
       expect(updatedGame.phase).toBe('lobby');
       expect(updatedGame.round).toBe(0);
       expect(updatedGame.winner).toBeNull();
 
-      const updatedPlayers = await Player.find({ gameId });
+      const updatedPlayers = await findPlayersByGameId(gameId);
       updatedPlayers.forEach(p => {
         expect(p.alive).toBe(true);
         expect(p.role).toBeNull();
-        expect(p.hasVoted).toBe(false);
-        expect(p.voteFor).toBeNull();
+        expect(p.has_voted).toBe(false);
+        expect(p.vote_for_id).toBeNull();
       });
     });
   });

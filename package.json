@@ -13,6 +13,7 @@
     "build": "vite build",
     "package": "npm run build && electron-builder",
     "test": "cross-env NODE_ENV=test jest",
+    "test:unit": "cross-env NODE_ENV=test SKIP_INTEGRATION_TESTS=true jest",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage",
     "migrations:show": "node electron/db/runMigrations.js"

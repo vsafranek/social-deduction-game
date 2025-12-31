@@ -23,6 +23,10 @@ const createMockPlayer = (id, name, role, options = {}) => {
     roleHidden = false
   } = options;
 
+  const nightActionObj = nightAction ? { ...nightAction } : { targetId: null, action: null, results: [] };
+  
+  const roleDataObj = { ...roleData };
+  
   const player = {
     _id: { toString: () => id },
     name,
@@ -30,9 +34,11 @@ const createMockPlayer = (id, name, role, options = {}) => {
     alive,
     modifier,
     effects: [...effects],
-    roleData: { ...roleData },
+    roleData: roleDataObj,
+    role_data: roleDataObj, // Also set role_data for compatibility
     roleHidden,
-    nightAction: nightAction ? { ...nightAction } : { targetId: null, action: null, results: [] }
+    nightAction: nightActionObj,
+    night_action: nightActionObj // Also set night_action for compatibility
   };
 
   // Set save method after player is created
@@ -142,7 +148,9 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [lookout, target, visitor]);
 
-      const watchResult = lookout.nightAction.results.find(r => r.startsWith('watch:'));
+      const watchResult = lookout.nightAction.results.find(r => 
+        r.startsWith('lookout_visitors:') || r.startsWith('lookout_quiet:')
+      );
       expect(watchResult).toBeDefined();
     });
 
@@ -160,7 +168,9 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [tracker, target, destination]);
 
-      const trackResult = tracker.nightAction.results.find(r => r.startsWith('track:'));
+      const trackResult = tracker.nightAction.results.find(r => 
+        r.startsWith('tracker_followed:') || r.startsWith('tracker_stayed:')
+      );
       expect(trackResult).toBeDefined();
     });
 
@@ -173,7 +183,13 @@ describe('nightActionResolver', () => {
 
       const hasGuard = guardian.effects.some(e => e.type === 'guard');
       expect(hasGuard).toBe(true);
-      expect(guardian.nightAction.results).toContain('success:Nastavil jsi stráž u Guardian');
+      // Guardian gets feedback about whether anyone came (guardian_stopped or guardian_quiet)
+      const guardResult = guardian.nightAction.results.find(r => 
+        r.startsWith('guardian_stopped:') || r.startsWith('guardian_quiet:')
+      );
+      expect(guardResult).toBeDefined();
+      // Since no one visits, should be quiet
+      expect(guardian.nightAction.results.some(r => r.includes('Nikdo nepřišel k Guardian'))).toBe(true);
     });
   });
 
@@ -213,11 +229,17 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [doctor, cleaner, target]);
 
-      // Target should be protected and not die
+      // Doctor has priority 9, Cleaner has priority 7, so Doctor goes AFTER Cleaner
+      // Target should be attacked first, then Doctor heals them
       expect(target.alive).toBe(true);
       expect(target.nightAction.results).toContain('attacked_killer:Napaden vrahem');
       expect(target.nightAction.results).toContain('healed:Zachráněn');
-      expect(doctor.nightAction.results.some(r => r.includes('Zachránil'))).toBe(true);
+      
+      // Doctor should get feedback that they saved someone
+      const savedMessage = doctor.nightAction.results.find(r => r.startsWith('doctor_saved:'));
+      expect(savedMessage).toBeDefined();
+      expect(savedMessage).toContain('zachránil');
+      expect(savedMessage).toContain('Target');
     });
   });
 
@@ -318,6 +340,31 @@ describe('nightActionResolver', () => {
 
   describe('Blocked Effects', () => {
     
+    test('should fail when Jailer tries to block SerialKiller', async () => {
+      const jailer = createMockPlayer('1', 'Jailer', 'Jailer', {
+        nightAction: { targetId: '2', action: 'block', results: [] }
+      });
+      const serialKiller = createMockPlayer('2', 'SerialKiller', 'SerialKiller', {
+        alive: true,
+        nightAction: { targetId: '3', action: 'kill', results: [] }
+      });
+      const target = createMockPlayer('3', 'Target', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({}, [jailer, serialKiller, target]);
+
+      // SerialKiller cannot be blocked
+      const hasBlocked = serialKiller.effects.some(e => e.type === 'blocked');
+      expect(hasBlocked).toBe(false);
+      
+      // Jailer should get failure message
+      expect(jailer.nightAction.results).toContain('failed:SerialKiller je SerialKiller - nemůže být zablokován');
+      
+      // SerialKiller should still be able to kill
+      expect(target.alive).toBe(false);
+    });
+    
     test('should prevent blocked player from acting', async () => {
       // Jailer blocks the cleaner in the same night
       const jailer = createMockPlayer('1', 'Jailer', 'Jailer', {
@@ -361,7 +408,8 @@ describe('nightActionResolver', () => {
         nightAction: { targetId: '1', action: 'guard', results: [] }
       });
       // Visitor tries to visit guardian in the same night
-      // Note: guard effect is added during processing, so visitor should be guarded
+      // Guardian has priority 3, Cleaner has priority 7, so Guardian goes first
+      // Guard effect is added before visitor arrives, so visitor should be stopped
       const visitor = createMockPlayer('2', 'Visitor', 'Cleaner', {
         nightAction: { targetId: '1', action: 'kill', results: [] }
       });
@@ -372,10 +420,20 @@ describe('nightActionResolver', () => {
       const hasGuard = guardian.effects.some(e => e.type === 'guard');
       expect(hasGuard).toBe(true);
       
-      // Visitor should be guarded (guard is checked before action)
-      // However, since guard is set in the same night, the visitor might not be guarded
-      // because guard effect is added during processing. Let's test that guard is set correctly.
-      expect(guardian.nightAction.results).toContain('success:Nastavil jsi stráž u Guardian');
+      // Visitor should be guarded (guard effect stops them)
+      const visitorGuarded = visitor.effects.some(e => e.type === 'guarded');
+      expect(visitorGuarded).toBe(true);
+      expect(visitor.nightAction.results).toContain('guardian_prevented:Stráž');
+      
+      // Guardian should get feedback that visitor was stopped
+      const stoppedMessage = guardian.nightAction.results.find(r => r.startsWith('guardian_stopped:'));
+      expect(stoppedMessage).toBeDefined();
+      expect(stoppedMessage).toContain('Zastavil jsi návštěvníka u Guardian');
+      
+      // Visitor's kill action should not succeed (target should still be alive)
+      // But in this case target is Guardian themselves, so we can't easily test kill success
+      // Instead, we test that visitor was prevented from acting
+      expect(visitor.nightAction.results.some(r => r.includes('killed') || r.includes('Zaútočil'))).toBe(false);
     });
   });
 
@@ -620,7 +678,7 @@ describe('nightActionResolver', () => {
       expect(failedResult).toContain('mrtvého hráče');
     });
 
-    test('should not allow Investigator to investigate cleaned role', async () => {
+    test('should allow Investigator to investigate cleaned role but get fake results', async () => {
       const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
         nightAction: { targetId: '2', action: 'investigate', results: [] }
       });
@@ -631,9 +689,16 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [investigator, cleaned]);
 
+      // Investigator can investigate cleaned dead player but gets fake results
+      const investigateResult = investigator.nightAction.results.find(r => r.startsWith('investigate:'));
+      expect(investigateResult).toBeDefined();
+      expect(investigateResult).toContain('Cleaned');
+      expect(investigateResult).toContain('=');
+      // Should not contain the actual role (Cleaner)
+      expect(investigateResult).not.toContain('Cleaner');
+      // Should not be a failed message
       const failedResult = investigator.nightAction.results.find(r => r.includes('failed:'));
-      expect(failedResult).toBeDefined();
-      expect(failedResult).toContain('vyčištěna');
+      expect(failedResult).toBeUndefined();
     });
   });
 
@@ -919,8 +984,16 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [doctor, cleaner, target]);
 
-      const saveMessage = doctor.nightAction.results.find(r => r.includes('Zachránil'));
+      // Target should be attacked and saved
+      expect(target.alive).toBe(true);
+      expect(target.nightAction.results).toContain('attacked_killer:Napaden vrahem');
+      expect(target.nightAction.results).toContain('healed:Zachráněn');
+      
+      // Doctor should get feedback that they saved someone
+      const saveMessage = doctor.nightAction.results.find(r => r.startsWith('doctor_saved:'));
       expect(saveMessage).toBeDefined();
+      expect(saveMessage).toContain('zachránil');
+      expect(saveMessage).toContain('Target');
     });
 
     test('should give Doctor feedback when no attack occurred', async () => {
@@ -954,8 +1027,18 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [jailer, target, victim]);
 
-      const triedToLeave = jailer.nightAction.results.find(r => r.includes('odešel'));
+      // Target should be blocked (has blocked effect)
+      const hasBlocked = target.effects.some(e => e.type === 'blocked');
+      expect(hasBlocked).toBe(true);
+      
+      // Target's action should not succeed (victim should still be alive)
+      expect(victim.alive).toBe(true);
+      
+      // Jailer should get feedback that target tried to leave
+      const triedToLeave = jailer.nightAction.results.find(r => r.startsWith('jailer_blocked:'));
       expect(triedToLeave).toBeDefined();
+      expect(triedToLeave).toContain('pokusil se odejít');
+      expect(triedToLeave).toContain('Target');
     });
 
     test('should inform Jailer when target stayed home', async () => {
@@ -1007,8 +1090,8 @@ describe('nightActionResolver', () => {
 
       expect(evil.alive).toBe(false);
       expect(hunter.alive).toBe(true);
-      const successMessage = hunter.nightAction.results.find(r => r.includes('Zabil'));
-      expect(successMessage).toBeDefined();
+      expect(hunter.nightAction.results).toContain('hunter_kill:Zabil Evil');
+      expect(hunter.nightAction.results).toContain('hunter_success:Úspěšně jsi zabil Evil');
     });
   });
 
@@ -1342,6 +1425,78 @@ describe('nightActionResolver', () => {
     });
   });
 
+  describe('Investigation History Tracking', () => {
+    
+    test('should track Investigator investigation history in roleData', async () => {
+      const investigator = createMockPlayer('1', 'Investigator', 'Investigator', {
+        nightAction: { targetId: '2', action: 'investigate', results: [] },
+        roleData: {}
+      });
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [investigator, target]);
+
+      // Investigator should have investigation history
+      expect(investigator.roleData.investigationHistory).toBeDefined();
+      expect(investigator.roleData.investigationHistory['2']).toBeDefined();
+      expect(investigator.roleData.investigationHistory['2'].type).toBe('investigate');
+      expect(investigator.roleData.investigationHistory['2'].roles).toBeDefined();
+      expect(investigator.roleData.investigationHistory['2'].detail).toContain('Target');
+      expect(investigator.roleData.investigationHistory['2'].round).toBe(1);
+      
+      // Should call markModified
+      expect(investigator.markModified).toHaveBeenCalledWith('roleData');
+    });
+
+    test('should track Coroner autopsy history in roleData', async () => {
+      const coroner = createMockPlayer('1', 'Coroner', 'Coroner', {
+        nightAction: { targetId: '2', action: 'autopsy', results: [] },
+        roleData: {}
+      });
+      const target = createMockPlayer('2', 'Target', 'Cleaner', {
+        alive: false
+      });
+
+      await resolveNightActions({ round: 1 }, [coroner, target]);
+
+      // Coroner should have investigation history
+      expect(coroner.roleData.investigationHistory).toBeDefined();
+      expect(coroner.roleData.investigationHistory['2']).toBeDefined();
+      expect(coroner.roleData.investigationHistory['2'].type).toBe('autopsy');
+      expect(coroner.roleData.investigationHistory['2'].roles).toBe('Cleaner');
+      expect(coroner.roleData.investigationHistory['2'].detail).toBe('Target = Cleaner');
+      expect(coroner.roleData.investigationHistory['2'].round).toBe(1);
+      
+      // Should call markModified
+      expect(coroner.markModified).toHaveBeenCalledWith('roleData');
+    });
+
+    test('should track Consigliere investigation history in roleData', async () => {
+      const consigliere = createMockPlayer('1', 'Consigliere', 'Consigliere', {
+        nightAction: { targetId: '2', action: 'consig_investigate', results: [] },
+        roleData: { usesRemaining: 2 }
+      });
+      const target = createMockPlayer('2', 'Target', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [consigliere, target]);
+
+      // Consigliere should have investigation history
+      expect(consigliere.roleData.investigationHistory).toBeDefined();
+      expect(consigliere.roleData.investigationHistory['2']).toBeDefined();
+      expect(consigliere.roleData.investigationHistory['2'].type).toBe('consig');
+      expect(consigliere.roleData.investigationHistory['2'].roles).toBe('Doctor');
+      expect(consigliere.roleData.investigationHistory['2'].detail).toBe('Target = Doctor');
+      expect(consigliere.roleData.investigationHistory['2'].round).toBe(1);
+      
+      // Should call markModified
+      expect(consigliere.markModified).toHaveBeenCalledWith('roleData');
+    });
+  });
+
   describe('Watch and Track Results', () => {
     
     test('should show visitors to Lookout', async () => {
@@ -1362,9 +1517,10 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [lookout, target, visitor1, visitor2]);
 
-      const watchResult = lookout.nightAction.results.find(r => r.startsWith('watch:'));
+      const watchResult = lookout.nightAction.results.find(r => r.startsWith('lookout_visitors:'));
       expect(watchResult).toBeDefined();
       expect(watchResult).toContain('Target');
+      expect(watchResult).toContain('navštívili');
     });
 
     test('should show "nobody" when no visitors', async () => {
@@ -1377,7 +1533,7 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [lookout, target]);
 
-      const watchResult = lookout.nightAction.results.find(r => r.startsWith('watch:'));
+      const watchResult = lookout.nightAction.results.find(r => r.startsWith('lookout_quiet:'));
       expect(watchResult).toBeDefined();
       expect(watchResult).toContain('nikdo nebyl');
     });
@@ -1396,9 +1552,10 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [tracker, target, destination]);
 
-      const trackResult = tracker.nightAction.results.find(r => r.startsWith('track:'));
+      const trackResult = tracker.nightAction.results.find(r => r.startsWith('tracker_followed:'));
       expect(trackResult).toBeDefined();
       expect(trackResult).toContain('Destination');
+      expect(trackResult).toContain('navštívil');
     });
 
     test('should show "stayed home" for tracked drunk player', async () => {
@@ -1416,9 +1573,18 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [tracker, drunk, target]);
 
-      const trackResult = tracker.nightAction.results.find(r => r.startsWith('track:'));
+      // Drunk player should get fake message (action was cancelled)
+      const drunkFakeMessage = drunk.nightAction.results.find(r => r.includes('Zaútočil jsi'));
+      expect(drunkFakeMessage).toBeDefined();
+      
+      // Target should not be killed (drunk action didn't execute)
+      expect(target.alive).toBe(true);
+      
+      // Tracker should see that drunk player stayed home
+      const trackResult = tracker.nightAction.results.find(r => r.startsWith('tracker_stayed:'));
       expect(trackResult).toBeDefined();
-      expect(trackResult).toContain('nikam nešel');
+      expect(trackResult).toContain('zůstal doma');
+      expect(trackResult).toContain('Drunk');
     });
   });
 
@@ -1505,11 +1671,12 @@ describe('nightActionResolver', () => {
         alive: true
       });
       delete player.nightAction;
+      delete player.night_action; // Also delete night_action
 
       await resolveNightActions({}, [player]);
 
       // Should not crash and should create nightAction
-      expect(player.nightAction).toBeDefined();
+      expect(player.nightAction || player.night_action).toBeDefined();
     });
 
     test('should clear expired effects', async () => {
@@ -1579,8 +1746,7 @@ describe('nightActionResolver', () => {
 
       await resolveNightActions({}, [player1, player2]);
 
-      expect(player1.save).toHaveBeenCalled();
-      expect(player2.save).toHaveBeenCalled();
+      // Note: save() is not called directly - updates are returned and saved by route handler
     });
   });
 
@@ -1616,7 +1782,7 @@ describe('nightActionResolver', () => {
       expect(puppet.nightAction.targetId.toString()).toBe('3');
       expect(puppet.nightAction.action).toBe('kill');
       expect(puppet.roleData.controlledByWitch).toBe(true);
-      expect(puppet.save).toHaveBeenCalled();
+      // Note: save() is not called directly - updates are returned and saved by route handler
       
       // Controlled target should be killed
       expect(controlledTarget.alive).toBe(false);
@@ -2148,7 +2314,7 @@ describe('nightActionResolver', () => {
       await resolveNightActions({ round: 2 }, [poisoner, victim]);
 
       expect(victim.alive).toBe(false);
-      expect(victim.nightAction.results).toContain('killed:Zavražděn');
+      expect(victim.nightAction.results).toContain('poisoned_killed:Zemřel na otravu');
     });
 
     test('should cure regular poison if Doctor protects victim', async () => {
@@ -2202,7 +2368,8 @@ describe('nightActionResolver', () => {
       const hasStrongPoisoned = victim.effects.some(e => e.type === 'strong_poisoned' && !e.meta?.activated);
       expect(hasStrongPoisoned).toBe(true);
       expect(poisoner.roleData.usesRemaining).toBe(0);
-      expect(poisoner.nightAction.results.some(r => r.includes('silný jed'))).toBe(true);
+      // Check for exact success message format
+      expect(poisoner.nightAction.results).toContain('success:Použil silný jed na Victim (0 použití zbývá)');
       expect(victim.alive).toBe(true); // Should not die immediately
     });
 
@@ -2240,7 +2407,8 @@ describe('nightActionResolver', () => {
       const strongPoisonEffect = victim.effects.find(e => e.type === 'strong_poisoned');
       expect(strongPoisonEffect?.meta?.activated).toBe(true);
       expect(victim.alive).toBe(false);
-      expect(victim.nightAction.results).toContain('killed:Zavražděn');
+      // Strong poison kills the same night after Doctor visit
+      expect(victim.nightAction.results).toContain('poisoned_killed:Zemřel na otravu');
     });
 
     test('should not activate strong poison if Doctor does not visit', async () => {
@@ -2279,7 +2447,7 @@ describe('nightActionResolver', () => {
       expect(victim.alive).toBe(false);
       const hasProtected = victim.effects.some(e => e.type === 'protected');
       // Even if protected, strong poison should still kill
-      expect(victim.nightAction.results).toContain('killed:Zavražděn');
+      expect(victim.nightAction.results).toContain('poisoned_killed:Zemřel na otravu');
     });
 
     test('should allow regular poison to be blocked by Jailer', async () => {

@@ -20,20 +20,51 @@ function NightActionModal({
   const [selectedPuppet, setSelectedPuppet] = useState(null); // Pro Čarodějnici - první výběr (loutka)
   const [step, setStep] = useState('puppet'); // 'puppet' nebo 'target'
   
+  // Helper to normalize ID to string (handles ObjectId, string, etc.)
+  const normalizeId = (id) => {
+    if (!id) return null;
+    if (typeof id === 'string') return id;
+    if (typeof id?.toString === 'function') return id.toString();
+    return String(id);
+  };
+
   // Pro Infected roli - zkontroluj, zda je hráč už navštíven
   const isPlayerVisited = (playerId) => {
     if (!visitedPlayers || visitedPlayers.length === 0) return false;
     
     // Normalizuj playerId na string
-    const normalizedPlayerId = playerId?.toString();
+    const normalizedPlayerId = normalizeId(playerId);
     if (!normalizedPlayerId) return false;
     
     // Zkontroluj, zda je hráč v seznamu navštívených
     return visitedPlayers.some(visitedId => {
-      // visitedId může být ObjectId objekt nebo string
-      const normalizedVisitedId = visitedId?.toString?.() || visitedId?.toString() || String(visitedId);
+      const normalizedVisitedId = normalizeId(visitedId);
       return normalizedVisitedId === normalizedPlayerId;
     });
+  };
+
+  // Helper to get investigation for a player (handles different ID formats in investigationHistory keys)
+  const getInvestigation = (playerId) => {
+    if (!investigationHistory || typeof investigationHistory !== 'object') return null;
+    
+    const normalizedPlayerId = normalizeId(playerId);
+    if (!normalizedPlayerId) return null;
+    
+    // Try direct lookup first
+    if (investigationHistory[normalizedPlayerId]) {
+      return investigationHistory[normalizedPlayerId];
+    }
+    
+    // Try to find by comparing normalized keys (handles ObjectId keys that were serialized)
+    const keys = Object.keys(investigationHistory);
+    for (const key of keys) {
+      const normalizedKey = normalizeId(key);
+      if (normalizedKey === normalizedPlayerId) {
+        return investigationHistory[key];
+      }
+    }
+    
+    return null;
   };
 
   const handlePlayerSelect = (playerId) => {
@@ -123,9 +154,7 @@ function NightActionModal({
               })
               .map(player => {
               const visited = isPlayerVisited(player._id);
-              // Normalize player._id to string for lookup
-              const playerId = player._id?.toString?.() || player._id?.toString() || String(player._id);
-              const investigation = investigationHistory[playerId];
+              const investigation = getInvestigation(player._id);
               const isPuppet = requiresTwoTargets && selectedPuppet === player._id;
               const isSelected = selectedPlayer === player._id || isPuppet;
               

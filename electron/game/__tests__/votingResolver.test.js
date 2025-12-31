@@ -11,10 +11,8 @@ afterAll(() => {
   console.log.mockRestore();
 });
 
-// Mock GameLog model
-const mockGameLog = {
-  create: jest.fn().mockResolvedValue({})
-};
+// Mock GameLog function (createGameLog is passed as a function parameter)
+const mockGameLog = jest.fn().mockResolvedValue({});
 
 // Helper function to create mock players
 const createMockPlayer = (id, name, role, options = {}) => {
@@ -39,8 +37,11 @@ const createMockPlayer = (id, name, role, options = {}) => {
     role,
     alive,
     voteFor: voteForObj,
+    vote_for_id: voteForObj, // Also set vote_for_id for compatibility
     hasVoted,
+    has_voted: hasVoted, // Also set has_voted for compatibility
     voteWeight,
+    vote_weight: voteWeight, // Also set vote_weight for compatibility
     modifier
   };
 
@@ -74,8 +75,8 @@ describe('votingResolver', () => {
 
       expect(result.executed).toBeNull();
       expect(result.reason).toBe('no_players');
-      expect(mockGameLog.create).toHaveBeenCalledWith({
-        gameId: game._id,
+      expect(mockGameLog).toHaveBeenCalledWith({
+        game_id: 'game1',
         message: 'No execution (no alive players).'
       });
     });
@@ -92,8 +93,8 @@ describe('votingResolver', () => {
 
       expect(result.executed).toBeNull();
       expect(result.reason).toBe('no_votes');
-      expect(mockGameLog.create).toHaveBeenCalledWith({
-        gameId: game._id,
+      expect(mockGameLog).toHaveBeenCalledWith({
+        game_id: 'game1',
         message: 'No execution (no votes cast).'
       });
     });
@@ -118,8 +119,8 @@ describe('votingResolver', () => {
       expect(result.reason).toBe('tie');
       expect(result.tied).toContain('1');
       expect(result.tied).toContain('2');
-      expect(mockGameLog.create).toHaveBeenCalledWith({
-        gameId: game._id,
+      expect(mockGameLog).toHaveBeenCalledWith({
+        game_id: 'game1',
         message: expect.stringContaining('No execution (tie:')
       });
     });
@@ -166,8 +167,8 @@ describe('votingResolver', () => {
       expect(result.votesFor).toBe(2);
       expect(result.topCandidate).toBe('1');
       expect(target.alive).toBe(true);
-      expect(mockGameLog.create).toHaveBeenCalledWith({
-        gameId: game._id,
+      expect(mockGameLog).toHaveBeenCalledWith({
+        game_id: 'game1',
         message: expect.stringContaining('No execution (insufficient votes: 2/5')
       });
     });
@@ -238,9 +239,9 @@ describe('votingResolver', () => {
       }
       expect(result.votesFor).toBe(4);
       expect(target.alive).toBe(false);
-      expect(target.save).toHaveBeenCalled();
-      expect(mockGameLog.create).toHaveBeenCalledWith({
-        gameId: game._id,
+      // Note: save() is not called directly - updates are returned and saved by route handler
+      expect(mockGameLog).toHaveBeenCalledWith({
+        game_id: 'game1',
         message: expect.stringContaining('Executed: Target')
       });
     });
@@ -321,8 +322,7 @@ describe('votingResolver', () => {
       expect(voter1.hasVoted).toBe(false);
       expect(voter2.voteFor).toBeNull();
       expect(voter2.hasVoted).toBe(false);
-      expect(voter1.save).toHaveBeenCalled();
-      expect(voter2.save).toHaveBeenCalled();
+      // Note: save() is not called directly - updates are returned and saved by route handler
     });
 
     test('should clear all votes after execution', async () => {
@@ -341,8 +341,7 @@ describe('votingResolver', () => {
       if (result.executed) {
         expect(voter1.hasVoted).toBe(false);
         expect(voter2.hasVoted).toBe(false);
-        expect(voter1.save).toHaveBeenCalled();
-        expect(voter2.save).toHaveBeenCalled();
+        // Note: save() is not called directly - updates are returned and saved by route handler
       }
     });
   });
@@ -565,8 +564,8 @@ describe('votingResolver', () => {
 
       await resolveDayVoting(game, players, mockGameLog);
 
-      expect(mockGameLog.create).toHaveBeenCalledWith({
-        gameId: game._id,
+      expect(mockGameLog).toHaveBeenCalledWith({
+        game_id: 'game123',
         message: expect.stringContaining('Executed: Target')
       });
     });
@@ -584,8 +583,8 @@ describe('votingResolver', () => {
 
       await resolveDayVoting(game, players, mockGameLog);
 
-      expect(mockGameLog.create).toHaveBeenCalledWith({
-        gameId: game._id,
+      expect(mockGameLog).toHaveBeenCalledWith({
+        game_id: 'game1',
         message: expect.stringMatching(/No execution \(tie: .*Alice.*Bob.*\)|No execution \(tie: .*Bob.*Alice.*\)/)
       });
     });
@@ -655,7 +654,7 @@ describe('votingResolver', () => {
       expect(result.executed?.toString()).toBe('1');
       expect(result.executedName).toBe('Jester');
       expect(jester.alive).toBe(false);
-      expect(jester.save).toHaveBeenCalled();
+      // Note: save() is not called directly - updates are returned and saved by route handler
     });
 
     test('should end game immediately when Jester is executed', async () => {
@@ -682,8 +681,7 @@ describe('votingResolver', () => {
       expect(voter1.voteFor).toBeNull();
       expect(voter2.hasVoted).toBe(false);
       expect(voter2.voteFor).toBeNull();
-      expect(voter1.save).toHaveBeenCalled();
-      expect(voter2.save).toHaveBeenCalled();
+      // Note: save() is not called directly - updates are returned and saved by route handler
     });
 
     test('should not trigger jesterWin for non-Jester execution', async () => {
@@ -727,8 +725,8 @@ describe('votingResolver', () => {
 
       await resolveDayVoting(game, players, mockGameLog);
 
-      expect(mockGameLog.create).toHaveBeenCalled();
-      const logCalls = mockGameLog.create.mock.calls;
+      expect(mockGameLog).toHaveBeenCalled();
+      const logCalls = mockGameLog.mock.calls;
       const jesterWinLog = logCalls.find(call => 
         call[0].message && call[0].message.includes('Jester') && call[0].message.includes('wins')
       );
@@ -767,8 +765,8 @@ describe('votingResolver', () => {
       expect(result.tied).toContain('2'); // Target
       expect(result.tiedVotes).toBe(2);
       expect(target.alive).toBe(true);
-      expect(mockGameLog.create).toHaveBeenCalledWith({
-        gameId: game._id,
+      expect(mockGameLog).toHaveBeenCalledWith({
+        game_id: 'game1',
         message: expect.stringContaining('No execution (tie:')
       });
     });
@@ -937,7 +935,7 @@ describe('votingResolver', () => {
       expect(result.executedName).toBe('Mayor');
       expect(mayor.voteWeight).toBe(1); // Should be reduced to 1
       expect(game.mayor).toBeNull(); // Should be removed
-      expect(game.save).toHaveBeenCalled();
+      // Note: save() is not called directly - updates are returned and saved by route handler
     });
   });
 
@@ -1064,7 +1062,7 @@ describe('votingResolver', () => {
       const validCandidates = [voter1, voter2, voter3, voter4, candidate1, candidate2];
       const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
       expect(drunkCount).toBe(1);
-      expect(mockGameLog.create).toHaveBeenCalledWith(
+      expect(mockGameLog).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining('Sweetheart died... someone became Drunk!')
         })
@@ -1267,7 +1265,7 @@ describe('votingResolver', () => {
       const drunkCount = validCandidates.filter(p => p.modifier === 'Drunk').length;
       expect(drunkCount).toBe(1);
       // Verify GameLog was created for Sweetheart death
-      const sweetheartLogCall = mockGameLog.create.mock.calls.find(call => 
+      const sweetheartLogCall = mockGameLog.mock.calls.find(call => 
         call[0].message && call[0].message.includes('Sweetheart died')
       );
       expect(sweetheartLogCall).toBeDefined();

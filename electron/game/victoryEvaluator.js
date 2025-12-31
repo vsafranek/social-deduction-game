@@ -5,6 +5,12 @@
  * Good wins only when no evil AND no hostile neutrals remain
  */
 
+// Helper to get player ID (supports both id and _id for compatibility)
+function getPlayerId(player) {
+  const id = player.id || player._id;
+  return id && typeof id.toString === 'function' ? id.toString() : String(id);
+}
+
 function hasEffect(player, effectType) {
   const now = new Date();
   return (player.effects || []).some(e => 
@@ -78,9 +84,9 @@ function evaluateCustomRule(rule, ctx) {
       // For Infected: check all alive players (excluding self)
       // Infected wins if all other alive players have the 'infected' effect
       const alive = ctx.players.filter(pl => pl.alive);
-      const selfId = ctx.self?.id?.toString();
+      const selfId = ctx.self ? (getPlayerId(ctx.self)) : null;
       for (const pl of alive) {
-        if (selfId && pl.id.toString() === selfId) continue;
+        if (selfId && getPlayerId(pl) === selfId) continue;
         const has = hasEffect(pl, effect);
         if (negate ? has : !has) return false;
       }
@@ -92,7 +98,7 @@ function evaluateCustomRule(rule, ctx) {
       const self = ctx.self;
       if (!self || self.role !== 'Infected') return false;
       
-      const alive = ctx.players.filter(pl => pl.alive && pl.id.toString() !== self.id.toString());
+      const alive = ctx.players.filter(pl => pl.alive && getPlayerId(pl) !== getPlayerId(self));
       if (alive.length === 0) return true; // Pokud není nikdo jiný naživu, vyhrává
       
       const visitedPlayers = self.role_data?.visitedPlayers || [];
@@ -100,7 +106,7 @@ function evaluateCustomRule(rule, ctx) {
       
       // Zkontroluj, zda všechny živé hráče byly navštíveny
       for (const pl of alive) {
-        if (!visitedIds.includes(pl.id.toString())) {
+        if (!visitedIds.includes(getPlayerId(pl))) {
           return false;
         }
       }
@@ -139,13 +145,14 @@ function evaluateVictory(players) {
 
   // 1) Solo wins (highest priority)
   for (const p of alive) {
-    if (p.victory_conditions?.soloWin) {
-      const others = alive.filter(x => x.id.toString() !== p.id.toString());
+    const victoryConditions = p.victory_conditions || p.victoryConditions;
+    if (victoryConditions?.soloWin) {
+      const others = alive.filter(x => getPlayerId(x) !== getPlayerId(p));
       if (others.length === 0) {
         console.log(`✅ Solo win: ${p.name}`);
         return { 
           winner: 'solo', 
-          players: [p.id], 
+          players: [p.id || p._id], 
           teams: p.affiliations || ['solo'] 
         };
       }
@@ -154,13 +161,15 @@ function evaluateVictory(players) {
 
   // 2) Custom rules per player (e.g., Infected)
   for (const p of alive) {
-    const rules = p.victory_conditions?.customRules || [];
+    const victoryConditions = p.victory_conditions || p.victoryConditions;
+    const rules = victoryConditions?.customRules || [];
     if (rules.length) {
       const ctx = { counts, byTeam, players, self: p };
       const allSatisfied = rules.every(rule => evaluateCustomRule(rule, ctx));
       if (allSatisfied) {
         const winners = alive.filter(pl => {
-          const plRules = pl.victory_conditions?.customRules || [];
+          const plVictoryConditions = pl.victory_conditions || pl.victoryConditions;
+          const plRules = plVictoryConditions?.customRules || [];
           if (plRules.length === 0) return false;
           return plRules.every(r => evaluateCustomRule(r, { counts, byTeam, players, self: pl }));
         });
@@ -168,7 +177,7 @@ function evaluateVictory(players) {
         console.log(`✅ Custom rule win: ${winners.map(w => w.name).join(', ')}`);
         return { 
           winner: 'custom', 
-          players: winners.map(w => w.id), 
+          players: winners.map(w => w.id || w._id), 
           teams: p.affiliations || ['neutral'] 
         };
       }
@@ -188,15 +197,16 @@ function evaluateVictory(players) {
 
   // ✅ Good win: no evil AND no hostile neutrals
   if (evilAlive === 0 && !hasHostileNeutrals) {
-    const winners = alive.filter(p => 
-      p.victory_conditions?.canWinWithTeams?.includes('good')
-    );
+    const winners = alive.filter(p => {
+      const victoryConditions = p.victory_conditions || p.victoryConditions;
+      return victoryConditions?.canWinWithTeams?.includes('good');
+    });
     
     if (winners.length > 0) {
       console.log(`✅ Good wins: No evil or hostile neutrals remaining`);
       return { 
         winner: 'good', 
-        players: winners.map(w => w.id), 
+        players: winners.map(w => w.id || w._id), 
         teams: ['good'] 
       };
     }
@@ -215,15 +225,16 @@ function evaluateVictory(players) {
   
   // Case 1: Evil has majority
   if (evilAlive > goodAlive && evilAlive > 0) {
-    const winners = alive.filter(p => 
-      p.victory_conditions?.canWinWithTeams?.includes('evil')
-    );
+    const winners = alive.filter(p => {
+      const victoryConditions = p.victory_conditions || p.victoryConditions;
+      return victoryConditions?.canWinWithTeams?.includes('evil');
+    });
     
     if (winners.length > 0) {
       console.log(`✅ Evil wins (majority): ${evilAlive} evil > ${goodAlive} good`);
       return { 
         winner: 'evil', 
-        players: winners.map(w => w.id), 
+        players: winners.map(w => w.id || w._id), 
         teams: ['evil'] 
       };
     }
@@ -231,15 +242,16 @@ function evaluateVictory(players) {
 
   // Case 2: 1v1 scenario (cannot lynch)
   if (evilAlive === 1 && goodAlive === 1 && alive.length === 2) {
-    const winners = alive.filter(p => 
-      p.victory_conditions?.canWinWithTeams?.includes('evil')
-    );
+    const winners = alive.filter(p => {
+      const victoryConditions = p.victory_conditions || p.victoryConditions;
+      return victoryConditions?.canWinWithTeams?.includes('evil');
+    });
     
     if (winners.length > 0) {
       console.log(`✅ Evil wins (1v1): Cannot be lynched`);
       return { 
         winner: 'evil', 
-        players: winners.map(w => w.id), 
+        players: winners.map(w => w.id || w._id), 
         teams: ['evil'] 
       };
     }
@@ -247,15 +259,16 @@ function evaluateVictory(players) {
 
   // Case 3: 2 players total with 1 evil
   if (alive.length === 2 && evilAlive >= 1) {
-    const winners = alive.filter(p => 
-      p.victory_conditions?.canWinWithTeams?.includes('evil')
-    );
+    const winners = alive.filter(p => {
+      const victoryConditions = p.victory_conditions || p.victoryConditions;
+      return victoryConditions?.canWinWithTeams?.includes('evil');
+    });
     
     if (winners.length > 0) {
       console.log(`✅ Evil wins (2 players, 1 evil): Cannot be lynched`);
       return { 
         winner: 'evil', 
-        players: winners.map(w => w.id), 
+        players: winners.map(w => w.id || w._id), 
         teams: ['evil'] 
       };
     }
@@ -276,7 +289,7 @@ function evaluateVictory(players) {
     console.log(`✅ Last player standing: ${lastPlayer.name} (${team})`);
     return {
       winner: team,
-      players: [lastPlayer.id],
+      players: [lastPlayer.id || lastPlayer._id],
       teams: [team]
     };
   }

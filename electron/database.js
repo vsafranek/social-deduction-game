@@ -29,11 +29,20 @@ const connectDB = async () => {
 
     supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Test connection
-    const { data, error } = await supabase
+    // Test connection with timeout
+    const testQuery = supabase
       .from("games")
       .select("count")
       .limit(1);
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Supabase connection timeout')), 5000)
+    );
+    
+    const { data, error } = await Promise.race([
+      testQuery,
+      timeoutPromise
+    ]);
 
     if (error && error.code !== "PGRST116") {
       // PGRST116 = table doesn't exist yet (expected on first run)
