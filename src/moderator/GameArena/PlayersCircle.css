@@ -1,6 +1,0 @@
-/* src/components/moderator/GameArena/PlayersCircle.css */
-.players-circle {
-  position: fixed;  /* kvůli full-screen */
-  inset: 0;
-  z-index: 2;       /* nad pozadím, pod panely */
-}

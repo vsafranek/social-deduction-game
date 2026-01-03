@@ -111,10 +111,10 @@ app.whenReady().then(async () => {
       });
     } else {
       console.log("📦 Production mode - serving static files...");
-      expressApp.use(express.static(path.join(__dirname, "../dist")));
+      expressApp.use(express.static(path.join(__dirname, "../frontend/dist")));
       expressApp.get("*", (req, res) => {
         if (req.path.startsWith("/api")) return;
-        res.sendFile(path.join(__dirname, "../dist/index.html"));
+        res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
       });
     }
 
