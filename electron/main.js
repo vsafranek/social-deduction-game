@@ -12,7 +12,7 @@ let playerWindows = {}; // Ukládáme otevřená player okna
 
 const expressApp = express();
 const PORT = 3001;
-const VITE_PORT = 5173;
+const NEXTJS_PORT = 3000;
 const isDev = !app.isPackaged;
 
 console.log("🚀 Starting Electron app...");
@@ -87,11 +87,11 @@ app.whenReady().then(async () => {
       console.log(`🔍 Debug ingest endpoint: http://127.0.0.1:${INGEST_PORT}/ingest/:id`);
     });
 
-    // Vite proxy in development
+    // Next.js proxy in development
     if (isDev) {
-      console.log("🔧 Development mode - setting up Vite proxy...");
-      const viteProxy = createProxyMiddleware({
-        target: `http://localhost:${VITE_PORT}`,
+      console.log("🔧 Development mode - setting up Next.js proxy...");
+      const nextjsProxy = createProxyMiddleware({
+        target: `http://localhost:${NEXTJS_PORT}`,
         changeOrigin: true,
         ws: true,
         logLevel: "silent",
@@ -107,15 +107,64 @@ app.whenReady().then(async () => {
         if (req.path.startsWith("/api")) {
           return next();
         }
-        viteProxy(req, res, next);
+        nextjsProxy(req, res, next);
       });
     } else {
-      console.log("📦 Production mode - serving static files...");
-      expressApp.use(express.static(path.join(__dirname, "../frontend/dist")));
-      expressApp.get("*", (req, res) => {
-        if (req.path.startsWith("/api")) return;
-        res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
-      });
+      console.log("📦 Production mode - proxying to Next.js standalone server...");
+      // Next.js standalone build runs its own server
+      // We need to start it and proxy to it, or proxy directly if it's already running
+      const standalonePath = path.join(__dirname, "../frontend/.next/standalone");
+      const staticPath = path.join(__dirname, "../frontend/.next/static");
+      const publicPath = path.join(__dirname, "../frontend/public");
+      
+      // Check if standalone build exists
+      if (require("fs").existsSync(standalonePath)) {
+        // Next.js standalone server runs on a different port internally
+        // We proxy all non-API requests to it
+        const nextjsStandaloneProxy = createProxyMiddleware({
+          target: "http://localhost:3000", // Next.js standalone default port
+          changeOrigin: true,
+          ws: true,
+          logLevel: "silent",
+          onProxyReq: (proxyReq) => {
+            proxyReq.setMaxListeners(50);
+          },
+          onProxyRes: (proxyRes) => {
+            proxyRes.setMaxListeners(50);
+          },
+        });
+
+        // Serve static files from .next/static (for better performance)
+        if (require("fs").existsSync(staticPath)) {
+          expressApp.use("/_next/static", express.static(staticPath));
+        }
+        
+        // Serve public files
+        if (require("fs").existsSync(publicPath)) {
+          expressApp.use(express.static(publicPath));
+        }
+
+        // Proxy all non-API requests to Next.js standalone server
+        expressApp.use((req, res, next) => {
+          if (req.path.startsWith("/api")) {
+            return next();
+          }
+          nextjsStandaloneProxy(req, res, next);
+        });
+      } else {
+        console.warn("⚠️ Next.js standalone build not found, falling back to static export");
+        // Fallback to static export if standalone doesn't exist
+        const outPath = path.join(__dirname, "../frontend/out");
+        if (require("fs").existsSync(outPath)) {
+          expressApp.use(express.static(outPath));
+          expressApp.get("*", (req, res) => {
+            if (req.path.startsWith("/api")) return;
+            res.sendFile(path.join(outPath, "index.html"));
+          });
+        } else {
+          console.error("❌ No Next.js build found! Please run 'npm run build' in frontend directory.");
+        }
+      }
     }
 
     expressApp.use("/api/*", (req, res) => {

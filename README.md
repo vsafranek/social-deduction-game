@@ -47,7 +47,7 @@ npm run dev
 ```
 
 Tento příkaz spustí:
-- Frontend dev server (Vite) na `http://localhost:5173`
+- Frontend dev server (Next.js) na `http://localhost:3000`
 - Electron aplikaci s backend serverem na `http://localhost:3001`
 
 ### Production build
