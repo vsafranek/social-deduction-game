@@ -61,6 +61,22 @@ const GameSchema = new mongoose.Schema({
     }
   },
   
+  // Role configuration limits and settings
+  roleMaxLimits: {
+    type: Map,
+    of: Number, // null values are stored as missing keys
+    default: {}
+  },
+  guaranteedRoles: {
+    type: [String],
+    default: []
+  },
+  teamLimits: {
+    good: { type: Number, default: 2 },
+    evil: { type: Number, default: 1 },
+    neutral: { type: Number, default: 0 }
+  },
+  
   // ✅ KONFIGURACE PASIVNÍCH MODIFIKÁTORŮ
   modifierConfiguration: {
     drunkChance: {

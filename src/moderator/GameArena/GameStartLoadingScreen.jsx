@@ -11,9 +11,6 @@ function GameStartLoadingScreen({ gameName, onComplete, onGameReady }) {
 
   // Initial progress animation up to 90%
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameStartLoadingScreen.jsx:14',message:'Initial progress effect',data:{onGameReady,progress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     if (onGameReady) return; // Don't start if game is already ready
     
     const duration = 1500; // 1.5 seconds to reach 90%
@@ -38,13 +35,7 @@ function GameStartLoadingScreen({ gameName, onComplete, onGameReady }) {
 
   // When game is ready, complete the progress bar and transition
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameStartLoadingScreen.jsx:38',message:'Game ready effect',data:{onGameReady,hasCompletionTimer:!!completionTimerRef.current,progress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
     if (onGameReady && !completionTimerRef.current) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameStartLoadingScreen.jsx:40',message:'Starting completion timer',data:{progress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       // Clear initial progress timer
       if (initialProgressTimerRef.current) {
         clearInterval(initialProgressTimerRef.current);
@@ -58,9 +49,6 @@ function GameStartLoadingScreen({ gameName, onComplete, onGameReady }) {
       completionTimerRef.current = setInterval(() => {
         setProgress((current) => {
           if (current >= 100) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameStartLoadingScreen.jsx:57',message:'Progress reached 100%, calling onComplete',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-            // #endregion
             if (completionTimerRef.current) {
               clearInterval(completionTimerRef.current);
               completionTimerRef.current = null;

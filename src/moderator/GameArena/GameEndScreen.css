@@ -2,22 +2,38 @@
 
 .game-end-screen {
   min-height: 100vh;
-  background: 
-    radial-gradient(circle at 50% 10%, rgba(40, 30, 60, 0.4) 0%, transparent 60%),
+  background: radial-gradient(
+      circle at 50% 10%,
+      rgba(40, 30, 60, 0.4) 0%,
+      transparent 60%
+    ),
     linear-gradient(180deg, #1f1a24 0%, #0f0c15 100%);
   padding: 16px;
   overflow-y: auto;
-  font-family: 'Lato', sans-serif;
+  overflow-x: hidden;
+  font-family: "Lato", sans-serif;
   color: #e0e0e0;
+  box-sizing: border-box;
 }
 
 .game-end-screen::before {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
-  background-image: 
-    repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 2px, transparent 2px, transparent 10px),
-    repeating-linear-gradient(-45deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 2px, transparent 2px, transparent 10px);
+  background-image: repeating-linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.05) 0px,
+      rgba(0, 0, 0, 0.05) 2px,
+      transparent 2px,
+      transparent 10px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(0, 0, 0, 0.05) 0px,
+      rgba(0, 0, 0, 0.05) 2px,
+      transparent 2px,
+      transparent 10px
+    );
   pointer-events: none;
   z-index: 0;
 }
@@ -60,23 +76,42 @@
   font-weight: 900;
   color: #ffd700;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  font-family: 'MedievalSharp', serif;
+  font-family: "MedievalSharp", serif;
 }
 
 @keyframes fadeOut {
-  0% { opacity: 1; pointer-events: auto; }
-  80% { opacity: 1; pointer-events: auto; }
-  100% { opacity: 0; pointer-events: none; }
+  0% {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  80% {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  100% {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 @keyframes bannerPop {
-  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
 }
 
 @keyframes spinIn {
-  from { transform: rotate(-360deg) scale(0); }
-  to { transform: rotate(0deg) scale(1); }
+  from {
+    transform: rotate(-360deg) scale(0);
+  }
+  to {
+    transform: rotate(0deg) scale(1);
+  }
 }
 
 /* ✅ Compact End Header */
@@ -85,24 +120,28 @@
   margin: 0 auto;
   position: relative;
   z-index: 1;
+  min-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
 }
 
 .end-header {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 24px 30px;
+  gap: 16px;
+  padding: 12px 16px;
   border-radius: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   background: linear-gradient(135deg, #2d2636, #1f1a24);
   border: 2px solid #8b7355;
+  flex-shrink: 0;
 }
 
 .victory-emoji-small {
-  font-size: 56px;
+  font-size: 40px;
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 .header-text {
@@ -110,58 +149,83 @@
 }
 
 .header-text h2 {
-  margin: 0 0 6px 0;
-  font-size: 32px;
+  margin: 0 0 4px 0;
+  font-size: 24px;
   font-weight: 900;
   color: #ffd700;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  font-family: 'MedievalSharp', serif;
+  font-family: "MedievalSharp", serif;
 }
 
 .header-text p {
   margin: 0;
-  font-size: 16px;
+  font-size: 13px;
   color: #c5a059;
   font-weight: 500;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 /* Teams Container */
 .teams-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Row for Evil and Neutral teams side by side */
+.evil-neutral-row {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .team-section {
   background: rgba(30, 25, 35, 0.6);
   border-radius: 8px;
-  padding: 20px;
+  padding: 10px;
   border: 2px solid #5d4037;
   position: relative;
+  flex-shrink: 0;
 }
 
 .team-section.good {
   border-color: rgba(46, 125, 50, 0.5);
-  background: linear-gradient(135deg, rgba(30, 60, 40, 0.2), rgba(20, 40, 30, 0.2));
+  background: linear-gradient(
+    135deg,
+    rgba(30, 60, 40, 0.2),
+    rgba(20, 40, 30, 0.2)
+  );
 }
 
 .team-section.evil {
   border-color: rgba(198, 40, 40, 0.5);
-  background: linear-gradient(135deg, rgba(60, 30, 30, 0.2), rgba(40, 20, 20, 0.2));
+  background: linear-gradient(
+    135deg,
+    rgba(60, 30, 30, 0.2),
+    rgba(40, 20, 20, 0.2)
+  );
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .team-title {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 0 0 16px 0;
-  font-size: 22px;
+  gap: 8px;
+  margin: 0 0 8px 0;
+  font-size: 16px;
   font-weight: 800;
   color: #ffecd1;
-  font-family: 'Cinzel', serif;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  font-family: "Cinzel", serif;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .team-icon {
@@ -172,100 +236,117 @@
 .neutrals-section {
   background: rgba(30, 25, 35, 0.6);
   border-radius: 8px;
-  padding: 20px;
+  padding: 10px;
   border: 2px solid #7e57c2;
-  background: linear-gradient(135deg, rgba(40, 30, 60, 0.3), rgba(30, 20, 50, 0.3));
+  background: linear-gradient(
+    135deg,
+    rgba(40, 30, 60, 0.3),
+    rgba(30, 20, 50, 0.3)
+  );
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 0 0 16px 0;
-  font-size: 22px;
+  gap: 8px;
+  margin: 0 0 8px 0;
+  font-size: 16px;
   font-weight: 800;
   color: #d1c4e9;
-  font-family: 'Cinzel', serif;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  font-family: "Cinzel", serif;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .neutrals-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, max-content));
+  grid-auto-rows: min-content;
+  gap: 8px;
+  justify-content: start;
+  flex: 1;
+  min-height: 0;
+  max-height: calc(
+    2 * 250px + 8px
+  ); /* 2 rows of cards (estimated 250px each) + gap */
+  overflow-y: auto;
 }
 
 /* ✅ Individual Neutral Container */
 .neutral-container {
-  background: rgba(45, 35, 60, 0.4);
-  border: 2px solid #5e35b1;
-  border-radius: 6px;
-  padding: 12px;
-  transition: all 0.3s ease;
-}
-
-.neutral-container:hover {
-  border-color: #7e57c2;
-  background: rgba(50, 40, 70, 0.5);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-.neutral-header {
-  text-align: center;
-  padding: 8px 0;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(126, 87, 194, 0.3);
-}
-
-.neutral-role-label {
-  font-size: 15px;
-  font-weight: 700;
-  color: #b39ddb;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-family: 'Cinzel', serif;
-}
-
-.neutral-player-wrapper {
-  /* No grid needed - single player */
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
 }
 
 /* Players Grid */
 .players-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, max-content));
+  grid-auto-rows: min-content;
+  gap: 8px;
+  justify-content: start;
+  flex: 1;
+  min-height: 0;
+  max-height: calc(
+    2 * 250px + 8px
+  ); /* 2 rows of cards (estimated 250px each) + gap */
+  overflow-y: auto;
 }
 
 /* Player Card - Base */
 .player-card {
-  background: linear-gradient(135deg, rgba(45, 38, 54, 0.8), rgba(30, 25, 35, 0.8));
+  background: linear-gradient(
+    135deg,
+    rgba(45, 38, 54, 0.8),
+    rgba(30, 25, 35, 0.8)
+  );
   border-radius: 6px;
-  padding: 14px;
+  padding: 8px;
   border: 1px solid #5d4037;
   transition: all 0.3s ease;
   position: relative;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
 }
 
 /* Winner Highlight */
 .player-card.winner {
   border-color: #ffd700;
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(45, 38, 54, 0.9));
-  box-shadow: 
-    0 0 15px rgba(255, 215, 0, 0.3),
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 0, 0.15),
+    rgba(45, 38, 54, 0.9)
+  );
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3),
     inset 0 0 10px rgba(255, 215, 0, 0.1);
   animation: winnerPulse 3s ease-in-out infinite;
 }
 
 @keyframes winnerPulse {
-  0%, 100% { border-color: #ffd700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
-  50% { border-color: #ffecb3; box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); }
+  0%,
+  100% {
+    border-color: #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  }
+  50% {
+    border-color: #ffecb3;
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+  }
 }
 
 .player-card.self {
   border-color: #2196f3;
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.15), rgba(45, 38, 54, 0.9));
+  background: linear-gradient(
+    135deg,
+    rgba(33, 150, 243, 0.15),
+    rgba(45, 38, 54, 0.9)
+  );
 }
 
 .player-card.dead {
@@ -279,28 +360,25 @@
   opacity: 0.6;
 }
 
-/* Player Card Header */
-.player-card-header {
+/* Player Card Name Header - Top of card */
+.player-card-name-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.2);
 }
 
 .player-card-avatar {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #8b7355;
   flex-shrink: 0;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-
-.role-emoji {
-  font-size: 40px;
-  flex-shrink: 0;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
 }
 
 .player-info {
@@ -312,14 +390,14 @@
 }
 
 .player-name {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #ffecd1;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-family: 'MedievalSharp', serif;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  gap: 4px;
+  font-family: "MedievalSharp", serif;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .self-badge {
@@ -333,56 +411,83 @@
   color: #64b5f6;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .winner-crown {
-  font-size: 24px;
+  font-size: 20px;
   animation: crownBounce 2s ease-in-out infinite;
   filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
   color: #ffd700;
+  flex-shrink: 0;
 }
 
 @keyframes crownBounce {
-  0%, 100% { transform: translateY(0) rotate(-5deg); }
-  50% { transform: translateY(-3px) rotate(5deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(5deg);
+  }
 }
 
 /* Player Card Body */
 .player-card-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
-  padding-left: 6px;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding-left: 4px;
   border-left: 2px solid rgba(139, 115, 85, 0.2);
 }
 
 .role-name {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #c5a059;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .modifier-icon-inline {
   display: inline-block;
   vertical-align: middle;
-  margin-right: 4px;
+  margin-right: 2px;
   object-fit: contain;
+  width: 18px;
+  height: 18px;
+}
+
+.modifiers-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
 }
 
 .modifier-badge {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 2px 6px;
   background: rgba(197, 160, 89, 0.15);
   border: 1px solid #c5a059;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: #ffd700;
   width: fit-content;
-  font-family: 'Lato', sans-serif;
+  font-family: "Lato", sans-serif;
+}
+
+.modifier-badge.past {
+  opacity: 0.7;
+  background: rgba(197, 160, 89, 0.1);
+  border-color: rgba(197, 160, 89, 0.5);
+}
+
+.modifier-history-indicator {
+  margin-left: 4px;
+  font-size: 0.7rem;
+  opacity: 0.8;
 }
 
 /* Player Card Footer */
@@ -390,17 +495,17 @@
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid rgba(139, 115, 85, 0.1);
-  padding-top: 8px;
+  padding-top: 4px;
 }
 
 .status-badge {
-  padding: 4px 10px;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .status-badge.alive {
@@ -429,7 +534,7 @@
   border-radius: 8px;
   padding: 16px;
   text-align: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
 .stat-label {
@@ -440,7 +545,7 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 8px;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .stat-value {
@@ -448,17 +553,284 @@
   font-size: 28px;
   font-weight: 900;
   color: #ffecd1;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-  font-family: 'MedievalSharp', serif;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  font-family: "MedievalSharp", serif;
+}
+
+/* Medium screens */
+@media (max-width: 1024px) {
+  .game-end-screen {
+    padding: 12px;
+  }
+  .end-header {
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    gap: 16px;
+  }
+  .victory-emoji-small {
+    font-size: 48px;
+  }
+  .header-text h2 {
+    font-size: 28px;
+  }
+  .header-text p {
+    font-size: 14px;
+  }
+  .players-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, max-content));
+    gap: 6px;
+  }
+  .neutrals-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, max-content));
+    gap: 6px;
+  }
+  .team-section,
+  .neutrals-section {
+    padding: 8px;
+  }
+  .team-title,
+  .section-title {
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+  .teams-container {
+    gap: 8px;
+  }
+  .player-card {
+    width: 130px;
+    min-width: 130px;
+    max-width: 130px;
+    padding: 6px;
+  }
 }
 
 /* Mobile */
 @media (max-width: 768px) {
-  .victory-banner { padding: 30px 20px; }
-  .victory-banner h1 { font-size: 28px; }
-  .victory-emoji { font-size: 60px; }
-  .end-header { flex-direction: column; text-align: center; }
-  .header-text h2 { font-size: 24px; }
-  .players-grid, .neutrals-grid { grid-template-columns: 1fr; }
-  .game-stats { grid-template-columns: 1fr; }
+  .game-end-screen {
+    padding: 8px;
+  }
+  .victory-banner {
+    padding: 30px 20px;
+  }
+  .victory-banner h1 {
+    font-size: 28px;
+  }
+  .victory-emoji {
+    font-size: 60px;
+  }
+  .end-header {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  .victory-emoji-small {
+    font-size: 40px;
+  }
+  .header-text h2 {
+    font-size: 22px;
+  }
+  .header-text p {
+    font-size: 13px;
+  }
+  .evil-neutral-row {
+    flex-direction: column;
+  }
+  .players-grid,
+  .neutrals-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, max-content));
+    gap: 6px;
+    justify-content: start;
+  }
+  .game-stats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .team-section,
+  .neutrals-section {
+    padding: 8px;
+  }
+  .team-title,
+  .section-title {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  .player-card {
+    padding: 6px;
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+  }
+  .player-card-header {
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .player-card-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  .role-emoji {
+    font-size: 24px;
+  }
+  .player-name {
+    font-size: 0.85rem;
+  }
+  .role-name {
+    font-size: 0.75rem;
+  }
+  .teams-container {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    padding: 12px;
+  }
+  .stat-value {
+    font-size: 24px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 600px) {
+  .game-end-screen {
+    padding: 6px;
+  }
+  .end-header {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+  .victory-emoji-small {
+    font-size: 36px;
+  }
+  .header-text h2 {
+    font-size: 20px;
+  }
+  .header-text p {
+    font-size: 12px;
+  }
+  .players-grid,
+  .neutrals-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, max-content));
+    gap: 5px;
+    justify-content: start;
+  }
+  .player-card {
+    padding: 6px;
+    width: 110px;
+    min-width: 110px;
+    max-width: 110px;
+  }
+  .player-card-header {
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .player-card-avatar {
+    width: 30px;
+    height: 30px;
+  }
+  .role-emoji {
+    font-size: 22px;
+  }
+  .player-name {
+    font-size: 0.8rem;
+  }
+  .role-name {
+    font-size: 0.7rem;
+  }
+  .modifier-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+  .team-section,
+  .neutrals-section {
+    padding: 10px;
+  }
+  .team-title,
+  .section-title {
+    font-size: 16px;
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+  .team-icon {
+    font-size: 20px;
+  }
+  .teams-container {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .game-stats {
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .stat-card {
+    padding: 10px;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 20px;
+  }
+  .player-card-body {
+    gap: 4px;
+    margin-bottom: 8px;
+    padding-left: 4px;
+  }
+  .modifiers-list {
+    gap: 4px;
+    margin-top: 2px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 400px) {
+  .game-end-screen {
+    padding: 4px;
+  }
+  .end-header {
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .victory-emoji-small {
+    font-size: 32px;
+  }
+  .header-text h2 {
+    font-size: 18px;
+  }
+  .header-text p {
+    font-size: 11px;
+  }
+  .team-section,
+  .neutrals-section {
+    padding: 8px;
+  }
+  .team-title,
+  .section-title {
+    font-size: 14px;
+  }
+  .player-card {
+    padding: 5px;
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+  }
+  .player-card-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  .role-emoji {
+    font-size: 20px;
+  }
+  .player-name {
+    font-size: 0.75rem;
+  }
+  .role-name {
+    font-size: 0.65rem;
+  }
+  .stat-value {
+    font-size: 18px;
+  }
 }

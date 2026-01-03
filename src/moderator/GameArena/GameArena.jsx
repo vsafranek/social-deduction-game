@@ -23,17 +23,20 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
       phase: gameState?.game?.phase,
       round: gameState?.game?.round,
       players: gameState?.players?.length,
-      playerAvatars: gameState?.players?.map(p => ({ name: p.name, avatar: p.avatar || 'MISSING' }))
+      playerAvatars: gameState?.players?.map((p) => ({
+        name: p.name,
+        avatar: p.avatar || "MISSING",
+      })),
     });
     if (gameState?.players) {
       gameState.players.forEach((p, idx) => {
         console.log(`🎮 [GameArena] Player ${idx + 1}:`, {
           _id: p._id,
           name: p.name,
-          avatar: p.avatar || '❌ MISSING',
+          avatar: p.avatar || "❌ MISSING",
           role: p.role,
           alive: p.alive,
-          hasAvatar: !!(p.avatar && p.avatar.trim())
+          hasAvatar: !!(p.avatar && p.avatar.trim()),
         });
       });
     }
@@ -45,7 +48,7 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
       hasGameState: !!gameState,
       hasGame: !!gameState?.game,
       hasPlayers: !!gameState?.players,
-      playersCount: gameState?.players?.length
+      playersCount: gameState?.players?.length,
     });
     return null;
   }
@@ -63,7 +66,9 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
       const index = (round - 1 + dayVariants.length) % dayVariants.length;
       const variant = dayVariants[index];
       const bgPath = `/backgrounds/day_${variant}.png`;
-      console.log(`🖼️ [GameArena] Background image: ${bgPath} (phase: ${phase}, round: ${round})`);
+      console.log(
+        `🖼️ [GameArena] Background image: ${bgPath} (phase: ${phase}, round: ${round})`
+      );
       return bgPath;
     } else if (phase === "night") {
       const nightVariants = [1, 2, 3, 4, 5];
@@ -71,7 +76,9 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
       const index = (round - 1 + nightVariants.length) % nightVariants.length;
       const variant = nightVariants[index];
       const bgPath = `/backgrounds/night_${variant}.png`;
-      console.log(`🖼️ [GameArena] Background image: ${bgPath} (phase: ${phase}, round: ${round})`);
+      console.log(
+        `🖼️ [GameArena] Background image: ${bgPath} (phase: ${phase}, round: ${round})`
+      );
       return bgPath;
     }
     console.log(`🖼️ [GameArena] No background image (phase: ${phase})`);
@@ -181,7 +188,7 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
           : null;
 
         if (executedPlayer) {
-          // Execution - přidat do voting reveal i do dead players
+          // Execution - zobrazit pouze v voting reveal, ne v death reveal
           console.log(
             `⚖️ [VOTING REVEAL] Execution: ${executedPlayer.name} (phase: ${phase})`
           );
@@ -189,11 +196,7 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
             type: "execution",
             player: executedPlayer,
           };
-          // Přidat executed hráče do dead players pro zobrazení v death reveal sekci
-          detectedDeadPlayers.push(executedPlayer);
-          console.log(
-            `💀 [DEATH REVEAL] Added executed player to dead players: ${executedPlayer.name}`
-          );
+          // NEPŘIDÁVAT executed hráče do dead players - zobrazí se pouze v voting reveal
         } else if (mayorElected && mayorPlayer) {
           // Mayor election
           console.log(`🏛️ [VOTING REVEAL] Mayor elected: ${mayorPlayer.name}`);
@@ -394,7 +397,10 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
                 onRefresh();
               }
             } else {
-              console.warn("⚠️ [COUNTDOWN] endPhase response not successful:", response);
+              console.warn(
+                "⚠️ [COUNTDOWN] endPhase response not successful:",
+                response
+              );
             }
           })
           .catch((e) => {
@@ -425,29 +431,32 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
     console.log("🔄 Starting SSE subscription for GameArena");
 
     // Subscribe to real-time game state updates
-    const unsubscribe = gameApi.subscribeToGameState(gameState.game._id, async (freshState) => {
-      try {
-        // Use ref to get current phase value without causing subscription recreation
-        const currentPhase = currentPhaseRef.current;
-        if (freshState.game.phase !== currentPhase) {
-          console.log(
-            `🔄 [SYNC] Phase changed: ${currentPhase} → ${freshState.game.phase}`
-          );
+    const unsubscribe = gameApi.subscribeToGameState(
+      gameState.game._id,
+      async (freshState) => {
+        try {
+          // Use ref to get current phase value without causing subscription recreation
+          const currentPhase = currentPhaseRef.current;
+          if (freshState.game.phase !== currentPhase) {
+            console.log(
+              `🔄 [SYNC] Phase changed: ${currentPhase} → ${freshState.game.phase}`
+            );
 
-          // Animace se spustí automaticky přes hlavní useEffect při změně fáze
+            // Animace se spustí automaticky přes hlavní useEffect při změně fáze
 
-          if (onRefresh) {
-            try {
-              await onRefresh();
-            } catch (refreshError) {
-              console.error("❌ Error in onRefresh callback:", refreshError);
+            if (onRefresh) {
+              try {
+                await onRefresh();
+              } catch (refreshError) {
+                console.error("❌ Error in onRefresh callback:", refreshError);
+              }
             }
           }
+        } catch (e) {
+          console.error("❌ Error processing game state update:", e);
         }
-      } catch (e) {
-        console.error("❌ Error processing game state update:", e);
       }
-    });
+    );
 
     return () => {
       console.log("🔄 Cleaning up SSE subscription");
@@ -504,12 +513,14 @@ function GameArena({ gameState, onRefresh, onReturnToMenu }) {
     <div
       className={`game-arena ${phaseClass}`}
       style={
-        backgroundImage ? { 
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center center',
-          backgroundRepeat: 'no-repeat'
-        } : {}
+        backgroundImage
+          ? {
+              backgroundImage: `url(${backgroundImage})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center center",
+              backgroundRepeat: "no-repeat",
+            }
+          : {}
       }
     >
       <InGameModMenu

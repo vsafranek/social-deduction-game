@@ -167,21 +167,6 @@ function assignRandomAvatar() {
 router.post("/join", async (req, res) => {
   try {
     const { roomCode, name, sessionId } = req.body || {};
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "gameRoutes.js:177",
-        message: "Join request received",
-        data: { roomCode, name, sessionId },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {});
-    // #endregion
 
     const game = await findGameByRoomCode(roomCode);
     if (!game) return res.status(404).json({ error: "Game not found" });
@@ -200,69 +185,10 @@ router.post("/join", async (req, res) => {
       return res.status(500).json({ error: "Invalid game ID format" });
     }
 
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "gameRoutes.js:182",
-        message: "Searching for existing player",
-        data: {
-          gameId: gameIdStr,
-          sessionId,
-          searchQuery: "gameId+sessionId",
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {});
-    // #endregion
-
     let player = await findPlayerByGameAndSession(gameIdStr, sessionId);
-
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "gameRoutes.js:190",
-        message: "Player search result",
-        data: {
-          playerFound: !!player,
-          playerId: player?.id?.toString(),
-          playerGameId: player?.game_id?.toString(),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {});
-    // #endregion
 
     if (!player) {
       // Nový hráč - přiřaď unikátní náhodný avatar
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "gameRoutes.js:195",
-            message: "Creating new player",
-            data: { gameId: gameIdStr, sessionId, name },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "C",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
-
       const avatar = assignRandomAvatar();
       player = await createPlayer({
         game_id: gameIdStr,
@@ -277,25 +203,6 @@ router.post("/join", async (req, res) => {
         console.error("Failed to create player:", player);
         return res.status(500).json({ error: "Failed to create player" });
       }
-
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "gameRoutes.js:200",
-            message: "Player created",
-            data: { playerId: player.id, sessionId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "C",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
 
       // Create game log asynchronously to not block join response
       createGameLog({ game_id: gameIdStr, message: `${name} joined.` }).catch(
@@ -337,25 +244,6 @@ router.post("/join", async (req, res) => {
 
     res.json({ success: true, gameId: gameIdStr, playerId: playerIdStr });
   } catch (e) {
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "gameRoutes.js:230",
-        message: "Join error caught",
-        data: {
-          errorMessage: e.message,
-          errorCode: e.code,
-          isDuplicateKey: e.code === 11000,
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {});
-    // #endregion
     console.error("join error:", e);
     res.status(500).json({ error: e.message });
   }
@@ -497,6 +385,31 @@ function formatGameStateResponse(game, players, logs) {
 
   // Convert roleConfiguration (JSONB) to object for JSON response
   const roleConfigObj = game.role_configuration || game.roleConfiguration || {};
+  // Extract roleMaxLimits, guaranteedRoles, and teamLimits from roleConfiguration
+  // These are stored as _roleMaxLimits, _guaranteedRoles, _teamLimits within roleConfiguration
+  const roleMaxLimitsObj =
+    roleConfigObj._roleMaxLimits ||
+    game.role_max_limits ||
+    game.roleMaxLimits ||
+    {};
+  const guaranteedRolesArr =
+    roleConfigObj._guaranteedRoles ||
+    game.guaranteed_roles ||
+    game.guaranteedRoles ||
+    [];
+  const teamLimitsObj = roleConfigObj._teamLimits ||
+    game.team_limits ||
+    game.teamLimits || { good: 2, evil: 1, neutral: 0 };
+
+  // Remove internal keys from roleConfiguration for clean response
+  const cleanRoleConfig = { ...roleConfigObj };
+  delete cleanRoleConfig._roleMaxLimits;
+  delete cleanRoleConfig._guaranteedRoles;
+  delete cleanRoleConfig._teamLimits;
+
+  // Convert modifierConfiguration (JSONB) to object for JSON response
+  const modifierConfigObj =
+    game.modifier_configuration || game.modifierConfiguration || {};
 
   return {
     game: {
@@ -509,7 +422,11 @@ function formatGameStateResponse(game, players, logs) {
       timerState: game.timer_state,
       winner: game.winner,
       winnerPlayerIds: game.winner_player_ids || game.winnerPlayerIds || [],
-      roleConfiguration: roleConfigObj,
+      roleConfiguration: cleanRoleConfig,
+      modifierConfiguration: modifierConfigObj,
+      roleMaxLimits: roleMaxLimitsObj,
+      guaranteedRoles: guaranteedRolesArr,
+      teamLimits: teamLimitsObj,
     },
     players: publicPlayers,
     logs: logs.map((l) => ({
@@ -782,8 +699,15 @@ router.post("/:gameId/vote", async (req, res) => {
 router.post("/:gameId/start-config", async (req, res) => {
   try {
     const { gameId } = req.params;
-    const { assignments, modifiers, timers, roleConfiguration } =
-      req.body || {};
+    const {
+      assignments,
+      modifiers,
+      timers,
+      roleConfiguration,
+      roleMaxLimits,
+      guaranteedRoles,
+      teamLimits,
+    } = req.body || {};
 
     if (!ensureUUID(gameId))
       return res.status(400).json({ error: "Invalid game id" });
@@ -1013,6 +937,20 @@ router.post("/:gameId/start-config", async (req, res) => {
           }
         }
 
+        // Track modifier history for initial assignment
+        const playerRoleData = p.role_data || {};
+        if (!playerRoleData.modifierHistory) {
+          playerRoleData.modifierHistory = [];
+        }
+        if (p.modifier) {
+          playerRoleData.modifierHistory.push({
+            modifier: p.modifier,
+            round: 0,
+            reason: "Game start",
+          });
+        }
+        p.role_data = playerRoleData;
+
         if (!p.modifier) {
           console.log(`  ✓ ${p.name} (${p.role}/${roleTeam}) ← No modifier`);
         }
@@ -1021,21 +959,69 @@ router.post("/:gameId/start-config", async (req, res) => {
       // Batch update all modifiers
       const modifierUpdates = updatedPlayers.map((p) => ({
         id: p.id,
-        updates: { modifier: p.modifier },
+        updates: {
+          modifier: p.modifier,
+          role_data: p.role_data || {},
+        },
       }));
       if (modifierUpdates.length > 0) {
         await updatePlayersBatch(modifierUpdates);
       }
     }
 
-    // Save roleConfiguration if provided
+    // Save roleConfiguration and related settings if provided
     const gameUpdates = { ...timerUpdates };
     if (roleConfiguration) {
-      gameUpdates.role_configuration = roleConfiguration;
+      // Store roleMaxLimits, guaranteedRoles, and teamLimits within roleConfiguration JSONB
+      const enhancedRoleConfig = {
+        ...roleConfiguration,
+        _roleMaxLimits: roleMaxLimits || {},
+        _guaranteedRoles: guaranteedRoles || [],
+        _teamLimits: teamLimits || { good: 2, evil: 1, neutral: 0 },
+      };
+      gameUpdates.role_configuration = enhancedRoleConfig;
+    } else if (roleMaxLimits || guaranteedRoles || teamLimits) {
+      // If only limits are provided without roleConfiguration, merge with existing
+      const existingConfig = game.role_configuration || {};
+      const enhancedRoleConfig = {
+        ...existingConfig,
+        _roleMaxLimits: roleMaxLimits || existingConfig._roleMaxLimits || {},
+        _guaranteedRoles:
+          guaranteedRoles || existingConfig._guaranteedRoles || [],
+        _teamLimits: teamLimits ||
+          existingConfig._teamLimits || { good: 2, evil: 1, neutral: 0 },
+      };
+      gameUpdates.role_configuration = enhancedRoleConfig;
+    }
+
+    // Save modifierConfiguration if provided
+    if (modifiers) {
+      // Normalize chances to 0-1 range for storage (backend expects 0-1, frontend sends 0-100)
+      const modifierConfig = {
+        drunkChance: normalizeChance(
+          modifiers?.drunkChance ?? modifiers?.opilýChance,
+          0.2
+        ),
+        shadyChance: normalizeChance(
+          modifiers?.shadyChance ??
+            modifiers?.recluseChance ??
+            modifiers?.poustevníkChance,
+          0.15
+        ),
+        innocentChance: normalizeChance(modifiers?.innocentChance, 0.15),
+        paranoidChance: normalizeChance(modifiers?.paranoidChance, 0.1),
+        insomniacChance: normalizeChance(modifiers?.insomniacChance, 0.1),
+        sweetheartChance: normalizeChance(modifiers?.sweetheartChance, 0.1),
+        amnesiacChance: normalizeChance(modifiers?.amnesiacChance, 0),
+      };
+      gameUpdates.modifier_configuration = modifierConfig;
     }
 
     // Start by DAY with timer
-    const daySec = Number((game.timers || {}).daySeconds ?? 150);
+    // Use new timer values from gameUpdates if available, otherwise fall back to existing game.timers
+    const daySec = Number(
+      (gameUpdates.timers || game.timers || {}).daySeconds ?? 150
+    );
     gameUpdates.phase = "day";
     gameUpdates.round = 1;
     gameUpdates.timer_state = { phaseEndsAt: endInMs(daySec) };
@@ -1414,6 +1400,8 @@ router.post("/:gameId/reset-to-lobby", async (req, res) => {
     const game = await findGameById(gameId);
     if (!game) return res.status(404).json({ error: "Game not found" });
 
+    // Preserve timers, role_configuration, and modifier_config
+    // Only reset game state fields, not configuration
     await updateGame(gameId, {
       phase: "lobby",
       round: 0,
@@ -1421,6 +1409,7 @@ router.post("/:gameId/reset-to-lobby", async (req, res) => {
       timer_state: { phaseEndsAt: null },
       winner: null,
       winner_player_ids: [],
+      // timers, role_configuration, and modifier_config are preserved (not reset)
     });
 
     // Batch reset all players to lobby state
@@ -1439,6 +1428,7 @@ router.post("/:gameId/reset-to-lobby", async (req, res) => {
       vote_for_id: null,
       vote_weight: 1,
       night_action: { targetId: null, action: null, results: [] },
+      role_data: {}, // Clear role_data to remove investigation history and other role-specific data
     });
 
     await createGameLog({

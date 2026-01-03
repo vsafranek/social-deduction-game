@@ -8,6 +8,7 @@ import NightResults from '../NightResults/NightResults';
 import VotingModal from '../VotingModal/VotingModal';
 import AvatarModal from '../AvatarSelector/AvatarModal';
 import RolePoolModal from '../RolePoolModal/RolePoolModal';
+import ConfirmModal from '../../../moderator/components/ConfirmModal/ConfirmModal';
 import { gameApi } from '../../../api/gameApi';
 import './GameScreen.css';
 
@@ -22,7 +23,8 @@ function GameScreen({
   error,
   onErrorDismiss,
   onRefresh,
-  isVoting = false
+  isVoting = false,
+  onLeaveLobby
 }) {
   const [showStories, setShowStories] = useState(false);
   const [storiesShown, setStoriesShown] = useState(false);
@@ -30,6 +32,7 @@ function GameScreen({
   const [showVotingModal, setShowVotingModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showRolePoolModal, setShowRolePoolModal] = useState(false);
+  const [showLeaveLobbyModal, setShowLeaveLobbyModal] = useState(false);
   const [availableAvatars, setAvailableAvatars] = useState([]);
   const [modalKey, setModalKey] = useState(0);
 
@@ -232,6 +235,15 @@ function GameScreen({
         </div>
 
         <div className="header-right">
+          {phase === 'lobby' && onLeaveLobby && (
+            <button 
+              className="leave-lobby-button"
+              onClick={() => setShowLeaveLobbyModal(true)}
+              title="Odejít z lobby"
+            >
+              🚪
+            </button>
+          )}
           <button 
             className="role-pool-button"
             onClick={() => setShowRolePoolModal(true)}
@@ -317,6 +329,22 @@ function GameScreen({
         <RolePoolModal
           gameState={gameState}
           onClose={() => setShowRolePoolModal(false)}
+        />
+      )}
+
+      {/* Leave Lobby Confirm Modal */}
+      {showLeaveLobbyModal && onLeaveLobby && (
+        <ConfirmModal
+          title="Odejít z lobby"
+          message="Opravdu chceš odejít z lobby? Budeš se muset znovu připojit pomocí room kódu."
+          confirmText="Odejít"
+          cancelText="Zůstat"
+          onConfirm={() => {
+            setShowLeaveLobbyModal(false);
+            onLeaveLobby();
+          }}
+          onCancel={() => setShowLeaveLobbyModal(false)}
+          isDanger={true}
         />
       )}
 

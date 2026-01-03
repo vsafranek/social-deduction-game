@@ -18,7 +18,7 @@ async function resolveDayVoting(game, players, createGameLog) {
   // Helper to get game ID (supports both id and _id for compatibility)
   const getGameId = (game) => {
     const id = game.id || game._id;
-    return id && typeof id.toString === 'function' ? id.toString() : String(id);
+    return id && typeof id.toString === "function" ? id.toString() : String(id);
   };
   const gameId = getGameId(game);
 
@@ -54,16 +54,16 @@ async function resolveMayorElection(game, players, createGameLog) {
   // Helper to get game ID (supports both id and _id for compatibility)
   const getGameId = (game) => {
     const id = game.id || game._id;
-    return id && typeof id.toString === 'function' ? id.toString() : String(id);
+    return id && typeof id.toString === "function" ? id.toString() : String(id);
   };
   const gameId = getGameId(game);
-  
+
   // Helper to get player ID (supports both id and _id for compatibility)
   const getPlayerId = (player) => {
     const id = player.id || player._id;
-    return id && typeof id.toString === 'function' ? id.toString() : String(id);
+    return id && typeof id.toString === "function" ? id.toString() : String(id);
   };
-  
+
   const alive = players.filter((p) => p.alive);
   const totalAlive = alive.length;
 
@@ -218,12 +218,13 @@ async function resolveMayorElection(game, players, createGameLog) {
       });
     } else {
       // Mayor already in updates, just add vote reset
-      const mayorUpdate = playerUpdates.find(
-        (u) => {
-          const updateId = u.id && typeof u.id.toString === 'function' ? u.id.toString() : String(u.id);
-          return updateId === getPlayerId(mayor);
-        }
-      );
+      const mayorUpdate = playerUpdates.find((u) => {
+        const updateId =
+          u.id && typeof u.id.toString === "function"
+            ? u.id.toString()
+            : String(u.id);
+        return updateId === getPlayerId(mayor);
+      });
       if (mayorUpdate) {
         mayorUpdate.updates.has_voted = false;
         mayorUpdate.updates.vote_for_id = null;
@@ -248,16 +249,29 @@ async function resolveExecutionVoting(game, players, createGameLog) {
   // Helper to get game ID (supports both id and _id for compatibility)
   const getGameId = (game) => {
     const id = game.id || game._id;
-    return id && typeof id.toString === 'function' ? id.toString() : String(id);
+    return id && typeof id.toString === "function" ? id.toString() : String(id);
   };
   const gameId = getGameId(game);
-  
+
   // Helper to get player ID (supports both id and _id for compatibility)
   const getPlayerId = (player) => {
     const id = player.id || player._id;
-    return id && typeof id.toString === 'function' ? id.toString() : String(id);
+    return id && typeof id.toString === "function" ? id.toString() : String(id);
   };
-  
+
+  // Helper to get/set role_data (supports both role_data and roleData for compatibility)
+  const getRoleData = (player) => {
+    if (!player.role_data && !player.roleData) {
+      player.role_data = {};
+      player.roleData = player.role_data;
+    } else if (player.role_data && !player.roleData) {
+      player.roleData = player.role_data;
+    } else if (player.roleData && !player.role_data) {
+      player.role_data = player.roleData;
+    }
+    return player.role_data;
+  };
+
   const alive = players.filter((p) => p.alive);
   const totalAlive = alive.length;
 
@@ -323,7 +337,11 @@ async function resolveExecutionVoting(game, players, createGameLog) {
           )
           .map(
             (p) =>
-              `${p.name}${(p.vote_weight || p.voteWeight || 1) > 1 ? ` (${p.vote_weight || p.voteWeight || 1} votes)` : ""}`
+              `${p.name}${
+                (p.vote_weight || p.voteWeight || 1) > 1
+                  ? ` (${p.vote_weight || p.voteWeight || 1} votes)`
+                  : ""
+              }`
           )
           .join(", ");
         const candidate = players.find((p) => getPlayerId(p) === candidateId);
@@ -496,9 +514,24 @@ async function resolveExecutionVoting(game, players, createGameLog) {
       if (candidates.length > 0) {
         const victim =
           candidates[Math.floor(Math.random() * candidates.length)];
+
+        // Track modifier history
+        const victimRoleData = getRoleData(victim);
+        if (!victimRoleData.modifierHistory) {
+          victimRoleData.modifierHistory = [];
+        }
+        victimRoleData.modifierHistory.push({
+          modifier: "Drunk",
+          round: game.round || 0,
+          reason: "Sweetheart death",
+        });
+
         playerUpdates.push({
           id: victim.id || victim._id,
-          updates: { modifier: "Drunk" },
+          updates: {
+            modifier: "Drunk",
+            role_data: victimRoleData,
+          },
         });
         // Also update in-memory object for test compatibility
         victim.modifier = "Drunk";
@@ -517,7 +550,10 @@ async function resolveExecutionVoting(game, players, createGameLog) {
   for (const p of alive) {
     const playerId = getPlayerId(p);
     const existingUpdate = playerUpdates.find((u) => {
-      const updateId = u.id && typeof u.id.toString === 'function' ? u.id.toString() : String(u.id);
+      const updateId =
+        u.id && typeof u.id.toString === "function"
+          ? u.id.toString()
+          : String(u.id);
       return updateId === playerId;
     });
     if (!existingUpdate) {
@@ -538,7 +574,7 @@ async function resolveExecutionVoting(game, players, createGameLog) {
   }
 
   return {
-    executed: target ? (target.id || target._id) : null,
+    executed: target ? target.id || target._id : null,
     executedName: target?.name || null,
     votesFor,
     votesAgainst,

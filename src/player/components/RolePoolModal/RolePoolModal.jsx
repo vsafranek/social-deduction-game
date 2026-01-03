@@ -7,9 +7,6 @@ import './RolePoolModal.css';
 function RolePoolModal({ gameState, onClose }) {
   // Extract active roles from roleConfiguration
   const activeRoles = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RolePoolModal.jsx:10',message:'Extracting active roles',data:{hasRoleConfig:!!gameState?.game?.roleConfiguration,roleConfigType:typeof gameState?.game?.roleConfiguration,roleConfigKeys:gameState?.game?.roleConfiguration ? Object.keys(gameState.game.roleConfiguration) : []},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-    // #endregion
     if (!gameState?.game?.roleConfiguration) {
       return [];
     }
@@ -21,10 +18,6 @@ function RolePoolModal({ gameState, onClose }) {
     const configObj = roleConfig instanceof Map 
       ? Object.fromEntries(roleConfig) 
       : roleConfig;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RolePoolModal.jsx:22',message:'Processing role config',data:{configObjEntries:Object.entries(configObj).length,configObj},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-    // #endregion
 
     // Filter roles with count > 0
     Object.entries(configObj).forEach(([roleName, count]) => {

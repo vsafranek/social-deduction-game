@@ -288,11 +288,24 @@ function ModeratorView() {
         finalRoleConfig[playerId] = role;
       });
 
-      // Send to backend
+      // Build roleConfiguration from roleCount (only include roles in random pool with count > 0)
+      const roleConfiguration = {};
+      Object.entries(roleCount).forEach(([role, count]) => {
+        if (randomPoolRoles[role] && count > 0) {
+          roleConfiguration[role] = count;
+        }
+      });
+
+      // Send to backend with all required parameters
       await gameApi.startGameWithConfig(
         gameId,
         finalRoleConfig,
-        modifierConfig
+        modifierConfig,
+        null, // timers - legacy component doesn't have timer configuration
+        roleConfiguration,
+        null, // roleMaxLimits - legacy component doesn't have this feature
+        [], // guaranteedRoles - legacy component doesn't have this feature
+        teamLimits
       );
       await fetchGameState();
     } catch (error) {

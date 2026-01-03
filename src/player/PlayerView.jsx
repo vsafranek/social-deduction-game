@@ -50,42 +50,219 @@ function PlayerView() {
     return sid;
   });
 
-  // Auto-join z URL parametrů
+  // Helper functions for localStorage
+  const saveGameSession = (gameId, playerId, playerName, roomCode) => {
+    const sessionData = {
+      gameId,
+      playerId,
+      playerName,
+      roomCode,
+      sessionId,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(
+      `gameSession_${sessionId}`,
+      JSON.stringify(sessionData)
+    );
+    console.log("💾 Saved game session to localStorage:", sessionData);
+  };
+
+  const loadGameSession = () => {
+    const sessionDataStr = localStorage.getItem(`gameSession_${sessionId}`);
+    if (!sessionDataStr) return null;
+
+    try {
+      const sessionData = JSON.parse(sessionDataStr);
+      // Verify sessionId matches
+      if (sessionData.sessionId !== sessionId) {
+        console.log("🔄 SessionId mismatch, clearing saved session");
+        localStorage.removeItem(`gameSession_${sessionId}`);
+        return null;
+      }
+      console.log("💾 Loaded game session from localStorage:", sessionData);
+      return sessionData;
+    } catch (err) {
+      console.error("❌ Error parsing saved session:", err);
+      localStorage.removeItem(`gameSession_${sessionId}`);
+      return null;
+    }
+  };
+
+  const clearGameSession = () => {
+    localStorage.removeItem(`gameSession_${sessionId}`);
+    console.log("🗑️ Cleared game session from localStorage");
+  };
+
+  // Auto-join z URL parametrů nebo obnovení z localStorage
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlRoomCode = urlParams.get("room");
     const urlPlayerName = urlParams.get("playerName");
+    const forceNew = urlParams.get("newSession");
 
-    if (urlRoomCode) {
-      setRoomCode(urlRoomCode);
-      console.log("🔑 Room code z URL:", urlRoomCode);
+    // Pokud je forceNew, vymaž uloženou session
+    if (forceNew === "1") {
+      localStorage.removeItem(`gameSession_${sessionId}`);
     }
 
-    if (urlPlayerName) {
-      setPlayerName(urlPlayerName);
-      console.log("👤 Player name z URL:", urlPlayerName);
+    // Zkus načíst uloženou session
+    const sessionDataStr = localStorage.getItem(`gameSession_${sessionId}`);
+    let savedSession = null;
+
+    if (sessionDataStr && forceNew !== "1") {
+      try {
+        const parsed = JSON.parse(sessionDataStr);
+        if (parsed.sessionId === sessionId) {
+          savedSession = parsed;
+        }
+      } catch (err) {
+        console.error("❌ Error parsing saved session:", err);
+        localStorage.removeItem(`gameSession_${sessionId}`);
+      }
     }
-  }, []);
+
+    if (savedSession) {
+      // Máme uloženou session - zkus se automaticky připojit
+      console.log("🔄 Attempting to restore game session...");
+      setGameId(savedSession.gameId);
+      setPlayerId(savedSession.playerId);
+      setPlayerName(savedSession.playerName);
+      setRoomCode(savedSession.roomCode);
+      setStep("playing");
+      setLoading(true);
+
+      // Zkus se připojit zpět do hry
+      gameApi
+        .joinGameByCode(
+          savedSession.roomCode,
+          savedSession.playerName,
+          sessionId
+        )
+        .then((result) => {
+          if (result.error) {
+            throw new Error(result.error);
+          }
+
+          // Ověř, že playerId odpovídá
+          let currentPlayerId = result.playerId;
+          if (
+            result.playerId?.toString() !== savedSession.playerId?.toString()
+          ) {
+            console.warn("⚠️ PlayerId mismatch, updating...");
+            setPlayerId(result.playerId);
+            const updatedSession = {
+              gameId: result.gameId,
+              playerId: result.playerId,
+              playerName: savedSession.playerName,
+              roomCode: savedSession.roomCode,
+              sessionId,
+              timestamp: Date.now(),
+            };
+            localStorage.setItem(
+              `gameSession_${sessionId}`,
+              JSON.stringify(updatedSession)
+            );
+            // Update currentPlayerId to use the new ID from result
+            currentPlayerId = result.playerId;
+          }
+
+          setGameId(result.gameId);
+          setPlayerId(result.playerId);
+          setLoading(false);
+
+          // Načíst game state
+          return gameApi.getGameState(result.gameId).then((data) => ({
+            data,
+            playerId: currentPlayerId,
+          }));
+        })
+        .then(({ data, playerId }) => {
+          // Ověř, že hráč stále existuje v hře
+          // Use the current playerId (which may have been updated)
+          if (data?.players) {
+            const currentPlayerExists = data.players.some(
+              (p) => p._id?.toString() === playerId?.toString()
+            );
+
+            if (currentPlayerExists) {
+              setGameState(data);
+              console.log("✅ Successfully restored game session");
+            } else {
+              throw new Error("Player not found in game");
+            }
+          } else {
+            throw new Error("Invalid game state");
+          }
+        })
+        .catch((err) => {
+          console.error("❌ Failed to restore game session:", err);
+          // Vymazat uloženou session a vrátit na login
+          localStorage.removeItem(`gameSession_${sessionId}`);
+          setStep("login");
+          setGameId(null);
+          setPlayerId(null);
+          setGameState(null);
+          setLoading(false);
+          if (
+            err.message?.includes("not found") ||
+            err.message?.includes("404")
+          ) {
+            setError(
+              "Hra byla ukončena nebo neexistuje. Prosím připoj se znovu."
+            );
+          } else {
+            setError(
+              "Nepodařilo se obnovit připojení. Prosím připoj se znovu."
+            );
+          }
+        });
+    } else {
+      // Žádná uložená session - použij URL parametry
+      if (urlRoomCode) {
+        setRoomCode(urlRoomCode);
+        console.log("🔑 Room code z URL:", urlRoomCode);
+      }
+
+      if (urlPlayerName) {
+        setPlayerName(urlPlayerName);
+        console.log("👤 Player name z URL:", urlPlayerName);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Spustit pouze jednou při mountu
 
   // Automatické přihlášení z URL - pouze v Electronu (pro testování)
+  // Tento useEffect se spustí pouze pokud jsme na login screen a nemáme uloženou session
   useEffect(() => {
     // Check if running in Electron
     const isElectron =
       typeof window !== "undefined" && window.electronAPI !== undefined;
 
     // Auto-login only in Electron (for testing with multiple windows)
-    if (isElectron && playerName && roomCode && step === "login" && !loading) {
+    // Pouze pokud jsme na login screen a nemáme uloženou session
+    const hasSavedSession = localStorage.getItem(`gameSession_${sessionId}`);
+    if (
+      isElectron &&
+      playerName &&
+      roomCode &&
+      step === "login" &&
+      !loading &&
+      !hasSavedSession
+    ) {
       console.log("🤖 Auto-login z URL (Electron test mode)");
       console.log("  SessionId:", sessionId);
       performLogin(playerName, roomCode);
     }
-  }, [playerName, roomCode, step, loading]);
+  }, [playerName, roomCode, step, loading, sessionId]);
 
   // Real-time game state updates via Server-Sent Events
   useEffect(() => {
     if (!gameId || !playerId) return;
 
-    console.log("🔄 Starting SSE subscription for game state with playerId:", playerId);
+    console.log(
+      "🔄 Starting SSE subscription for game state with playerId:",
+      playerId
+    );
 
     // Subscribe to real-time game state updates
     const unsubscribe = gameApi.subscribeToGameState(
@@ -107,6 +284,8 @@ function PlayerView() {
             if (preservedRoomCode && preservedRoomCode !== roomCode) {
               setRoomCode(preservedRoomCode);
             }
+            // Vymazat uloženou session
+            clearGameSession();
             setStep("login");
             setGameId(null);
             setPlayerId(null);
@@ -127,6 +306,8 @@ function PlayerView() {
             err.message?.includes("Game not found")
           ) {
             console.log("🚪 Game was deleted, returning to login screen");
+            // Vymazat uloženou session
+            clearGameSession();
             setStep("login");
             setGameId(null);
             setPlayerId(null);
@@ -140,11 +321,15 @@ function PlayerView() {
         // Handle SSE connection errors (e.g., 404 when game doesn't exist)
         console.error("❌ SSE connection error:", error);
         console.log("🚪 Game connection failed, returning to login screen");
+        // Vymazat uloženou session
+        clearGameSession();
         setStep("login");
         setGameId(null);
         setPlayerId(null);
         setGameState(null);
-        setError("Hra byla ukončena moderátorem nebo neexistuje. Prosím připoj se znovu.");
+        setError(
+          "Hra byla ukončena moderátorem nebo neexistuje. Prosím připoj se znovu."
+        );
         unsubscribe();
       }
     );
@@ -191,6 +376,9 @@ function PlayerView() {
       setError("");
       setLoading(false);
 
+      // Uložit session do localStorage pro obnovení po refreshi
+      saveGameSession(result.gameId, result.playerId, name, room);
+
       await fetchGameState();
     } catch (err) {
       setError("Nepodařilo se připojit.");
@@ -215,59 +403,19 @@ function PlayerView() {
           (p) => p._id?.toString() === playerId?.toString()
         );
 
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "PlayerView.jsx:150",
-              message: "fetchGameState player check",
-              data: { currentPlayerExists, playerId, roomCode },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run1",
-              hypothesisId: "A",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
-
         if (!currentPlayerExists) {
           // Player was kicked from the game
           console.log(
             "🚪 Player was kicked from the game, returning to login screen"
           );
-          // #region agent log
-          fetch(
-            "http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                location: "PlayerView.jsx:163",
-                message: "fetchGameState player kicked",
-                data: {
-                  playerId,
-                  currentRoomCode: roomCode,
-                  gameRoomCode: data?.game?.roomCode,
-                  preservingRoomCode: true,
-                },
-                timestamp: Date.now(),
-                sessionId: "debug-session",
-                runId: "run1",
-                hypothesisId: "A",
-              }),
-            }
-          ).catch(() => {});
-          // #endregion
           // Preserve roomCode when returning to login screen
           // Get roomCode from game state if available, otherwise keep current roomCode
           const preservedRoomCode = data?.game?.roomCode || roomCode;
           if (preservedRoomCode && preservedRoomCode !== roomCode) {
             setRoomCode(preservedRoomCode);
           }
+          // Vymazat uloženou session
+          clearGameSession();
           setStep("login");
           setGameId(null);
           setPlayerId(null);
@@ -287,6 +435,8 @@ function PlayerView() {
         error.message?.includes("Game not found")
       ) {
         console.log("🚪 Game was deleted, returning to login screen");
+        // Vymazat uloženou session
+        clearGameSession();
         setStep("login");
         setGameId(null);
         setPlayerId(null);
@@ -416,6 +566,19 @@ function PlayerView() {
     );
   }
 
+  // Handler pro odchod z lobby
+  const handleLeaveLobby = () => {
+    // Vymazat uloženou session
+    clearGameSession();
+    // Vrátit na login screen
+    setStep("login");
+    setGameId(null);
+    setPlayerId(null);
+    setGameState(null);
+    // Zachovat roomCode pro snadné znovupřipojení
+    // playerName a roomCode zůstávají v state
+  };
+
   // ✅ Pass currentPlayer to GameScreen
   return (
     <GameScreen
@@ -429,6 +592,7 @@ function PlayerView() {
       error={error}
       onRefresh={fetchGameState}
       isVoting={isVoting}
+      onLeaveLobby={handleLeaveLobby}
     />
   );
 }
