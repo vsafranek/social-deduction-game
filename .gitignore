@@ -31,3 +31,9 @@ frontend/dist
 *.sln
 *.sw?
 .vercel
+
+# Next.js
+.next
+.next/
+frontend/.next
+frontend/.next/

@@ -64,7 +64,15 @@ app.whenReady().then(async () => {
 
     // Health check
     expressApp.get("/api/health", (req, res) => {
-      res.json({ status: "ok", ip: LOCAL_IP, port: PORT });
+      console.log("🔍 [DEBUG] Health endpoint called");
+      try {
+        const response = { status: "ok", ip: LOCAL_IP, port: PORT };
+        console.log("🔍 [DEBUG] Health endpoint response:", response);
+        res.json(response);
+      } catch (error) {
+        console.error("🔍 [DEBUG] Health endpoint error:", error);
+        res.status(500).json({ error: error.message });
+      }
     });
 
     // Debug/telemetry ingest endpoint (silently accepts and discards data)
@@ -157,10 +165,10 @@ app.whenReady().then(async () => {
         const outPath = path.join(__dirname, "../frontend/out");
         if (require("fs").existsSync(outPath)) {
           expressApp.use(express.static(outPath));
-          expressApp.get("*", (req, res) => {
-            if (req.path.startsWith("/api")) return;
+      expressApp.get("*", (req, res) => {
+        if (req.path.startsWith("/api")) return;
             res.sendFile(path.join(outPath, "index.html"));
-          });
+      });
         } else {
           console.error("❌ No Next.js build found! Please run 'npm run build' in frontend directory.");
         }
@@ -168,11 +176,20 @@ app.whenReady().then(async () => {
     }
 
     expressApp.use("/api/*", (req, res) => {
+      console.log("🔍 [DEBUG] Catch-all API route hit:", req.path);
       res.status(404).json({ error: "API endpoint not found", path: req.path });
+    });
+
+    // Error handler (must be last, after all routes)
+    expressApp.use((err, req, res, next) => {
+      console.error('🔍 [DEBUG] Express error handler:', err.message);
+      console.error('🔍 [DEBUG] Express error stack:', err.stack);
+      res.status(500).json({ error: err.message });
     });
 
     // Start server
     const serverInstance = expressApp.listen(PORT, "0.0.0.0", () => {
+      console.log(`🔍 [DEBUG] Express server started on port ${PORT}`);
       console.log("");
       const GAME_NAME = "Shadows of Gloaming";
       console.log("╔═══════════════════════════════════════════════════════╗");
@@ -191,9 +208,18 @@ app.whenReady().then(async () => {
     });
 
     serverInstance.setMaxListeners(50);
+    
+    serverInstance.on('error', (err) => {
+      console.error("🔍 [DEBUG] Express server error:", err);
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use!`);
+      }
+    });
+    
     createWindow();
   } catch (error) {
     console.error("❌ FATAL ERROR during startup:", error);
+    console.error("🔍 [DEBUG] Error stack:", error.stack);
     process.exit(1);
   }
 });
