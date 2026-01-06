@@ -96,9 +96,6 @@ function clearExpiredEffects(players) {
 
 // Create game
 router.post("/create", async (req, res) => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:98',message:'createGame endpoint called',data:{hasBody:!!req.body},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   try {
     const { ip, port } = req.body || {};
     
@@ -108,42 +105,20 @@ router.post("/create", async (req, res) => {
     const maxAttempts = 10;
     let existingGame = null;
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:107',message:'Starting room code generation',data:{maxAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
     do {
       attempts++;
       roomCode = Math.floor(1000 + Math.random() * 9000).toString();
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:113',message:'Generated room code',data:{roomCode,attempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
       // Check if room code already exists
       existingGame = await findGameByRoomCode(roomCode);
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:118',message:'Checked room code existence',data:{roomCode,exists:!!existingGame,attempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
       if (existingGame) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:121',message:'Room code collision detected',data:{roomCode,existingGameId:existingGame.id,attempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
       }
     } while (existingGame && attempts < maxAttempts);
     
     if (existingGame) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:128',message:'Failed to generate unique room code',data:{attempts,maxAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       throw new Error(`Failed to generate unique room code after ${maxAttempts} attempts`);
     }
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:133',message:'Attempting to create game with unique room code',data:{roomCode,attempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     const game = await createGame({
       room_code: roomCode,
@@ -153,10 +128,6 @@ router.post("/create", async (req, res) => {
       round: 0,
       timer_state: { phaseEndsAt: null },
     });
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:143',message:'Game created successfully',data:{gameId:game.id,roomCode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     await createGameLog({
       game_id: game.id,
@@ -165,9 +136,6 @@ router.post("/create", async (req, res) => {
 
     res.json({ success: true, gameId: game.id, roomCode });
   } catch (e) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:152',message:'createGame error caught',data:{error:e.message,errorCode:e.code,stack:e.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     console.error("create error:", e);
     res.status(500).json({ error: e.message });
   }
@@ -177,10 +145,19 @@ router.post("/create", async (req, res) => {
 function getAllAvailableAvatars() {
   const avatars = [];
 
-  // Get avatars ONLY from /avatars/ folder (public/avatars/)
-  const avatarsDir = path.join(__dirname, "../../public/avatars");
+  // Get avatars ONLY from /avatars/ folder (frontend/public/avatars/)
+  // Try both development and production paths
+  const devAvatarsDir = path.join(__dirname, "../../frontend/public/avatars");
+  const prodAvatarsDir = path.join(__dirname, "../../dist/avatars");
+  
+  let avatarsDir = null;
+  if (fs.existsSync(devAvatarsDir)) {
+    avatarsDir = devAvatarsDir;
+  } else if (fs.existsSync(prodAvatarsDir)) {
+    avatarsDir = prodAvatarsDir;
+  }
 
-  if (fs.existsSync(avatarsDir)) {
+  if (avatarsDir && fs.existsSync(avatarsDir)) {
     const files = fs.readdirSync(avatarsDir);
 
     files.forEach((file) => {
@@ -192,6 +169,10 @@ function getAllAvailableAvatars() {
         avatars.push(`/avatars/${file}`);
       }
     });
+    
+    console.log(`✅ Found ${avatars.length} avatars in ${avatarsDir}`);
+  } else {
+    console.warn(`⚠️ Avatars directory not found. Tried: ${devAvatarsDir}, ${prodAvatarsDir}`);
   }
 
   return avatars;
@@ -217,21 +198,10 @@ function assignRandomAvatar() {
 
 // Join by room code
 router.post("/join", async (req, res) => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:219',message:'join endpoint called',data:{hasBody:!!req.body,bodyKeys:req.body?Object.keys(req.body):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   try {
     const { roomCode, name, sessionId } = req.body || {};
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:225',message:'Parsed request body',data:{roomCode:!!roomCode,name:!!name,sessionId:!!sessionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     const game = await findGameByRoomCode(roomCode);
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:229',message:'Game lookup result',data:{gameFound:!!game,gameId:game?.id,roomCode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     
     if (!game) return res.status(404).json({ error: "Game not found" });
 
@@ -244,28 +214,20 @@ router.post("/join", async (req, res) => {
         ? String(gameId)
         : null;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:240',message:'Game ID normalization',data:{gameId,gameIdStr,isValidUUID:gameIdStr?ensureUUID(gameIdStr):false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-
     if (!gameIdStr || !ensureUUID(gameIdStr)) {
       console.error("Invalid game ID format:", gameId, gameIdStr);
       return res.status(500).json({ error: "Invalid game ID format" });
     }
 
     let player = await findPlayerByGameAndSession(gameIdStr, sessionId);
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:248',message:'Player lookup result',data:{playerFound:!!player,playerId:player?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
 
     if (!player) {
       // Nový hráč - přiřaď unikátní náhodný avatar
       const avatar = assignRandomAvatar();
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:253',message:'Assigning avatar for new player',data:{avatar,avatarIsNull:avatar===null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
+      if (!avatar) {
+        console.error("❌ Failed to assign avatar to new player - no avatars available");
+      }
       
       player = await createPlayer({
         game_id: gameIdStr,
@@ -274,16 +236,14 @@ router.post("/join", async (req, res) => {
         role: null,
         avatar,
       });
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:262',message:'Player created',data:{playerCreated:!!player,playerId:player?.id,hasAvatar:!!player?.avatar},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
 
       // Validate player was created successfully
       if (!player || !player.id) {
         console.error("Failed to create player:", player);
         return res.status(500).json({ error: "Failed to create player" });
       }
+      
+      console.log(`✅ Created new player ${player.name} with avatar: ${player.avatar || "MISSING"}`);
 
       // Create game log asynchronously to not block join response
       createGameLog({ game_id: gameIdStr, message: `${name} joined.` }).catch(
@@ -296,14 +256,16 @@ router.post("/join", async (req, res) => {
       if (!player.avatar || !player.avatar.trim()) {
         const avatar = assignRandomAvatar();
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:279',message:'Assigning avatar to existing player',data:{avatar,playerId:player.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
-        
-        player = await updatePlayer(player.id, { avatar });
-        console.log(
-          `✅ Assigned avatar to existing player ${player.name}: ${avatar}`
-        );
+        if (!avatar) {
+          console.error(`❌ Failed to assign avatar to existing player ${player.name} - no avatars available`);
+        } else {
+          player = await updatePlayer(player.id, { avatar });
+          console.log(
+            `✅ Assigned avatar to existing player ${player.name}: ${avatar || "MISSING"}`
+          );
+        }
+      } else {
+        console.log(`ℹ️ Existing player ${player.name} already has avatar: ${player.avatar}`);
       }
     }
 
@@ -316,10 +278,6 @@ router.post("/join", async (req, res) => {
         ? String(playerId)
         : null;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:293',message:'Final ID validation',data:{gameIdStr,playerIdStr,hasBothIds:!!gameIdStr&&!!playerIdStr},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
-
     if (!gameIdStr || !playerIdStr) {
       console.error("Missing IDs:", {
         gameId: gameIdStr,
@@ -330,21 +288,10 @@ router.post("/join", async (req, res) => {
 
     // Emit game state update so all clients (moderator and players) see the new player
     // Use debounced update to batch rapid joins
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:304',message:'Emitting game state update',data:{gameIdStr},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-    // #endregion
-    
     await emitGameStateUpdate(gameIdStr);
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:307',message:'Join successful, sending response',data:{gameIdStr,playerIdStr},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     res.json({ success: true, gameId: gameIdStr, playerId: playerIdStr });
   } catch (e) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34425453-c27a-41d3-9177-04e276b36c3a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'gameRoutes.js:312',message:'join error caught',data:{error:e.message,errorCode:e.code,stack:e.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-    // #endregion
     console.error("join error:", e);
     res.status(500).json({ error: e.message });
   }

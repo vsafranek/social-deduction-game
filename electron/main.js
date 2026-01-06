@@ -13,7 +13,11 @@ let playerWindows = {}; // Ukládáme otevřená player okna
 const expressApp = express();
 const PORT = 3001;
 const NEXTJS_PORT = 3000;
-const isDev = !app.isPackaged;
+// Check both app.isPackaged and NODE_ENV to determine if we're in production
+// Note: NODE_ENV may be set later, so use a function to evaluate dynamically
+function isDev() {
+  return !app.isPackaged && process.env.NODE_ENV !== "production";
+}
 
 console.log("🚀 Starting Electron app...");
 
@@ -49,9 +53,17 @@ app.whenReady().then(async () => {
   console.log("⚡ Electron ready, starting server...");
   try {
     // Set NODE_ENV to production if app is packaged (production build)
+    // Also respect NODE_ENV if it's already set (from npm start)
     if (app.isPackaged && !process.env.NODE_ENV) {
       process.env.NODE_ENV = "production";
     }
+    // Ensure NODE_ENV is set for production mode detection
+    if (!process.env.NODE_ENV) {
+      process.env.NODE_ENV = "development";
+    }
+    
+    // Now that NODE_ENV is set, log the mode
+    console.log(`📦 Mode: ${isDev() ? "Development" : "Production"}`);
 
     console.log("🔌 Connecting to Supabase...");
     const { connectDB } = require("./database");
@@ -96,7 +108,7 @@ app.whenReady().then(async () => {
     });
 
     // Next.js proxy in development
-    if (isDev) {
+    if (isDev()) {
       console.log("🔧 Development mode - setting up Next.js proxy...");
       const nextjsProxy = createProxyMiddleware({
         target: `http://localhost:${NEXTJS_PORT}`,
@@ -251,7 +263,7 @@ function createWindow() {
     }
   });
 
-  if (isDev) {
+  if (isDev()) {
     mainWindow.webContents.openDevTools();
   }
 
