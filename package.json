@@ -41,5 +41,63 @@
     "electron-builder": "^25.0.0",
     "jest": "^30.2.0",
     "wait-on": "^8.0.0"
+  },
+  "author": {
+    "name": "Shadows of Gloaming Team"
+  },
+  "license": "UNLICENSED",
+  "build": {
+    "appId": "com.shadowsofgloaming.game",
+    "productName": "Shadows of Gloaming",
+    "copyright": "Copyright © 2024 Shadows of Gloaming",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/.next/**/*",
+      "frontend/public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "publisherName": "Shadows of Gloaming",
+      "verifyUpdateCodeSignature": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.games",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Game"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Shadows of Gloaming"
+    }
   }
 }

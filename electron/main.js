@@ -1,5 +1,5 @@
 // electron/main.js
-const { app, BrowserWindow, ipcMain, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, screen } = require("electron");
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
@@ -9,6 +9,7 @@ const os = require("os");
 const settingsStore = require("./store");
 
 let mainWindow;
+let splashWindow;
 let playerWindows = {}; // Store open player windows
 
 const expressApp = express();
@@ -238,6 +239,9 @@ app.whenReady().then(async () => {
       }
     });
     
+    // Show splash screen while main window loads
+    splashWindow = await createSplashWindow();
+    
     createWindow();
   } catch (error) {
     console.error("❌ FATAL ERROR during startup:", error);
@@ -246,11 +250,130 @@ app.whenReady().then(async () => {
   }
 });
 
+// Helper function to get icon path (case-insensitive check)
+function getIconPath() {
+  const fs = require("fs");
+  const buildDir = path.join(__dirname, "../build");
+  
+  // Helper to check if file exists (case-insensitive on Windows)
+  function fileExists(filePath) {
+    try {
+      return fs.existsSync(filePath);
+    } catch {
+      return false;
+    }
+  }
+  
+  // Helper to find file with any case variation
+  function findFile(dir, baseName, extensions) {
+    for (const ext of extensions) {
+      // Try exact case first
+      let filePath = path.join(dir, `${baseName}${ext}`);
+      if (fileExists(filePath)) return filePath;
+      
+      // Try lowercase
+      filePath = path.join(dir, `${baseName.toLowerCase()}${ext}`);
+      if (fileExists(filePath)) return filePath;
+      
+      // Try uppercase
+      filePath = path.join(dir, `${baseName.toUpperCase()}${ext}`);
+      if (fileExists(filePath)) return filePath;
+    }
+    return null;
+  }
+  
+  let iconPath;
+  if (process.platform === "win32") {
+    // Windows: prefer .ico, fallback to .png, then favicon.*
+    iconPath = findFile(buildDir, "icon", [".ico", ".ICO"]);
+    if (!iconPath) iconPath = findFile(buildDir, "icon", [".png", ".PNG"]);
+    if (!iconPath) iconPath = findFile(buildDir, "favicon", [".ico", ".ICO", ".png", ".PNG"]);
+  } else if (process.platform === "darwin") {
+    // macOS: prefer .icns, fallback to .png, then favicon.*
+    iconPath = findFile(buildDir, "icon", [".icns", ".ICNS"]);
+    if (!iconPath) iconPath = findFile(buildDir, "icon", [".png", ".PNG"]);
+    if (!iconPath) iconPath = findFile(buildDir, "favicon", [".icns", ".ICNS", ".png", ".PNG"]);
+  } else {
+    // Linux and others: use .png, then favicon.*
+    iconPath = findFile(buildDir, "icon", [".png", ".PNG"]);
+    if (!iconPath) iconPath = findFile(buildDir, "favicon", [".png", ".PNG", ".ico", ".ICO"]);
+  }
+  
+  // Fallback path for logging; may not exist if icons are missing
+  return iconPath || path.join(buildDir, "icon.png");
+}
+
+// Lightweight splash screen shown while the main window is loading
+// Uses same size as main window (1400x900) or fullscreen if main window will be fullscreen
+async function createSplashWindow() {
+  // Load settings to check if main window will be fullscreen
+  await settingsStore.initStore();
+  const settings = settingsStore.getSettings();
+  const willBeFullscreen = settings.fullscreen !== false; // Default true
+  
+  // Main window dimensions
+  const MAIN_WINDOW_WIDTH = 1400;
+  const MAIN_WINDOW_HEIGHT = 900;
+  
+  let splashOptions;
+  
+  if (willBeFullscreen) {
+    // If main window will be fullscreen, make splash fullscreen too
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+    splashOptions = {
+      width,
+      height,
+      fullscreen: true,
+      fullscreenable: false,
+    };
+  } else {
+    // Use same size as main window
+    splashOptions = {
+      width: MAIN_WINDOW_WIDTH,
+      height: MAIN_WINDOW_HEIGHT,
+      fullscreen: false,
+      fullscreenable: false,
+    };
+  }
+
+  const splash = new BrowserWindow({
+    ...splashOptions,
+    resizable: false,
+    movable: false,
+    frame: false,
+    show: true,
+    transparent: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    center: true,
+    backgroundColor: "#040309",
+    autoHideMenuBar: true,
+  });
+
+  try {
+    splash.loadFile(path.join(__dirname, "splash.html"));
+  } catch (error) {
+    console.error("⚠️ Could not load splash screen:", error);
+  }
+
+  return splash;
+}
+
 function createWindow() {
   console.log("🪟 Creating Moderator window...");
   
-  // Always create window with frame (title bar) - it will be hidden automatically in fullscreen
-  // When fullscreen is disabled, frame will be visible
+  // Get icon path using helper function
+  const iconPath = getIconPath();
+  
+  // Only set icon if file exists
+  const iconOptions = {};
+  if (require("fs").existsSync(iconPath)) {
+    iconOptions.icon = iconPath;
+    console.log(`🖼️ Using icon: ${iconPath}`);
+  } else {
+    console.log(`⚠️ Icon not found at ${iconPath}, using default Electron icon`);
+  }
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -258,6 +381,7 @@ function createWindow() {
     show: false, // Window won't show until ready
     frame: true, // Show title bar (will be hidden automatically in fullscreen)
     autoHideMenuBar: !isDev(), // Hide menu bar in production (Alt can show if setMenuBarVisibility true)
+    ...iconOptions, // Include icon if available
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -304,7 +428,19 @@ function createWindow() {
       console.log("📌 Window always on top disabled (from saved settings)");
     }
     
+    // Show main window first
     mainWindow.show();
+    
+    // Close splash screen after a short delay to ensure React app is ready
+    // This prevents flicker between splash and AppLoadingScreen (which is skipped in Electron)
+    setTimeout(() => {
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();
+        splashWindow = null;
+        console.log("🎬 Splash screen closed");
+      }
+    }, 300); // Small delay to let React app prepare
+    
     // Focus on window
     if (mainWindow) {
       mainWindow.focus();
@@ -350,6 +486,13 @@ function createWindow() {
 function createPlayerWindow(playerName, roomCode, sessionId) {
   console.log(`🎮 Creating player window for: ${playerName}`);
 
+  // Use same icon logic as main window
+  const playerIconPath = getIconPath();
+  const playerIconOptions = {};
+  if (require("fs").existsSync(playerIconPath)) {
+    playerIconOptions.icon = playerIconPath;
+  }
+
   const playerWindow = new BrowserWindow({
     width: 500,
     height: 800,
@@ -357,6 +500,7 @@ function createPlayerWindow(playerName, roomCode, sessionId) {
     show: false, // Window won't show until ready
     frame: false, // Remove title bar
     autoHideMenuBar: !isDev(), // Hide menu bar in production
+    ...playerIconOptions, // Include icon if available
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
