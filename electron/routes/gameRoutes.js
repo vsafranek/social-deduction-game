@@ -222,7 +222,7 @@ router.post("/join", async (req, res) => {
     let player = await findPlayerByGameAndSession(gameIdStr, sessionId);
 
     if (!player) {
-      // Nový hráč - přiřaď unikátní náhodný avatar
+      // New player - assign unique random avatar
       const avatar = assignRandomAvatar();
       
       if (!avatar) {
@@ -252,7 +252,7 @@ router.post("/join", async (req, res) => {
         }
       );
     } else {
-      // Existující hráč - pokud nemá avatar, přiřaď mu náhodný volný
+      // Existing player - if no avatar, assign random available one
       if (!player.avatar || !player.avatar.trim()) {
         const avatar = assignRandomAvatar();
         
@@ -428,7 +428,7 @@ function formatGameStateResponse(game, players, logs) {
     voteWeight: p.vote_weight || 1,
     avatar: p.avatar,
     nightResults: p.night_action?.results || [],
-    roleData: p.role_data || {}, // Přidej roleData pro sledování navštívených hráčů (Infected)
+    roleData: p.role_data || {}, // Add roleData for tracking visited players (Infected)
   }));
 
   // Convert roleConfiguration (JSONB) to object for JSON response
@@ -675,7 +675,7 @@ router.post("/:gameId/vote", async (req, res) => {
     player.has_voted = true;
     player.vote_for_id = targetId ? targetId : null;
 
-    // Zaznamenej zprávu o hlasování
+    // Record voting message
     if (targetId) {
       const target = await findPlayerById(targetId, "*");
       await createGameLog({
@@ -689,12 +689,12 @@ router.post("/:gameId/vote", async (req, res) => {
       });
     }
 
-    // Zkontroluj, zda všichni živí odhlasovali
+    // Check if all alive players have voted
     const allPlayers = await findPlayersByGameId(gameId, "*");
     const alivePlayers = allPlayers.filter((p) => p.alive);
     const allVoted = alivePlayers.every((p) => p.has_voted);
 
-    // Zkontroluj, zda všichni hlasovali skip (null)
+    // Check if all players voted skip (null)
     const allSkipped = allVoted && alivePlayers.every((p) => !p.vote_for_id);
 
     const timerState = game.timer_state || {};
@@ -703,7 +703,7 @@ router.post("/:gameId/vote", async (req, res) => {
       const currentEnds = new Date(timerState.phaseEndsAt).getTime();
 
       if (allSkipped) {
-        // Pokud všichni hlasovali skip, přeskoč čas (ukonči den okamžitě)
+        // If all players voted skip, skip time (end day immediately)
         await updateGame(gameId, {
           timer_state: { phaseEndsAt: new Date(now + 3 * 1000) },
         });
@@ -713,10 +713,10 @@ router.post("/:gameId/vote", async (req, res) => {
         });
         console.log("⏱️ All alive players skipped voting, ending day in 3s");
       } else {
-        // Normální zkrácení na 10 sekund
-        const shortDeadline = now + 10 * 1000; // 10 sekund od teď
+        // Normal shortening to 10 seconds
+        const shortDeadline = now + 10 * 1000; // 10 seconds from now
 
-        // Zkrať pouze pokud by to bylo dřív než původní deadline
+        // Shorten only if it would be earlier than original deadline
         if (shortDeadline < currentEnds) {
           await updateGame(gameId, {
             timer_state: { phaseEndsAt: new Date(shortDeadline) },
@@ -852,7 +852,7 @@ router.post("/:gameId/start-config", async (req, res) => {
       const roleData = ROLES[p.role];
       const currentRoleData = p.role_data || {};
 
-      // Pro dual role s hasLimitedUses - inicializuj usesRemaining pro sekundární akce
+      // For dual role with hasLimitedUses - initialize usesRemaining for secondary action
       if (roleData?.actionType === "dual" && roleData?.hasLimitedUses) {
         const usesRemaining = roleData.maxUses || 3;
         const updatedRoleData = { ...currentRoleData, usesRemaining };
@@ -1197,7 +1197,7 @@ router.post("/:gameId/end-night", async (req, res) => {
       timer_state: { phaseEndsAt: endInMs(daySec) },
     });
 
-    // ✅ RESET hlasování pro nový den - batch update
+    // ✅ RESET voting for new day - batch update
     console.log("🧹 Resetting votes for new day...");
     await updatePlayersByGameId(gameId, {
       has_voted: false,
@@ -1235,7 +1235,7 @@ router.post("/:gameId/voting-reveal-to-night", async (req, res) => {
       return res.status(400).json({ error: "Not in voting_reveal phase" });
 
     const nightSec = Number(game.timers?.nightSeconds ?? 90);
-    // Noc má stejné číslo jako poslední den - kolo se nezvyšuje
+    // Night has same number as last day - round doesn't increase
     const currentRound = game.round || 0;
     await updateGame(gameId, {
       phase: "night",
@@ -1416,7 +1416,7 @@ router.post("/:gameId/end-day", async (req, res) => {
 
     // Go directly to night (voting_reveal was removed)
     const nightSec = Number(game.timers?.nightSeconds ?? 90);
-    // Noc má stejné číslo jako poslední den - kolo se nezvyšuje
+    // Night has same number as last day - round doesn't increase
     const currentRound = game.round || 0;
     await updateGame(gameId, {
       phase: "night",
@@ -1648,7 +1648,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
         });
       }
 
-      // ✅ RESET nočních akcí pro novou noc - batch update
+      // ✅ RESET night actions for new night - batch update
       console.log("🧹 Resetting night actions for new night...");
       await updatePlayersByGameId(gameId, {
         night_action: {
@@ -1695,7 +1695,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
         Object.assign(game, currentGameState);
       }
       const nightSec = Number(game.timers?.nightSeconds ?? 90);
-      // Noc má stejné číslo jako poslední den - kolo se nezvyšuje
+      // Night has same number as last day - round doesn't increase
       const currentRound = game.round || 0;
       game.phase = "night";
       game.round = currentRound;
@@ -1778,7 +1778,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
 
       // Switch to day
       const daySec = Number((game.timers || {}).daySeconds ?? 150);
-      // Nový den = nové kolo - kolo se zvyšuje při přechodu night → day
+      // New day = new round - round increases when transitioning night → day
       const newRound = (game.round || 0) + 1;
       await updateGame(gameId, {
         phase: "day",
@@ -1787,7 +1787,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
       });
       game.round = newRound;
 
-      // ✅ RESET hlasování pro nový den - batch update
+      // ✅ RESET voting for new day - batch update
       console.log("🧹 Resetting votes for new day...");
       await updatePlayersByGameId(gameId, {
         has_voted: false,
@@ -1904,7 +1904,7 @@ router.post("/:gameId/set-night-action", async (req, res) => {
 
       if (isLimitedAction) {
         const roleDataObj = player.role_data || {};
-        // Pokud není usesRemaining nastaveno, inicializuj ho z role definice
+        // If usesRemaining is not set, initialize it from role definition
         if (
           roleDataObj.usesRemaining === undefined ||
           roleDataObj.usesRemaining === null

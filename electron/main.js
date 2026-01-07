@@ -1,14 +1,15 @@
 // electron/main.js
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu } = require("electron");
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const os = require("os");
+const settingsStore = require("./store");
 
 let mainWindow;
-let playerWindows = {}; // Ukládáme otevřená player okna
+let playerWindows = {}; // Store open player windows
 
 const expressApp = express();
 const PORT = 3001;
@@ -64,6 +65,15 @@ app.whenReady().then(async () => {
     
     // Now that NODE_ENV is set, log the mode
     console.log(`📦 Mode: ${isDev() ? "Development" : "Production"}`);
+
+    // In production, remove application menu (File/Edit/View...) globally
+    if (!isDev()) {
+      Menu.setApplicationMenu(null);
+    }
+
+    // Initialize settings store
+    await settingsStore.initStore();
+    console.log("✅ Settings store initialized");
 
     console.log("🔌 Connecting to Supabase...");
     const { connectDB } = require("./database");
@@ -177,10 +187,10 @@ app.whenReady().then(async () => {
         const outPath = path.join(__dirname, "../frontend/out");
         if (require("fs").existsSync(outPath)) {
           expressApp.use(express.static(outPath));
-      expressApp.get("*", (req, res) => {
-        if (req.path.startsWith("/api")) return;
+          expressApp.get("*", (req, res) => {
+            if (req.path.startsWith("/api")) return;
             res.sendFile(path.join(outPath, "index.html"));
-      });
+          });
         } else {
           console.error("❌ No Next.js build found! Please run 'npm run build' in frontend directory.");
         }
@@ -212,7 +222,7 @@ app.whenReady().then(async () => {
       console.log(` 🔌 API: http://${LOCAL_IP}:${PORT}/api`);
       console.log(` 📊 Supabase: Connected`);
       console.log("");
-      console.log(" 📱 Hráči zadají do mobilu:");
+      console.log(" 📱 Players enter on mobile:");
       console.log(` http://${LOCAL_IP}:${PORT}`);
       console.log("");
       console.log("╚═══════════════════════════════════════════════════════╝");
@@ -238,31 +248,93 @@ app.whenReady().then(async () => {
 
 function createWindow() {
   console.log("🪟 Creating Moderator window...");
+  
+  // Always create window with frame (title bar) - it will be hidden automatically in fullscreen
+  // When fullscreen is disabled, frame will be visible
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    backgroundColor: "#0a080f", // Tmavá barva pozadí (stejná jako v AppLoadingScreen)
-    show: false, // Okno se nezobrazí dokud není připravené
+    backgroundColor: "#0a080f", // Dark background color (same as in AppLoadingScreen)
+    show: false, // Window won't show until ready
+    frame: true, // Show title bar (will be hidden automatically in fullscreen)
+    autoHideMenuBar: !isDev(), // Hide menu bar in production (Alt can show if setMenuBarVisibility true)
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"), // ✅ PŘIDÁNO
+      preload: path.join(__dirname, "preload.js"), // ✅ ADDED
     },
-    title: "Moderátorská Obrazovka",
+    title: "Moderator Screen",
   });
+
+  // Ensure menu bar is hidden in production
+  if (!isDev()) {
+    try {
+      mainWindow.setMenuBarVisibility(false);
+    } catch (_) {}
+  }
 
   mainWindow.loadURL(`http://localhost:${PORT}?mode=moderator`);
 
-  // Zobrazit okno až když je obsah připravený
-  mainWindow.once("ready-to-show", () => {
+  // Show window only when content is ready
+  mainWindow.once("ready-to-show", async () => {
     console.log("✅ Window content ready, showing window...");
+    
+    // Ensure store is initialized before loading settings
+    await settingsStore.initStore();
+    
+    // Load settings and apply them
+    const settings = settingsStore.getSettings();
+    console.log("📋 Loaded settings:", settings);
+    const shouldFullscreen = settings.fullscreen !== false; // Default true
+    const shouldAlwaysOnTop = settings.alwaysOnTop === true;
+    
+    if (shouldFullscreen) {
+      mainWindow.setFullScreen(true);
+      console.log("🖥️ Window set to fullscreen mode (from saved settings)");
+    } else {
+      console.log("🖥️ Window will show with title bar (fullscreen disabled in settings)");
+    }
+    
+    if (shouldAlwaysOnTop) {
+      mainWindow.setAlwaysOnTop(true);
+      console.log("📌 Window set to always on top (from saved settings)");
+    } else {
+      // Ensure always on top is explicitly disabled if setting says so
+      mainWindow.setAlwaysOnTop(false);
+      console.log("📌 Window always on top disabled (from saved settings)");
+    }
+    
     mainWindow.show();
-    // Fokus na okno
+    // Focus on window
     if (mainWindow) {
       mainWindow.focus();
     }
   });
 
+  // Listen for fullscreen changes
+  mainWindow.on('enter-full-screen', () => {
+    // Frame is automatically hidden in fullscreen
+    // Close DevTools when entering fullscreen
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.isDevToolsOpened()) {
+      mainWindow.webContents.closeDevTools();
+      console.log("🖥️ Entered fullscreen - DevTools closed, title bar automatically hidden");
+    } else {
+      console.log("🖥️ Entered fullscreen - title bar automatically hidden");
+    }
+  });
+
+  mainWindow.on('leave-full-screen', () => {
+    // When leaving fullscreen, frame (title bar) automatically becomes visible
+    // Keep DevTools closed in production, only reopen in dev mode
+    if (isDev() && mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDevToolsOpened()) {
+      mainWindow.webContents.openDevTools();
+      console.log("🖥️ Left fullscreen - DevTools reopened (dev mode)");
+    } else {
+      console.log("🖥️ Left fullscreen - title bar automatically visible");
+    }
+  });
+
+  // Only open DevTools in development mode
   if (isDev()) {
     mainWindow.webContents.openDevTools();
   }
@@ -274,30 +346,39 @@ function createWindow() {
   });
 }
 
-// ✅ Funkce pro vytvoření player okna
+// ✅ Function to create player window
 function createPlayerWindow(playerName, roomCode, sessionId) {
   console.log(`🎮 Creating player window for: ${playerName}`);
 
   const playerWindow = new BrowserWindow({
     width: 500,
     height: 800,
-    backgroundColor: "#0a080f", // Tmavá barva pozadí
-    show: false, // Okno se nezobrazí dokud není připravené
+    backgroundColor: "#0a080f", // Dark background color
+    show: false, // Window won't show until ready
+    frame: false, // Remove title bar
+    autoHideMenuBar: !isDev(), // Hide menu bar in production
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
     },
-    title: `Hráč: ${playerName}`,
+    title: `Player: ${playerName}`,
   });
 
-  // ✅ Přidej sessionId do URL
+  // Ensure menu bar is hidden in production
+  if (!isDev()) {
+    try {
+      playerWindow.setMenuBarVisibility(false);
+    } catch (_) {}
+  }
+
+  // ✅ Add sessionId to URL
   const playerUrl = `http://localhost:${PORT}?mode=player&room=${roomCode}&playerName=${encodeURIComponent(
     playerName
   )}&sessionId=${sessionId}`;
   playerWindow.loadURL(playerUrl);
 
-  // Zobrazit okno až když je obsah připravený
+  // Show window only when content is ready
   playerWindow.once("ready-to-show", () => {
     console.log(`✅ Player window content ready: ${playerName}`);
     playerWindow.show();
@@ -322,7 +403,7 @@ function createPlayerWindow(playerName, roomCode, sessionId) {
   return playerWindow;
 }
 
-// ✅ IPC handler s sessionId
+// ✅ IPC handler with sessionId
 ipcMain.handle(
   "create-player-window",
   (event, playerName, roomCode, sessionId) => {
@@ -354,6 +435,128 @@ ipcMain.handle("close-app", () => {
     mainWindow.close();
   }
   return { success: true };
+});
+
+// Window control IPC handlers
+ipcMain.handle("window-toggle-fullscreen", () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const isFullscreen = mainWindow.isFullScreen();
+    mainWindow.setFullScreen(!isFullscreen);
+    return { success: true, isFullscreen: !isFullscreen };
+  }
+  return { success: false, error: "Window not available" };
+});
+
+ipcMain.handle("window-is-fullscreen", () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return { success: true, isFullscreen: mainWindow.isFullScreen() };
+  }
+  return { success: false, error: "Window not available" };
+});
+
+ipcMain.handle("window-set-always-on-top", (event, alwaysOnTop) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setAlwaysOnTop(alwaysOnTop);
+    console.log(`📌 Always on top set to: ${alwaysOnTop}`);
+    
+    // When disabling always on top, ensure window can be brought to front normally
+    if (!alwaysOnTop) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    
+    return { success: true };
+  }
+  return { success: false, error: "Window not available" };
+});
+
+// Settings storage IPC handlers
+ipcMain.handle("settings-get", () => {
+  try {
+    const settings = settingsStore.getSettings();
+    return { success: true, settings };
+  } catch (error) {
+    console.error("Error getting settings:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("settings-set", async (event, settings) => {
+  try {
+    await settingsStore.setSettings(settings);
+    return { success: true };
+  } catch (error) {
+    console.error("Error setting settings:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("settings-get-setting", (event, key) => {
+  try {
+    const value = settingsStore.getSetting(key);
+    return { success: true, value };
+  } catch (error) {
+    console.error("Error getting setting:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("settings-set-setting", async (event, key, value) => {
+  try {
+    await settingsStore.setSetting(key, value);
+    
+    // Apply changes immediately to main window
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (key === "fullscreen") {
+        const currentFullscreen = mainWindow.isFullScreen();
+        if (currentFullscreen !== value) {
+          // Close DevTools before entering fullscreen
+          if (value && mainWindow.webContents.isDevToolsOpened()) {
+            mainWindow.webContents.closeDevTools();
+          }
+          
+          // Set fullscreen
+          mainWindow.setFullScreen(value);
+          
+          // Force window to update and show
+          if (value) {
+            // Entering fullscreen
+            mainWindow.show();
+            mainWindow.focus();
+            console.log("🖥️ Fullscreen enabled - DevTools closed, title bar hidden");
+          } else {
+            // Leaving fullscreen - only reopen DevTools in dev mode
+            mainWindow.show();
+            mainWindow.focus();
+            if (isDev() && !mainWindow.webContents.isDevToolsOpened()) {
+              // Small delay to ensure window is ready
+              setTimeout(() => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.openDevTools();
+                }
+              }, 100);
+            }
+            console.log("🖥️ Fullscreen disabled - title bar visible");
+          }
+        }
+      } else if (key === "alwaysOnTop") {
+        mainWindow.setAlwaysOnTop(value);
+        console.log(`📌 Always on top ${value ? 'enabled' : 'disabled'}`);
+        
+        // When disabling always on top, ensure window can be brought to front normally
+        if (!value) {
+          // Bring window to front to ensure it's accessible
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error setting setting:", error);
+    return { success: false, error: error.message };
+  }
 });
 
 app.on("window-all-closed", () => {

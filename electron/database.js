@@ -5,7 +5,7 @@ const nodeEnv = process.env.NODE_ENV || "development";
 if (nodeEnv === "test") {
   require("dotenv").config({ path: ".env.test" });
 } else {
-  // Development i production používají .env
+  // Development and production use .env
   require("dotenv").config({ path: ".env" });
 }
 
@@ -49,14 +49,14 @@ const connectDB = async () => {
       throw error;
     }
 
-    console.log("✅ Supabase připojeno:", supabaseUrl);
+    console.log("✅ Supabase connected:", supabaseUrl);
 
     // Note: Migrations need to be run manually in Supabase SQL Editor
     // Run `npm run migrations:show` to see migration SQL statements
 
     return supabase;
   } catch (error) {
-    console.error("❌ Supabase chyba připojení:", error.message);
+    console.error("❌ Supabase connection error:", error.message);
     console.error("Stack:", error.stack);
     throw error; // Re-throw to stop app
   }

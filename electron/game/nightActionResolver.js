@@ -519,7 +519,7 @@ async function resolveNightActions(game, players) {
       }
 
       case "guard": {
-        // Guardian nastaví stráž u cílového hráče, ne u sebe
+        // Guardian sets guard on target player, not on self
         addEffect(target, "guard", actor.id, null, {});
 
         // ✅ Track this guard for later feedback
@@ -860,13 +860,13 @@ async function resolveNightActions(game, players) {
           );
         }
 
-        // Sleduj navštívené hráče pro Infected roli
+        // Track visited players for Infected role
         const actorRoleData = getRoleData(actor);
         if (!actorRoleData.visitedPlayers)
           actorRoleData.visitedPlayers = [];
 
-        // Přidej cílového hráče do seznamu navštívených (pokud tam ještě není)
-        // Použij bezpečný pattern s optional chaining a filter (stejně jako v victoryEvaluator.js)
+        // Add target player to visited list (if not already there)
+        // Use safe pattern with optional chaining and filter (same as in victoryEvaluator.js)
         const visitedIds = actorRoleData.visitedPlayers
           .map((id) => id?.toString())
           .filter(Boolean);
@@ -1056,7 +1056,7 @@ async function resolveNightActions(game, players) {
       }
 
       case "hunter_kill": {
-        // Hunter připraví kill (zkontroluje se po smrti)
+        // Hunter prepares kill (checked after death)
         addEffect(target, "pendingKill", actorId, null, { hunter: true });
         hunterKills.set(actorId, targetId);
         actor.night_action.results.push(`success:Zaútočil ${target.name}`);
@@ -1067,9 +1067,9 @@ async function resolveNightActions(game, players) {
       }
 
       case "janitor_clean": {
-        // Janitor může cílit na MRTVÉ hráče
-        // Musíme implementovat výběr mrtvého hráče v UI
-        // Pro teď: cílí na živého, ale vyčistí ho pokud zemře
+        // Janitor can target DEAD players
+        // We need to implement dead player selection in UI
+        // For now: targets alive player, but cleans them if they die
 
         // Check if Janitor has uses left
         const actorRoleData = getRoleData(actor);
@@ -1313,7 +1313,7 @@ async function resolveNightActions(game, players) {
         continue;
       }
 
-      // Přidej informaci o návštěvě do výsledků cíle
+      // Add visit information to target results
       target.night_action.results.push(`visited:${homeInvaders.join(", ")}`);
       console.log(
         `  👤 ${target.name} was home-invaded by: ${homeInvaders.join(", ")}`
@@ -1686,7 +1686,7 @@ async function resolveNightActions(game, players) {
     }
 
     // Check if target was attacked and saved (has 'attacked_killer:' or 'attacked_hunter:' and 'healed:' results)
-    // or was poisoned and cured (has 'healed:Vyléčen z otravy' result)
+    // or was poisoned and cured (has 'healed:Cured from poison' result)
     // Support both night_action and nightAction for compatibility
     const targetResults = target.night_action?.results || target.nightAction?.results || [];
     const wasAttackedAndSaved =

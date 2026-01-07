@@ -77,17 +77,17 @@ const GameSchema = new mongoose.Schema({
     neutral: { type: Number, default: 0 }
   },
   
-  // ✅ KONFIGURACE PASIVNÍCH MODIFIKÁTORŮ
+  // ✅ PASSIVE MODIFIER CONFIGURATION
   modifierConfiguration: {
     drunkChance: {
       type: Number,
-      default: 0.2, // 20% šance
+      default: 0.2, // 20% chance
       min: 0,
       max: 1
     },
     shadyChance: {
       type: Number,
-      default: 0.15, // 15% šance
+      default: 0.15, // 15% chance
       min: 0,
       max: 1
     }
