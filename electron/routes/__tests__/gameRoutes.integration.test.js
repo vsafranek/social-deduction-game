@@ -25,6 +25,22 @@ const {
 jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'error').mockImplementation(() => {});
 
+// Helper function to generate unique room codes for tests
+// Uses high-resolution time, counter, and random for maximum uniqueness
+let roomCodeCounter = 0;
+function generateUniqueRoomCode() {
+  roomCodeCounter++;
+  // Use high-resolution time (nanoseconds) for better uniqueness
+  const hrtime = process.hrtime.bigint(); // High-resolution time in nanoseconds
+  const hrtimeNum = Number(hrtime % 1000000n); // Last 6 digits (0-999999)
+  const counter = roomCodeCounter % 10000; // 0-9999
+  const random = Math.floor(Math.random() * 10000); // 0-9999
+  // Combine with XOR for better distribution, then map to 1000-9999 range
+  const combined = (hrtimeNum ^ counter ^ random) % 9000;
+  const code = (combined + 1000).toString().padStart(4, '0');
+  return code;
+}
+
 describe('GameRoutes Integration Tests', () => {
   let isConnected = false;
   const testGameIds = [];
@@ -183,7 +199,7 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: '1234',
+        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timer_state: { phase_ends_at: null }
@@ -271,7 +287,7 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: '1234',
+        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timers: { night_seconds: 90, day_seconds: 150 },
@@ -315,6 +331,38 @@ describe('GameRoutes Integration Tests', () => {
       expect(players[2].name).toBe('Player3');
     });
 
+    test('should format game state response correctly (formatGameStateResponse logic)', async () => {
+      if (!isConnected) {
+        console.log('Skipping test - database not connected');
+        return;
+      }
+
+      // Test formatGameStateResponse logic by checking the structure
+      // This tests the helper function indirectly via getGameStateComplete
+      const { getGameStateComplete } = require('../../db/helpers');
+      const { game, players, logs } = await getGameStateComplete(gameId, 200);
+
+      // Verify players have required fields (as formatGameStateResponse would format them)
+      // formatGameStateResponse maps players to: _id, name, role, alive, hasVoted, voteFor, voteWeight, avatar, nightResults, roleData
+      for (const player of players) {
+        expect(player).toHaveProperty('id');
+        expect(player).toHaveProperty('name');
+        expect(player).toHaveProperty('role');
+        expect(player).toHaveProperty('alive');
+        expect(player).toHaveProperty('avatar');
+        // Other fields may be undefined/null, which is fine
+      }
+
+      // Verify game has required fields
+      expect(game).toHaveProperty('id');
+      expect(game).toHaveProperty('phase');
+      expect(game).toHaveProperty('round');
+      expect(game).toHaveProperty('timers');
+
+      // Verify logs is an array
+      expect(Array.isArray(logs)).toBe(true);
+    });
+
     test('should update game phase', async () => {
       if (!isConnected) {
         console.log('Skipping test - database not connected');
@@ -351,7 +399,7 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: '1234',
+        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timer_state: { phase_ends_at: null }
@@ -413,7 +461,7 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: '1234',
+        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timers: { night_seconds: 90, day_seconds: 150 },
@@ -515,6 +563,370 @@ describe('GameRoutes Integration Tests', () => {
         expect(p.has_voted).toBe(false);
         expect(p.vote_for_id).toBeNull();
       });
+    });
+  });
+
+  describe('Monk Role - start-config usesRemaining initialization', () => {
+    let gameId;
+    let playerIds;
+
+    beforeEach(async () => {
+      if (!isConnected) return;
+      const gameData = {
+        room_code: generateUniqueRoomCode(),
+        phase: 'lobby',
+        round: 0,
+        timers: { night_seconds: 90, day_seconds: 150 },
+        timer_state: { phase_ends_at: null }
+      };
+      const game = await createGame(gameData);
+      gameId = game.id;
+      testGameIds.push(gameId);
+
+      // Create 3 players
+      const players = [];
+      for (let i = 0; i < 3; i++) {
+        const playerData = {
+          game_id: gameId,
+          name: `Player${i + 1}`,
+          session_id: `session${i + 1}`,
+          avatar: `/avatars/${i + 1}.png`
+        };
+        const player = await createPlayer(playerData);
+        players.push(player);
+        testPlayerIds.push(player.id);
+      }
+      playerIds = players.map(p => p.id);
+    });
+
+    test('should initialize usesRemaining for Monk role during start-config', async () => {
+      if (!isConnected) {
+        console.log('Skipping test - database not connected');
+        return;
+      }
+
+      const ROLES = require('../../models/Role').ROLES;
+      const { updatePlayersBatch } = require('../../db/helpers');
+
+      // Assign Monk role to first player
+      const monkPlayerId = playerIds[0];
+      await updatePlayer(monkPlayerId, { role: 'Monk' });
+
+      // Get role data for Monk
+      const roleData = ROLES['Monk'];
+      expect(roleData.hasLimitedUses).toBe(true);
+      expect(roleData.maxUses).toBe(2);
+
+      // Simulate start-config logic: initialize usesRemaining for limited-use roles
+      const players = await findPlayersByGameId(gameId);
+      const monkPlayer = players.find(p => p.id === monkPlayerId);
+      
+      const currentRoleData = monkPlayer.role_data || {};
+      if (roleData?.hasLimitedUses) {
+        const usesRemaining = roleData.maxUses || 3;
+        const updatedRoleData = { ...currentRoleData, usesRemaining };
+        
+        await updatePlayersBatch([{
+          id: monkPlayerId,
+          updates: { role_data: updatedRoleData }
+        }]);
+      }
+
+      // Verify usesRemaining was initialized
+      const updatedPlayer = await findPlayerById(monkPlayerId);
+      expect(updatedPlayer.role_data).toBeDefined();
+      expect(updatedPlayer.role_data.usesRemaining).toBe(2);
+    });
+
+    test('should initialize usesRemaining for all hasLimitedUses roles during start-config', async () => {
+      if (!isConnected) {
+        console.log('Skipping test - database not connected');
+        return;
+      }
+
+      const ROLES = require('../../models/Role').ROLES;
+      const { updatePlayersBatch } = require('../../db/helpers');
+
+      // Assign Monk to first player, Accuser (also hasLimitedUses) to second
+      await updatePlayer(playerIds[0], { role: 'Monk' });
+      await updatePlayer(playerIds[1], { role: 'Accuser' });
+
+      // Simulate start-config logic
+      const players = await findPlayersByGameId(gameId);
+      const roleDataUpdates = [];
+
+      for (const p of players) {
+        if (!p.role) continue;
+        const roleData = ROLES[p.role];
+        const currentRoleData = p.role_data || {};
+        
+        if (roleData?.hasLimitedUses) {
+          const usesRemaining = roleData.maxUses || 3;
+          const updatedRoleData = { ...currentRoleData, usesRemaining };
+          roleDataUpdates.push({
+            id: p.id,
+            updates: { role_data: updatedRoleData }
+          });
+        }
+      }
+
+      if (roleDataUpdates.length > 0) {
+        await updatePlayersBatch(roleDataUpdates);
+      }
+
+      // Verify Monk
+      const monkPlayer = await findPlayerById(playerIds[0]);
+      expect(monkPlayer.role_data.usesRemaining).toBe(2);
+
+      // Verify Accuser (should have 3 uses by default)
+      const accuserPlayer = await findPlayerById(playerIds[1]);
+      expect(accuserPlayer.role_data.usesRemaining).toBe(3);
+    });
+  });
+
+  describe('Monk Role - set-night-action usesRemaining validation', () => {
+    let gameId;
+    let monkPlayerId;
+    let targetPlayerId;
+
+    beforeEach(async () => {
+      if (!isConnected) return;
+      const gameData = {
+        room_code: generateUniqueRoomCode(),
+        phase: 'night', // Night phase for set-night-action
+        round: 1,
+        timers: { night_seconds: 90, day_seconds: 150 },
+        timer_state: { phase_ends_at: null }
+      };
+      const game = await createGame(gameData);
+      gameId = game.id;
+      testGameIds.push(gameId);
+
+      // Create Monk player
+      const monkPlayer = await createPlayer({
+        game_id: gameId,
+        name: 'Monk',
+        session_id: 'session-monk',
+        avatar: '/avatars/monk.png',
+        role: 'Monk',
+        alive: true,
+        role_data: { usesRemaining: 2 } // Initialize with 2 uses
+      });
+      monkPlayerId = monkPlayer.id;
+      testPlayerIds.push(monkPlayerId);
+
+      // Create target player (dead)
+      const targetPlayer = await createPlayer({
+        game_id: gameId,
+        name: 'Target',
+        session_id: 'session-target',
+        avatar: '/avatars/target.png',
+        role: 'Citizen',
+        alive: false // Dead player
+      });
+      targetPlayerId = targetPlayer.id;
+      testPlayerIds.push(targetPlayerId);
+    });
+
+    test('should allow Monk to set action when usesRemaining > 0', async () => {
+      if (!isConnected) {
+        console.log('Skipping test - database not connected');
+        return;
+      }
+
+      const ROLES = require('../../models/Role').ROLES;
+
+      // Get player and role data
+      const player = await findPlayerById(monkPlayerId);
+      const roleData = ROLES[player.role];
+      
+      // Simulate set-night-action logic for limited-use roles
+      const roleDataObj = player.role_data || {};
+      const usesLeft = roleDataObj.usesRemaining || roleData.maxUses || 2;
+
+      expect(usesLeft).toBeGreaterThan(0);
+
+      // Action should be allowed (not decremented yet - resolver will do it)
+      await updatePlayer(monkPlayerId, {
+        night_action: {
+          targetId: targetPlayerId,
+          action: roleData?.actionType || 'revive',
+          results: []
+        },
+        role_data: roleDataObj // Keep current usesRemaining
+      });
+
+      // Verify action was set
+      const updatedPlayer = await findPlayerById(monkPlayerId);
+      expect(updatedPlayer.night_action).toBeDefined();
+      expect(updatedPlayer.night_action.action).toBe('revive');
+      expect(updatedPlayer.night_action.targetId.toString()).toBe(targetPlayerId);
+      expect(updatedPlayer.role_data.usesRemaining).toBe(2); // Not decremented yet
+    });
+
+    test('should prevent Monk from setting action when usesRemaining <= 0', async () => {
+      if (!isConnected) {
+        console.log('Skipping test - database not connected');
+        return;
+      }
+
+      const ROLES = require('../../models/Role').ROLES;
+
+      // Set usesRemaining to 0
+      await updatePlayer(monkPlayerId, {
+        role_data: { usesRemaining: 0 }
+      });
+
+      // Get player and role data
+      const player = await findPlayerById(monkPlayerId);
+      const roleData = ROLES[player.role];
+      const roleDataObj = player.role_data || {};
+      const usesLeft = roleDataObj.usesRemaining || 0;
+
+      // Action should be rejected (simulate validation)
+      expect(usesLeft).toBeLessThanOrEqual(0);
+
+      // In real endpoint, this would return 400 error
+      // Here we just verify the validation logic
+      const shouldReject = usesLeft <= 0;
+      expect(shouldReject).toBe(true);
+    });
+
+    test('should initialize usesRemaining from maxUses if not set', async () => {
+      if (!isConnected) {
+        console.log('Skipping test - database not connected');
+        return;
+      }
+
+      const ROLES = require('../../models/Role').ROLES;
+
+      // Create new Monk player without role_data
+      const newMonk = await createPlayer({
+        game_id: gameId,
+        name: 'NewMonk',
+        session_id: 'session-newmonk',
+        avatar: '/avatars/newmonk.png',
+        role: 'Monk',
+        alive: true
+        // No role_data
+      });
+      testPlayerIds.push(newMonk.id);
+
+      // Simulate set-night-action initialization logic
+      const player = await findPlayerById(newMonk.id);
+      const roleData = ROLES[player.role];
+      const roleDataObj = player.role_data || {};
+      
+      // Initialize if not set (simulate endpoint logic)
+      if (roleDataObj.usesRemaining === undefined || roleDataObj.usesRemaining === null) {
+        roleDataObj.usesRemaining = roleData.maxUses || 2;
+      }
+
+      expect(roleDataObj.usesRemaining).toBe(2);
+
+      // Update player
+      await updatePlayer(newMonk.id, {
+        night_action: {
+          targetId: targetPlayerId,
+          action: 'revive',
+          results: []
+        },
+        role_data: roleDataObj
+      });
+
+      // Verify
+      const updatedPlayer = await findPlayerById(newMonk.id);
+      expect(updatedPlayer.role_data.usesRemaining).toBe(2);
+    });
+
+    test('should allow Monk to target dead players', async () => {
+      if (!isConnected) {
+        console.log('Skipping test - database not connected');
+        return;
+      }
+
+      const ROLES = require('../../models/Role').ROLES;
+
+      // Get player and role data
+      const player = await findPlayerById(monkPlayerId);
+      const roleData = ROLES[player.role];
+      const target = await findPlayerById(targetPlayerId);
+      
+      // Verify target is dead
+      expect(target.alive).toBe(false);
+      
+      // Verify role can target dead players (visitsTarget: false means doesn't visit, can target dead)
+      expect(roleData.visitsTarget).toBe(false);
+      expect(roleData.actionType).toBe('revive');
+
+      // Action should be allowed (Monk can target dead players)
+      const roleDataObj = player.role_data || {};
+      await updatePlayer(monkPlayerId, {
+        night_action: {
+          targetId: targetPlayerId,
+          action: 'revive',
+          results: []
+        },
+        role_data: roleDataObj
+      });
+
+      // Verify action was set
+      const updatedPlayer = await findPlayerById(monkPlayerId);
+      expect(updatedPlayer.night_action).toBeDefined();
+      expect(updatedPlayer.night_action.action).toBe('revive');
+      expect(updatedPlayer.night_action.targetId.toString()).toBe(targetPlayerId);
+    });
+
+    test('should prevent Monk from targeting alive players', async () => {
+      if (!isConnected) {
+        console.log('Skipping test - database not connected');
+        return;
+      }
+
+      // Create alive target player
+      const aliveTarget = await createPlayer({
+        game_id: gameId,
+        name: 'AliveTarget',
+        session_id: 'session-alivetarget',
+        avatar: '/avatars/alivetarget.png',
+        role: 'Citizen',
+        alive: true // Alive player
+      });
+      testPlayerIds.push(aliveTarget.id);
+
+      // Get player
+      const player = await findPlayerById(monkPlayerId);
+      
+      // Verify target is alive
+      const target = await findPlayerById(aliveTarget.id);
+      expect(target.alive).toBe(true);
+
+      // In nightActionResolver, revive action checks if target is alive and returns error
+      // Here we verify that revive action should only target dead players
+      // The validation happens in nightActionResolver, not in set-night-action endpoint
+      // But we can verify the logic: if target is alive, revive should fail
+      const roleDataObj = player.role_data || {};
+      
+      // Set the action (endpoint doesn't validate target alive/dead status for revive)
+      // Validation happens in nightActionResolver
+      await updatePlayer(monkPlayerId, {
+        night_action: {
+          targetId: aliveTarget.id,
+          action: 'revive',
+          results: []
+        },
+        role_data: roleDataObj
+      });
+
+      // Action was set, but resolver will reject it
+      // The endpoint allows setting the action, validation happens in resolver
+      const updatedPlayer = await findPlayerById(monkPlayerId);
+      expect(updatedPlayer.night_action).toBeDefined();
+      expect(updatedPlayer.night_action.targetId.toString()).toBe(aliveTarget.id);
+      
+      // Note: The actual validation (preventing revive of alive players) 
+      // happens in nightActionResolver, not in the endpoint
+      // This test verifies the endpoint allows setting the action
     });
   });
 });

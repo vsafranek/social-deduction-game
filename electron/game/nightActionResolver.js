@@ -1782,6 +1782,10 @@ async function resolveNightActions(game, players) {
     }
   }
 
+            // Note: Drunk Doctors are already handled in the main action loop (Phase 2)
+            // where they receive a basic fake action message. We do NOT add additional
+            // doctor-specific feedback here to avoid duplicate messages.
+
   console.log("🏹 [NightResolver] Phase 5b: Hunter penalty check...");
   for (const [hunterId, targetId] of hunterKills.entries()) {
     const hunter = idMap.get(hunterId);

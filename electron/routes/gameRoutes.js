@@ -112,10 +112,11 @@ router.post("/create", async (req, res) => {
       // Check if room code already exists
       existingGame = await findGameByRoomCode(roomCode);
       
-      if (existingGame) {
-      }
+      // If duplicate found and we haven't exhausted attempts, loop will continue
+      // If duplicate found but we've exhausted attempts, loop will exit and error will be thrown below
     } while (existingGame && attempts < maxAttempts);
     
+    // If we exit the loop with an existingGame, it means we exhausted all attempts
     if (existingGame) {
       throw new Error(`Failed to generate unique room code after ${maxAttempts} attempts`);
     }
@@ -146,16 +147,9 @@ function getAllAvailableAvatars() {
   const avatars = [];
 
   // Get avatars ONLY from /avatars/ folder (frontend/public/avatars/)
-  // Try both development and production paths
-  const devAvatarsDir = path.join(__dirname, "../../frontend/public/avatars");
-  const prodAvatarsDir = path.join(__dirname, "../../dist/avatars");
-  
-  let avatarsDir = null;
-  if (fs.existsSync(devAvatarsDir)) {
-    avatarsDir = devAvatarsDir;
-  } else if (fs.existsSync(prodAvatarsDir)) {
-    avatarsDir = prodAvatarsDir;
-  }
+  // In both development and production, avatars are in frontend/public/avatars
+  // (main.js serves frontend/public as static files in production)
+  const avatarsDir = path.join(__dirname, "../../frontend/public/avatars");
 
   if (avatarsDir && fs.existsSync(avatarsDir)) {
     const files = fs.readdirSync(avatarsDir);
@@ -172,7 +166,7 @@ function getAllAvailableAvatars() {
     
     console.log(`✅ Found ${avatars.length} avatars in ${avatarsDir}`);
   } else {
-    console.warn(`⚠️ Avatars directory not found. Tried: ${devAvatarsDir}, ${prodAvatarsDir}`);
+    console.warn(`⚠️ Avatars directory not found: ${avatarsDir}`);
   }
 
   return avatars;

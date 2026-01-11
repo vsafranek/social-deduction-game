@@ -279,6 +279,33 @@ describe('nightActionResolver', () => {
       expect(fakeMessage).toBeDefined();
     });
 
+    test('should give fake basic message to drunk Doctor (no duplicate doctor feedback)', async () => {
+      const drunkDoctor = createMockPlayer('1', 'DrunkDoctor', 'Doctor', {
+        modifier: 'Drunk',
+        nightAction: { targetId: '2', action: 'protect', results: [] }
+      });
+      const target = createMockPlayer('2', 'Target', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({}, [drunkDoctor, target]);
+
+      // Target should NOT be protected (drunk Doctor cannot act)
+      const hasProtected = target.effects.some(e => e.type === 'protected');
+      expect(hasProtected).toBe(false);
+
+      // Drunk Doctor should get fake basic message
+      const basicFakeMessage = drunkDoctor.nightAction.results.find(r => r.includes('Chráníš'));
+      expect(basicFakeMessage).toBeDefined();
+
+      // Drunk Doctor should NOT get duplicate doctor-specific feedback messages
+      // (doctor_saved or doctor_quiet) - only the basic fake message
+      const doctorFeedback = drunkDoctor.nightAction.results.filter(r =>
+        r.startsWith('doctor_saved:') || r.startsWith('doctor_quiet:')
+      );
+      expect(doctorFeedback).toHaveLength(0);
+    });
+
     test('should prevent drunk player from investigating', async () => {
       const drunk = createMockPlayer('1', 'Drunk', 'Investigator', {
         modifier: 'Drunk',
@@ -885,6 +912,35 @@ describe('nightActionResolver', () => {
       expect(monkRole.nightPriority).toBe(9);
       expect(doctorRole.nightPriority).toBe(9);
       expect(monkRole.nightPriority).toBe(doctorRole.nightPriority);
+    });
+
+    test('should not revive when Monk is drunk but should see fake success', async () => {
+      const drunkMonk = createMockPlayer('1', 'DrunkMonk', 'Monk', {
+        modifier: 'Drunk',
+        roleData: { usesRemaining: 2 },
+        nightAction: { targetId: '2', action: 'revive', results: [] }
+      });
+      const dead = createMockPlayer('2', 'Dead', 'Citizen', {
+        alive: false
+      });
+
+      await resolveNightActions({ round: 1 }, [drunkMonk, dead]);
+
+      // Target should NOT be revived (drunk Monk cannot act)
+      expect(dead.alive).toBe(false);
+      
+      // UsesRemaining should NOT be decremented (action was not executed)
+      expect(drunkMonk.roleData.usesRemaining).toBe(2);
+      
+      // Monk should get fake success message
+      const fakeMessage = drunkMonk.nightAction.results.find(r => 
+        r.includes('Oživil jsi') || r.startsWith('success:')
+      );
+      expect(fakeMessage).toBeDefined();
+      expect(fakeMessage).toContain('Dead');
+      
+      // Target should NOT get revived message
+      expect(dead.nightAction.results).not.toContain('revived:Byl jsi oživen');
     });
   });
 
