@@ -762,6 +762,132 @@ describe('nightActionResolver', () => {
     });
   });
 
+  describe('Monk Role', () => {
+    
+    test('should allow Monk to revive dead player', async () => {
+      const monk = createMockPlayer('1', 'Monk', 'Monk', {
+        roleData: { usesRemaining: 2 },
+        nightAction: { targetId: '2', action: 'revive', results: [] }
+      });
+      const dead = createMockPlayer('2', 'Dead', 'Citizen', {
+        alive: false
+      });
+
+      await resolveNightActions({ round: 1 }, [monk, dead]);
+
+      expect(dead.alive).toBe(true);
+      expect(monk.roleData.usesRemaining).toBe(1);
+      const reviveResult = monk.nightAction.results.find(r => r.startsWith('revive:'));
+      expect(reviveResult).toBeDefined();
+      expect(reviveResult).toContain('Oživil jsi Dead');
+      expect(reviveResult).toContain('1 použití zbývá');
+    });
+
+    test('should not allow Monk to revive alive player', async () => {
+      const monk = createMockPlayer('1', 'Monk', 'Monk', {
+        roleData: { usesRemaining: 2 },
+        nightAction: { targetId: '2', action: 'revive', results: [] }
+      });
+      const alive = createMockPlayer('2', 'Alive', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({}, [monk, alive]);
+
+      expect(alive.alive).toBe(true);
+      expect(monk.roleData.usesRemaining).toBe(2); // Uses should not be decremented
+      const failedResult = monk.nightAction.results.find(r => r.includes('failed:'));
+      expect(failedResult).toBeDefined();
+      expect(failedResult).toContain('živého hráče');
+    });
+
+    test('should not allow Monk to revive when out of uses', async () => {
+      const monk = createMockPlayer('1', 'Monk', 'Monk', {
+        roleData: { usesRemaining: 0 },
+        nightAction: { targetId: '2', action: 'revive', results: [] }
+      });
+      const dead = createMockPlayer('2', 'Dead', 'Citizen', {
+        alive: false
+      });
+
+      await resolveNightActions({}, [monk, dead]);
+
+      expect(dead.alive).toBe(false); // Should not be revived
+      expect(monk.roleData.usesRemaining).toBe(0);
+      expect(monk.nightAction.results).toContain('failed:Žádná použití');
+    });
+
+    test('should allow Monk to revive player dead for multiple rounds', async () => {
+      const monk = createMockPlayer('1', 'Monk', 'Monk', {
+        roleData: { usesRemaining: 2 },
+        nightAction: { targetId: '2', action: 'revive', results: [] }
+      });
+      const longDead = createMockPlayer('2', 'LongDead', 'Citizen', {
+        alive: false
+      });
+
+      // Simulate player being dead since round 1, now it's round 5
+      await resolveNightActions({ round: 5 }, [monk, longDead]);
+
+      expect(longDead.alive).toBe(true); // Should be revived regardless of how long dead
+      expect(monk.roleData.usesRemaining).toBe(1);
+      const reviveResult = monk.nightAction.results.find(r => r.startsWith('revive:'));
+      expect(reviveResult).toBeDefined();
+    });
+
+    test('should decrement uses correctly on successful revive', async () => {
+      // Test multiple revives with same Monk
+      const monk = createMockPlayer('1', 'Monk', 'Monk', {
+        roleData: { usesRemaining: 2 },
+        nightAction: { targetId: '2', action: 'revive', results: [] }
+      });
+      const dead1 = createMockPlayer('2', 'Dead1', 'Citizen', {
+        alive: false
+      });
+      const dead2 = createMockPlayer('3', 'Dead2', 'Citizen', {
+        alive: false
+      });
+      const dead3 = createMockPlayer('4', 'Dead3', 'Citizen', {
+        alive: false
+      });
+
+      // First revive
+      await resolveNightActions({ round: 1 }, [monk, dead1]);
+      expect(dead1.alive).toBe(true);
+      expect(monk.roleData.usesRemaining).toBe(1);
+
+      // Reset night action for second revive (keep same monk with updated usesRemaining)
+      monk.nightAction = { targetId: '3', action: 'revive', results: [] };
+      monk.night_action = monk.nightAction;
+
+      // Second revive
+      await resolveNightActions({ round: 2 }, [monk, dead2]);
+      expect(dead2.alive).toBe(true);
+      expect(monk.roleData.usesRemaining).toBe(0);
+
+      // Try third revive - should fail
+      monk.nightAction = { targetId: '4', action: 'revive', results: [] };
+      monk.night_action = monk.nightAction;
+
+      await resolveNightActions({ round: 3 }, [monk, dead3]);
+      expect(dead3.alive).toBe(false); // Should not be revived
+      expect(monk.roleData.usesRemaining).toBe(0);
+      const failedResult = monk.nightAction.results.find(r => r.includes('failed:'));
+      expect(failedResult).toBeDefined();
+      expect(failedResult).toContain('Žádná použití');
+    });
+
+    test('should act at same priority as Doctor (priority 9)', async () => {
+      const monkRole = ROLES['Monk'];
+      const doctorRole = ROLES['Doctor'];
+      
+      expect(monkRole).toBeDefined();
+      expect(monkRole.nightPriority).toBe(9);
+      expect(doctorRole.nightPriority).toBe(9);
+      expect(monkRole.nightPriority).toBe(doctorRole.nightPriority);
+    });
+  });
+
   describe('Paranoid Modifier', () => {
     
     test('should add fake visitors to Paranoid player', async () => {

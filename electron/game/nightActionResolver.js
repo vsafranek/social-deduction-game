@@ -99,6 +99,9 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
       return `autopsy:${targetName} = ${randomRole}`;
     }
 
+    case "revive":
+      return `success:Oživil jsi ${targetName}`;
+
     case "watch": {
       // Random visitors or quiet night - use new lookout result types
       const visitorCount = Math.floor(Math.random() * 4);
@@ -377,11 +380,12 @@ async function resolveNightActions(game, players) {
     }
 
     // Most actions require alive target, but some actions need to validate dead targets themselves
-    // autopsy and clean_role can target dead players
+    // autopsy, clean_role, and revive can target dead players
     // investigate, consig_investigate, and infect need to validate dead targets and provide user feedback
     if (
       action !== "autopsy" &&
       action !== "clean_role" &&
+      action !== "revive" &&
       action !== "investigate" &&
       action !== "consig_investigate" &&
       action !== "infect" &&
@@ -836,6 +840,70 @@ async function resolveNightActions(game, players) {
         // Mark roleData as modified for Mongoose (if markModified exists)
         if (actor.markModified && typeof actor.markModified === 'function') {
           actor.markModified('roleData');
+        }
+        break;
+      }
+
+      case "revive": {
+        // Monk can only revive dead players
+        if (target.alive) {
+          actor.night_action.results.push(
+            `failed:Nemůžeš oživit živého hráče - ${target.name} je stále naživu`
+          );
+          console.log(
+            `  🙏 [P${actionData.priority}] ${actor.name} cannot revive alive player ${target.name}`
+          );
+          break;
+        }
+
+        const actorRoleData = getRoleData(actor);
+        const usesLeft = actorRoleData.usesRemaining || 0;
+
+        if (usesLeft > 0) {
+          // Revive the player
+          target.alive = true;
+          updatePlayerInMemory(target);
+          
+          // Decrement uses
+          actorRoleData.usesRemaining = usesLeft - 1;
+          
+          // Mark roleData as modified for Mongoose (if markModified exists)
+          if (actor.markModified && typeof actor.markModified === 'function') {
+            actor.markModified('roleData');
+          }
+          
+          // Ensure target night_action is initialized
+          if (!target.night_action) {
+            target.night_action = { targetId: null, action: null, results: [] };
+          }
+          if (!target.night_action.results) {
+            target.night_action.results = [];
+          }
+          // Also ensure nightAction is initialized for compatibility
+          if (!target.nightAction) {
+            target.nightAction = { targetId: null, action: null, results: [] };
+          }
+          if (!target.nightAction.results) {
+            target.nightAction.results = [];
+          }
+          
+          // Add result for actor (Monk)
+          actor.night_action.results.push(
+            `revive:Oživil jsi ${target.name} (${actorRoleData.usesRemaining} použití zbývá)`
+          );
+          
+          // Add result for target (revived player)
+          target.night_action.results.push("revived:Byl jsi oživen");
+          target.nightAction.results.push("revived:Byl jsi oživen");
+          
+          console.log(
+            `  🙏 [P${actionData.priority}] ${actor.name} revived ${target.name} (${actorRoleData.usesRemaining} uses remaining)`
+          );
+        } else {
+          actor.night_action.results.push("failed:Žádná použití");
+          console.log(
+            `  🙏 [P${actionData.priority}] ${actor.name} cannot revive ${target.name} - no uses remaining`
+          );
         }
         break;
       }

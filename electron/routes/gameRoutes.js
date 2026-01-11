@@ -227,6 +227,7 @@ router.post("/join", async (req, res) => {
       
       if (!avatar) {
         console.error("❌ Failed to assign avatar to new player - no avatars available");
+        return res.status(500).json({ error: "Failed to assign avatar - no avatars available" });
       }
       
       player = await createPlayer({
@@ -258,6 +259,7 @@ router.post("/join", async (req, res) => {
         
         if (!avatar) {
           console.error(`❌ Failed to assign avatar to existing player ${player.name} - no avatars available`);
+          return res.status(500).json({ error: "Failed to assign avatar - no avatars available" });
         } else {
           player = await updatePlayer(player.id, { avatar });
           console.log(
@@ -852,24 +854,14 @@ router.post("/:gameId/start-config", async (req, res) => {
       const roleData = ROLES[p.role];
       const currentRoleData = p.role_data || {};
 
-      // For dual role with hasLimitedUses - initialize usesRemaining for secondary action
-      if (roleData?.actionType === "dual" && roleData?.hasLimitedUses) {
+      // Initialize usesRemaining for all roles with hasLimitedUses
+      if (roleData?.hasLimitedUses) {
         const usesRemaining = roleData.maxUses || 3;
         const updatedRoleData = { ...currentRoleData, usesRemaining };
         p.role_data = updatedRoleData;
+        const actionTypeLabel = roleData.actionType === "dual" ? " for secondary actions" : "";
         console.log(
-          `  ✓ ${p.name} (${p.role}) initialized with ${usesRemaining} uses for secondary actions`
-        );
-        roleDataUpdates.push({
-          id: p.id,
-          updates: { role_data: updatedRoleData },
-        });
-      } else if (roleData?.hasLimitedUses) {
-        const usesRemaining = roleData.maxUses || 3;
-        const updatedRoleData = { ...currentRoleData, usesRemaining };
-        p.role_data = updatedRoleData;
-        console.log(
-          `  ✓ ${p.name} (${p.role}) initialized with ${usesRemaining} uses`
+          `  ✓ ${p.name} (${p.role}) initialized with ${usesRemaining} uses${actionTypeLabel}`
         );
         roleDataUpdates.push({
           id: p.id,
@@ -1940,13 +1932,42 @@ router.post("/:gameId/set-night-action", async (req, res) => {
       }
     } else {
       // Regular action
-      await updatePlayer(playerId, {
-        night_action: {
-          targetId,
-          action: roleData?.actionType || "none",
-          results: [],
-        },
-      });
+      // Check if role has limited uses (like Monk)
+      if (roleData?.hasLimitedUses) {
+        const roleDataObj = player.role_data || {};
+        // If usesRemaining is not set, initialize it from role definition
+        if (
+          roleDataObj.usesRemaining === undefined ||
+          roleDataObj.usesRemaining === null
+        ) {
+          roleDataObj.usesRemaining = roleData.maxUses || 2;
+        }
+        const usesLeft = roleDataObj.usesRemaining;
+
+        if (usesLeft <= 0) {
+          return res
+            .status(400)
+            .json({ error: "No special ability uses remaining" });
+        }
+
+        // Don't decrement here - resolver will decrement when action is executed
+        await updatePlayer(playerId, {
+          night_action: {
+            targetId,
+            action: roleData?.actionType || "none",
+            results: [],
+          },
+          role_data: roleDataObj,
+        });
+      } else {
+        await updatePlayer(playerId, {
+          night_action: {
+            targetId,
+            action: roleData?.actionType || "none",
+            results: [],
+          },
+        });
+      }
     }
     const updatedPlayer = await findPlayerById(playerId);
     const nightAction = updatedPlayer.night_action || {};
