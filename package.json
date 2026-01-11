@@ -5,18 +5,22 @@
   "main": "electron/main.js",
   "type": "commonjs",
   "scripts": {
-    "vite": "vite --host 0.0.0.0",
-    "electron": "wait-on http://localhost:5173 && electron .",
-    "electron:dev": "cross-env NODE_ENV=development wait-on http://localhost:5173 && electron .",
-    "dev": "cross-env NODE_ENV=development concurrently \"npm:vite\" \"npm:electron:dev\"",
-    "start": "cross-env NODE_ENV=production concurrently \"npm:vite\" \"npm:electron\"",
-    "build": "vite build",
+    "electron": "cross-env NODE_ENV=production wait-on http://localhost:3000 && cross-env NODE_ENV=production electron .",
+    "electron:dev": "cross-env NODE_ENV=development wait-on http://localhost:3000 && electron .",
+    "dev": "cross-env NODE_ENV=development concurrently \"npm:frontend:dev\" \"npm:electron:dev\"",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "frontend:start": "cd frontend && npm run start",
+    "start": "cross-env NODE_ENV=production npm run build && cross-env NODE_ENV=production concurrently \"npm:frontend:start\" \"npm:electron\"",
+    "build": "npm run frontend:build",
     "package": "npm run build && electron-builder",
     "test": "cross-env NODE_ENV=test jest",
     "test:unit": "cross-env NODE_ENV=test SKIP_INTEGRATION_TESTS=true jest",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage",
-    "migrations:show": "node electron/db/runMigrations.js"
+    "migrations:show": "node electron/db/runMigrations.js",
+    "submodule:update": "git submodule update --remote --merge",
+    "submodule:init": "git submodule update --init --recursive"
   },
   "dependencies": {
     "@ngrok/ngrok": "^1.5.2",
@@ -24,23 +28,76 @@
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "electron-store": "^10.0.0",
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.5",
-    "qrcode.react": "^4.2.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^32.0.0",
     "electron-builder": "^25.0.0",
     "jest": "^30.2.0",
-    "vite": "^5.4.0",
     "wait-on": "^8.0.0"
+  },
+  "author": {
+    "name": "Shadows of Gloaming Team"
+  },
+  "license": "UNLICENSED",
+  "build": {
+    "appId": "com.shadowsofgloaming.game",
+    "productName": "Shadows of Gloaming",
+    "copyright": "Copyright © 2024 Shadows of Gloaming",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/.next/**/*",
+      "frontend/public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "publisherName": "Shadows of Gloaming",
+      "verifyUpdateCodeSignature": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.games",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Game"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Shadows of Gloaming"
+    }
   }
 }

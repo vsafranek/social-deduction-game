@@ -192,7 +192,7 @@ async function resolveMayorElection(game, players, createGameLog) {
   });
 
   // Set mayor in game
-  // POZNÁMKA: V databázi se používá mayor_id, ale v getGameState se vrací jako mayor
+  // NOTE: Database uses mayor_id, but getGameState returns it as mayor
   const gameUpdates = {
     mayor_id: mayor.id || mayor._id,
   };
@@ -281,12 +281,12 @@ async function resolveExecutionVoting(game, players, createGameLog) {
     // Support both vote_for_id and voteFor (for compatibility)
     const voteForId = p.vote_for_id || p.voteFor;
     if (voteForId) {
-      // Pouze hlasy pro konkrétního hráče (skipy mají vote_for_id = null)
+      // Only votes for specific player (skips have vote_for_id = null)
       const key = voteForId.toString();
       const weight = p.vote_weight || p.voteWeight || 1;
       voteCounts.set(key, (voteCounts.get(key) || 0) + weight);
     }
-    // Skipy (vote_for_id = null) se přeskočí, ale jejich vote_weight se počítá do totalWeightedVotes
+    // Skips (vote_for_id = null) are skipped, but their vote_weight is counted in totalWeightedVotes
   }
 
   // If nobody voted for anyone
@@ -379,14 +379,14 @@ async function resolveExecutionVoting(game, players, createGameLog) {
 
   const votesAgainst = totalWeightedVotes - votesFor;
 
-  // ✅ Většina se počítá z počtu živých hráčů, ne z celkového počtu vážených hlasů
-  // Pokud je např. 3 živí hráči, většina je 2 hráči (více než 50% ze 3)
-  // Starosta má 2 hlasy, ale počítá se jako 1 hráč při výpočtu většiny
-  // majorityThreshold = počet hlasujících HRÁČŮ (ne vážených hlasů), které je potřeba pro většinu
+  // ✅ Majority is calculated from number of alive players, not from total weighted votes
+  // E.g. if there are 3 alive players, majority is 2 players (more than 50% of 3)
+  // Mayor has 2 votes, but counts as 1 player when calculating majority
+  // majorityThreshold = number of voting PLAYERS (not weighted votes) needed for majority
   const majorityThreshold = Math.floor(totalAlive / 2) + 1;
 
-  // Počítáme kolik HRÁČŮ hlasovalo pro top kandidáta
-  // (ne kolik vážených hlasů - to už máme v topVotes)
+  // Count how many PLAYERS voted for top candidate
+  // (not how many weighted votes - we already have that in topVotes)
   let playersVotingForTop = 0;
   for (const p of alive) {
     if (p.vote_for_id && p.vote_for_id.toString() === topId) {
@@ -404,9 +404,9 @@ async function resolveExecutionVoting(game, players, createGameLog) {
     `     Majority needed: ${majorityThreshold} players (more than 50% of ${totalAlive} alive players)`
   );
 
-  // ✅ KONTROLA: Hráč může být vyloučen pouze pokud má nadpoloviční většinu z počtu živých HRÁČŮ
-  // Např. 3 živí hráči → většina = 2 hráči (více než 50% ze 3)
-  // Starosta s 2 hlasy se počítá jako 1 hráč při výpočtu většiny
+  // ✅ CHECK: Player can only be executed if they have majority of alive PLAYERS
+  // E.g. 3 alive players → majority = 2 players (more than 50% of 3)
+  // Mayor with 2 votes counts as 1 player when calculating majority
   if (playersVotingForTop < majorityThreshold) {
     const target = players.find((p) => getPlayerId(p) === topId);
     await createGameLog({
@@ -426,7 +426,7 @@ async function resolveExecutionVoting(game, players, createGameLog) {
     };
   }
 
-  // Má většinu → execute
+  // Has majority → execute
   const target = players.find((p) => getPlayerId(p) === topId);
   const playerUpdates = [];
   let gameUpdates = null;
@@ -441,7 +441,7 @@ async function resolveExecutionVoting(game, players, createGameLog) {
         id: target.id || target._id,
         updates: { vote_weight: 1, alive: false },
       });
-      target.alive = false; // Aktualizovat také v paměti
+      target.alive = false; // Also update in memory
       target.vote_weight = 1;
       target.voteWeight = 1; // Also set voteWeight for compatibility
       gameUpdates = { mayor_id: null };
@@ -456,7 +456,7 @@ async function resolveExecutionVoting(game, players, createGameLog) {
         id: target.id || target._id,
         updates: { alive: false },
       });
-      target.alive = false; // Aktualizovat také v paměti
+      target.alive = false; // Also update in memory
     }
 
     // ✅ Check if Jester was executed - special win condition

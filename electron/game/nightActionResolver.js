@@ -99,6 +99,9 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
       return `autopsy:${targetName} = ${randomRole}`;
     }
 
+    case "revive":
+      return `success:Oživil jsi ${targetName}`;
+
     case "watch": {
       // Random visitors or quiet night - use new lookout result types
       const visitorCount = Math.floor(Math.random() * 4);
@@ -377,11 +380,12 @@ async function resolveNightActions(game, players) {
     }
 
     // Most actions require alive target, but some actions need to validate dead targets themselves
-    // autopsy and clean_role can target dead players
+    // autopsy, clean_role, and revive can target dead players
     // investigate, consig_investigate, and infect need to validate dead targets and provide user feedback
     if (
       action !== "autopsy" &&
       action !== "clean_role" &&
+      action !== "revive" &&
       action !== "investigate" &&
       action !== "consig_investigate" &&
       action !== "infect" &&
@@ -519,7 +523,7 @@ async function resolveNightActions(game, players) {
       }
 
       case "guard": {
-        // Guardian nastaví stráž u cílového hráče, ne u sebe
+        // Guardian sets guard on target player, not on self
         addEffect(target, "guard", actor.id, null, {});
 
         // ✅ Track this guard for later feedback
@@ -840,6 +844,70 @@ async function resolveNightActions(game, players) {
         break;
       }
 
+      case "revive": {
+        // Monk can only revive dead players
+        if (target.alive) {
+          actor.night_action.results.push(
+            `failed:Nemůžeš oživit živého hráče - ${target.name} je stále naživu`
+          );
+          console.log(
+            `  🙏 [P${actionData.priority}] ${actor.name} cannot revive alive player ${target.name}`
+          );
+          break;
+        }
+
+        const actorRoleData = getRoleData(actor);
+        const usesLeft = actorRoleData.usesRemaining || 0;
+
+        if (usesLeft > 0) {
+          // Revive the player
+          target.alive = true;
+          updatePlayerInMemory(target);
+          
+          // Decrement uses
+          actorRoleData.usesRemaining = usesLeft - 1;
+          
+          // Mark roleData as modified for Mongoose (if markModified exists)
+          if (actor.markModified && typeof actor.markModified === 'function') {
+            actor.markModified('roleData');
+          }
+          
+          // Ensure target night_action is initialized
+          if (!target.night_action) {
+            target.night_action = { targetId: null, action: null, results: [] };
+          }
+          if (!target.night_action.results) {
+            target.night_action.results = [];
+          }
+          // Also ensure nightAction is initialized for compatibility
+          if (!target.nightAction) {
+            target.nightAction = { targetId: null, action: null, results: [] };
+          }
+          if (!target.nightAction.results) {
+            target.nightAction.results = [];
+          }
+          
+          // Add result for actor (Monk)
+          actor.night_action.results.push(
+            `revive:Oživil jsi ${target.name} (${actorRoleData.usesRemaining} použití zbývá)`
+          );
+          
+          // Add result for target (revived player)
+          target.night_action.results.push("revived:Byl jsi oživen");
+          target.nightAction.results.push("revived:Byl jsi oživen");
+          
+          console.log(
+            `  🙏 [P${actionData.priority}] ${actor.name} revived ${target.name} (${actorRoleData.usesRemaining} uses remaining)`
+          );
+        } else {
+          actor.night_action.results.push("failed:Žádná použití");
+          console.log(
+            `  🙏 [P${actionData.priority}] ${actor.name} cannot revive ${target.name} - no uses remaining`
+          );
+        }
+        break;
+      }
+
       case "infect": {
         // Infected can only infect alive players
         if (!target.alive) {
@@ -860,13 +928,13 @@ async function resolveNightActions(game, players) {
           );
         }
 
-        // Sleduj navštívené hráče pro Infected roli
+        // Track visited players for Infected role
         const actorRoleData = getRoleData(actor);
         if (!actorRoleData.visitedPlayers)
           actorRoleData.visitedPlayers = [];
 
-        // Přidej cílového hráče do seznamu navštívených (pokud tam ještě není)
-        // Použij bezpečný pattern s optional chaining a filter (stejně jako v victoryEvaluator.js)
+        // Add target player to visited list (if not already there)
+        // Use safe pattern with optional chaining and filter (same as in victoryEvaluator.js)
         const visitedIds = actorRoleData.visitedPlayers
           .map((id) => id?.toString())
           .filter(Boolean);
@@ -1056,7 +1124,7 @@ async function resolveNightActions(game, players) {
       }
 
       case "hunter_kill": {
-        // Hunter připraví kill (zkontroluje se po smrti)
+        // Hunter prepares kill (checked after death)
         addEffect(target, "pendingKill", actorId, null, { hunter: true });
         hunterKills.set(actorId, targetId);
         actor.night_action.results.push(`success:Zaútočil ${target.name}`);
@@ -1067,9 +1135,9 @@ async function resolveNightActions(game, players) {
       }
 
       case "janitor_clean": {
-        // Janitor může cílit na MRTVÉ hráče
-        // Musíme implementovat výběr mrtvého hráče v UI
-        // Pro teď: cílí na živého, ale vyčistí ho pokud zemře
+        // Janitor can target DEAD players
+        // We need to implement dead player selection in UI
+        // For now: targets alive player, but cleans them if they die
 
         // Check if Janitor has uses left
         const actorRoleData = getRoleData(actor);
@@ -1313,7 +1381,7 @@ async function resolveNightActions(game, players) {
         continue;
       }
 
-      // Přidej informaci o návštěvě do výsledků cíle
+      // Add visit information to target results
       target.night_action.results.push(`visited:${homeInvaders.join(", ")}`);
       console.log(
         `  👤 ${target.name} was home-invaded by: ${homeInvaders.join(", ")}`
@@ -1686,7 +1754,7 @@ async function resolveNightActions(game, players) {
     }
 
     // Check if target was attacked and saved (has 'attacked_killer:' or 'attacked_hunter:' and 'healed:' results)
-    // or was poisoned and cured (has 'healed:Vyléčen z otravy' result)
+    // or was poisoned and cured (has 'healed:Cured from poison' result)
     // Support both night_action and nightAction for compatibility
     const targetResults = target.night_action?.results || target.nightAction?.results || [];
     const wasAttackedAndSaved =
@@ -1713,6 +1781,10 @@ async function resolveNightActions(game, players) {
       console.log(`  💉 ${doctor.name}: Protected ${target.name} (no attack)`);
     }
   }
+
+            // Note: Drunk Doctors are already handled in the main action loop (Phase 2)
+            // where they receive a basic fake action message. We do NOT add additional
+            // doctor-specific feedback here to avoid duplicate messages.
 
   console.log("🏹 [NightResolver] Phase 5b: Hunter penalty check...");
   for (const [hunterId, targetId] of hunterKills.entries()) {

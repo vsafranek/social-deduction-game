@@ -104,6 +104,19 @@ const ROLES = {
     defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
   },
 
+  'Monk': {
+    team: 'good',
+    description: 'Can revive a dead player (2 uses per game)',
+    actionType: 'revive',
+    nightPriority: 9,
+    canUseEveryNight: false,
+    visitsTarget: false, // Targets dead players, doesn't visit them
+    hasLimitedUses: true,
+    maxUses: 2,
+    defaultAffiliations: ['good'],
+    defaultVictory: { canWinWithTeams: ['good'], soloWin: false, customRules: [] }
+  },
+
 
 
   // ==================

@@ -94,17 +94,17 @@ function evaluateCustomRule(rule, ctx) {
     }
 
     case 'allOthersVisited': {
-      // Pro Infected roli - zkontroluj, zda navštívil všechny živé hráče
+      // For Infected role - check if all alive players were visited
       const self = ctx.self;
       if (!self || self.role !== 'Infected') return false;
       
       const alive = ctx.players.filter(pl => pl.alive && getPlayerId(pl) !== getPlayerId(self));
-      if (alive.length === 0) return true; // Pokud není nikdo jiný naživu, vyhrává
+      if (alive.length === 0) return true; // If no one else is alive, wins
       
       const visitedPlayers = self.role_data?.visitedPlayers || [];
       const visitedIds = visitedPlayers.map(id => id?.toString()).filter(Boolean);
       
-      // Zkontroluj, zda všechny živé hráče byly navštíveny
+      // Check if all alive players were visited
       for (const pl of alive) {
         if (!visitedIds.includes(getPlayerId(pl))) {
           return false;

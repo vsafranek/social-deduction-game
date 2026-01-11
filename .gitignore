@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+frontend/dist
+dist-electron
 *.local
 
 # Environment variables
@@ -30,3 +32,9 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Next.js
+.next
+.next/
+frontend/.next
+frontend/.next/
