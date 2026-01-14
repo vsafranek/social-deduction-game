@@ -448,8 +448,8 @@ async function resolveNightActions(game, players) {
     if (!actor || !target) continue;
 
     // Check drunk FIRST
-    // ✅ SerialKiller cannot be stopped by Drunk modifier - he always acts
-    if (actor.modifier === "Drunk" && actor.role !== "SerialKiller") {
+    // ✅ Maniac cannot be stopped by Drunk modifier - he always acts
+    if (actor.modifier === "Drunk" && actor.role !== "Maniac") {
       drunkPlayers.add(actorId);
       const fakeMessage = generateDrunkFakeMessage(
         action,
@@ -464,8 +464,8 @@ async function resolveNightActions(game, players) {
     }
 
     // Check if actor is blocked
-    // ✅ SerialKiller cannot be blocked - he always goes first and cannot be stopped
-    if (hasEffect(actor, "blocked") && actor.role !== "SerialKiller") {
+    // ✅ Maniac cannot be blocked - he always goes first and cannot be stopped
+    if (hasEffect(actor, "blocked") && actor.role !== "Maniac") {
       if (!blocked.has(actorId)) {
         blocked.add(actorId);
         // Jailer-specific feedback for blocked target
@@ -478,8 +478,8 @@ async function resolveNightActions(game, players) {
     }
 
     // Check for guard
-    // ✅ SerialKiller cannot be guarded - he always goes first and cannot be stopped
-    if (hasEffect(target, "guard") && actor.role !== "SerialKiller") {
+    // ✅ Maniac cannot be guarded - he always goes first and cannot be stopped
+    if (hasEffect(target, "guard") && actor.role !== "Maniac") {
       if (!guarded.has(actorId)) {
         guarded.add(actorId);
         addEffect(actor, "guarded", null, null, {});
@@ -499,13 +499,13 @@ async function resolveNightActions(game, players) {
     // Apply action effects immediately
     switch (action) {
       case "block": {
-        // ✅ SerialKiller cannot be blocked - remove blocked effect if target is SerialKiller
-        if (target.role === "SerialKiller") {
+        // ✅ Maniac cannot be blocked - remove blocked effect if target is Maniac
+        if (target.role === "Maniac") {
           console.log(
-            `  👮 [P${actionData.priority}] ${actor.name} tried to jail ${target.name} (SerialKiller) - FAILED (SerialKiller cannot be blocked)`
+            `  👮 [P${actionData.priority}] ${actor.name} tried to jail ${target.name} (Maniac) - FAILED (Maniac cannot be blocked)`
           );
           actor.night_action.results.push(
-            `failed:${target.name} je SerialKiller - nemůže být zablokován`
+            `failed:${target.name} je Maniac - nemůže být zablokován`
           );
           break;
         }

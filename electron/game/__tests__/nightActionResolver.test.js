@@ -367,11 +367,11 @@ describe('nightActionResolver', () => {
 
   describe('Blocked Effects', () => {
     
-    test('should fail when Jailer tries to block SerialKiller', async () => {
+    test('should fail when Jailer tries to block Maniac', async () => {
       const jailer = createMockPlayer('1', 'Jailer', 'Jailer', {
         nightAction: { targetId: '2', action: 'block', results: [] }
       });
-      const serialKiller = createMockPlayer('2', 'SerialKiller', 'SerialKiller', {
+      const maniac = createMockPlayer('2', 'Maniac', 'Maniac', {
         alive: true,
         nightAction: { targetId: '3', action: 'kill', results: [] }
       });
@@ -379,16 +379,16 @@ describe('nightActionResolver', () => {
         alive: true
       });
 
-      await resolveNightActions({}, [jailer, serialKiller, target]);
+      await resolveNightActions({}, [jailer, maniac, target]);
 
-      // SerialKiller cannot be blocked
-      const hasBlocked = serialKiller.effects.some(e => e.type === 'blocked');
+      // Maniac cannot be blocked
+      const hasBlocked = maniac.effects.some(e => e.type === 'blocked');
       expect(hasBlocked).toBe(false);
       
       // Jailer should get failure message
-      expect(jailer.nightAction.results).toContain('failed:SerialKiller je SerialKiller - nemůže být zablokován');
+      expect(jailer.nightAction.results).toContain('failed:Maniac je Maniac - nemůže být zablokován');
       
-      // SerialKiller should still be able to kill
+      // Maniac should still be able to kill
       expect(target.alive).toBe(false);
     });
     
@@ -2127,7 +2127,7 @@ describe('nightActionResolver', () => {
       expect(hasFailureMessage).toBe(true);
     });
 
-    test('should execute puppet action before SerialKiller (priority -1 vs 0)', async () => {
+    test('should execute puppet action before Maniac (priority -1 vs 0)', async () => {
       const witch = createMockPlayer('1', 'Witch', 'Witch', {
         nightAction: {
           action: 'witch_control',
@@ -2143,7 +2143,7 @@ describe('nightActionResolver', () => {
           results: []
         }
       });
-      const serialKiller = createMockPlayer('3', 'SerialKiller', 'SerialKiller', {
+      const maniac = createMockPlayer('3', 'Maniac', 'Maniac', {
         nightAction: {
           action: 'kill',
           targetId: '4',
@@ -2156,13 +2156,13 @@ describe('nightActionResolver', () => {
       const originalTarget = createMockPlayer('5', 'OriginalTarget', 'Citizen', {
         alive: true
       });
-      const players = [witch, puppet, serialKiller, controlledTarget, originalTarget];
+      const players = [witch, puppet, maniac, controlledTarget, originalTarget];
 
       await resolveNightActions({}, players);
 
       // Puppet's target should be overridden to controlledTarget
       expect(puppet.nightAction.targetId.toString()).toBe('4');
-      // Controlled target should be killed by puppet (before SerialKiller)
+      // Controlled target should be killed by puppet (before Maniac)
       expect(controlledTarget.alive).toBe(false);
       // Original target should be safe
       expect(originalTarget.alive).toBe(true);
@@ -2442,7 +2442,7 @@ describe('nightActionResolver', () => {
       const killer1 = createMockPlayer('1', 'Killer1', 'Cleaner', {
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
-      const killer2 = createMockPlayer('3', 'Killer2', 'SerialKiller', {
+      const killer2 = createMockPlayer('3', 'Killer2', 'Maniac', {
         nightAction: { targetId: '2', action: 'kill', results: [] }
       });
       const sweetheart = createMockPlayer('2', 'Sweetheart', 'Citizen', {

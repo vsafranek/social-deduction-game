@@ -34,7 +34,7 @@ const PlayerSchema = new mongoose.Schema({
     type: String,
     enum: ['Doctor', 'Jailer', 'Investigator', 'Coroner', 'Lookout', 'Guardian', 'Tracker',
       'Hunter', 'Citizen', 'Monk', 'Cleaner', 'Accuser', 'Consigliere',
-      'SerialKiller', 'Infected', 'Jester', 'Witch', null],
+      'Maniac', 'Infected', 'Jester', 'Witch', null],
     default: null
   },
   modifier: {

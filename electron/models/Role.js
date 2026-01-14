@@ -199,9 +199,9 @@ const ROLES = {
   // NEUTRAL
   // ==================
 
-  'SerialKiller': {
+  'Maniac': {
     team: 'neutral',
-    description: 'Serial killer - aims to survive alone',
+    description: 'Maniac - aims to survive alone',
     actionType: 'kill',
     nightPriority: 0,
     canUseEveryNight: true,
@@ -252,9 +252,9 @@ const ROLES = {
 
   'Witch': {
     team: 'neutral',
-    description: 'Survive until the end. Controls a player - forces them to use their ability on your chosen target. Acts before SerialKiller.',
+    description: 'Survive until the end. Controls a player - forces them to use their ability on your chosen target. Acts before Maniac.',
     actionType: 'witch_control',
-    nightPriority: -1, // Before SerialKiller (0)
+    nightPriority: -1, // Before Maniac (0)
     canUseEveryNight: true,
     visitsTarget: false, // Doesn't visit, controls others
     defaultAffiliations: ['neutral'],
