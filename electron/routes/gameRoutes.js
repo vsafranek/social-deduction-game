@@ -425,6 +425,7 @@ function formatGameStateResponse(game, players, logs) {
     avatar: p.avatar,
     nightResults: p.night_action?.results || [],
     roleData: p.role_data || {}, // Add roleData for tracking visited players (Infected)
+    affiliations: p.affiliations || [], // Add affiliations for team identification
   }));
 
   // Convert roleConfiguration (JSONB) to object for JSON response
