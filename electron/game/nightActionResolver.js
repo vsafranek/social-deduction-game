@@ -145,6 +145,9 @@ function generateDrunkFakeMessage(action, targetName, players = []) {
     case "witch_control":
       return `success:Ovladla jsi hráče, aby cílil na ${targetName}`;
 
+    case "reaper_guess_kill":
+      return `success:Zaútočil jsi na ${targetName} a uhodl jsi roli`;
+
     default:
       return `success:Akce provedena`;
   }
@@ -381,7 +384,7 @@ async function resolveNightActions(game, players) {
 
     // Most actions require alive target, but some actions need to validate dead targets themselves
     // autopsy, clean_role, and revive can target dead players
-    // investigate, consig_investigate, and infect need to validate dead targets and provide user feedback
+    // investigate, consig_investigate, infect, reaper_guess_kill, kill, poison, and strong_poison need to validate dead targets and provide user feedback
     if (
       action !== "autopsy" &&
       action !== "clean_role" &&
@@ -390,6 +393,10 @@ async function resolveNightActions(game, players) {
       action !== "consig_investigate" &&
       action !== "infect" &&
       action !== "witch_control" &&
+      action !== "reaper_guess_kill" &&
+      action !== "kill" &&
+      action !== "poison" &&
+      action !== "strong_poison" &&
       !target.alive
     ) {
       console.log(
@@ -446,6 +453,14 @@ async function resolveNightActions(game, players) {
     const target = idMap.get(targetId);
 
     if (!actor || !target) continue;
+    
+    // Check if actor is still alive (may have been killed by earlier action)
+    // Also check if actor has pendingKill effect (will die at end of night)
+    const actorHasPendingKill = hasEffect(actor, "pendingKill");
+    if (!actor.alive || actorHasPendingKill) {
+      console.log(`  ⚠️ ${actor.name}: Actor is dead or has pendingKill, skipping action`);
+      continue;
+    }
 
     // Check drunk FIRST
     // ✅ Maniac cannot be stopped by Drunk modifier - he always acts
@@ -953,11 +968,21 @@ async function resolveNightActions(game, players) {
       }
 
       case "kill": {
-        addEffect(target, "pendingKill", actor.id, null, {});
-        actor.night_action.results.push(`success:Zaútočil ${target.name}`);
-        console.log(
-          `  🔪 [P${actionData.priority}] ${actor.name} killed ${target.name}`
-        );
+        const hasPendingKill = hasEffect(target, "pendingKill");
+        const wasAlive = target.alive && !hasPendingKill;
+        if (wasAlive) {
+          addEffect(target, "pendingKill", actor.id, null, {});
+          actor.night_action.results.push(`success:Zaútočil ${target.name}`);
+          console.log(
+            `  🔪 [P${actionData.priority}] ${actor.name} killed ${target.name}`
+          );
+        } else {
+          // Target already dead or has pendingKill - still successful but inform actor
+          actor.night_action.results.push(`success:Zaútočil ${target.name} (byl již mrtvý)`);
+          console.log(
+            `  🔪 [P${actionData.priority}] ${actor.name} tried to kill ${target.name} but target was already dead`
+          );
+        }
         break;
       }
 
@@ -1075,6 +1100,87 @@ async function resolveNightActions(game, players) {
         break;
       }
 
+      case "reaper_guess_kill": {
+        const actionState =
+          actor.night_action ||
+          actor.nightAction ||
+          (actor.night_action = { results: [] });
+        if (!actionState.results) actionState.results = [];
+        const results = actionState.results;
+        const guessedRole = actionState.guessedRole;
+        
+        if (!guessedRole) {
+          results.push("failed:Nevybral jsi roli");
+          console.log(
+            `  ⚠️ [P${actionData.priority}] ${actor.name} (Reaper) didn't guess a role`
+          );
+          break;
+        }
+
+        // Check if target is already dead (before night started)
+        // Note: pendingKill from earlier priority is allowed - Reaper can guess correctly and succeed
+        if (!target.alive) {
+          results.push(
+            `failed:Nemůžeš uhodnout roli mrtvého hráče - ${target.name} je mrtvý`
+          );
+          console.log(
+            `  ⚠️ [P${actionData.priority}] ${actor.name} (Reaper) cannot guess role of dead player ${target.name}`
+          );
+          break;
+        }
+
+        const actualRole = target.role;
+        const actualRoleConfig = ROLES[actualRole];
+        const guessedRoleConfig = ROLES[guessedRole];
+        const hasPendingKill = hasEffect(target, "pendingKill");
+        
+        // Pro evil hráče (Shadows): stačí uhodnout "Shadows" nebo jakoukoliv evil roli
+        // Pro ostatní (Order/good a Odpadlíci/neutral): musí uhodnout přesnou roli
+        let guessedCorrectly = false;
+        if (actualRoleConfig?.team === 'evil') {
+          // Pro evil hráče: správně pokud uhodl "Shadows" nebo jakoukoliv evil roli
+          guessedCorrectly = guessedRole === 'Shadows' || guessedRoleConfig?.team === 'evil';
+        } else {
+          // Pro ostatní: pouze přesná shoda role
+          guessedCorrectly = guessedRole === actualRole;
+        }
+
+        if (guessedCorrectly) {
+          // Správně uhodl → pokud target ještě nemá pendingKill, přidáme ho
+          // Reaper nedostává informaci o tom, zda target byl mrtvý (nenavštěvuje ho)
+          if (!hasPendingKill) {
+            addEffect(target, "pendingKill", actor.id || actor._id, null, {});
+          }
+          const successMessage = guessedRole === 'Shadows' 
+            ? `reaper_success:Správně! ${target.name} je Shadows (${actualRole}) - zemřel`
+            : `reaper_success:Správně! ${target.name} je ${actualRole} - zemřel`;
+          results.push(successMessage);
+          console.log(
+            `  🎯 [P${actionData.priority}] ${actor.name} (Reaper) correctly guessed ${target.name} as ${guessedRole} (actual: ${actualRole}) - ${hasPendingKill ? 'target already dead (Reaper doesn\'t know)' : 'target dies'}`
+          );
+        } else {
+          // Špatně uhodl → pokud target má pendingKill, Reaper nemůže uhodnout roli mrtvého hráče
+          if (hasPendingKill) {
+            results.push(
+              `failed:Nemůžeš uhodnout roli mrtvého hráče - ${target.name} je mrtvý`
+            );
+            console.log(
+              `  ⚠️ [P${actionData.priority}] ${actor.name} (Reaper) incorrectly guessed ${target.name} as ${guessedRole} (actual: ${actualRole}) - target already dead, Reaper lives`
+            );
+          } else {
+            // Target žije → Reaper zemře
+            addEffect(actor, "pendingKill", actor.id || actor._id, null, { selfKill: true });
+            results.push(
+              `reaper_fail:Špatně! ${target.name} není ${guessedRole}, ale ${actualRole} - zemřeš`
+            );
+            console.log(
+              `  💀 [P${actionData.priority}] ${actor.name} (Reaper) incorrectly guessed ${target.name} as ${guessedRole} (actual: ${actualRole}) - Reaper dies`
+            );
+          }
+        }
+        break;
+      }
+
       case "protect": {
         addEffect(target, "protected", actor.id, null, {});
         console.log(
@@ -1084,9 +1190,24 @@ async function resolveNightActions(game, players) {
       }
 
       case "poison": {
+        const actionState =
+          actor.night_action ||
+          actor.nightAction ||
+          (actor.night_action = { results: [] });
+        if (!actionState.results) actionState.results = [];
+        const results = actionState.results;
         // Regular poison - victim dies next day, can be healed by Doctor
+        // Cannot poison dead players or players with pendingKill
+        const hasPendingKill = hasEffect(target, "pendingKill");
+        if (!target.alive || hasPendingKill) {
+          results.push(`failed:${target.name} je mrtvý - nemůžeš otrávit mrtvého hráče`);
+          console.log(
+            `  ⚠️ [P${actionData.priority}] ${actor.name} tried to poison dead player ${target.name}`
+          );
+          break;
+        }
         addEffect(target, "poisoned", actor.id, null, { round: game.round });
-        actor.night_action.results.push(`success:Otrávil ${target.name}`);
+        results.push(`success:Otrávil ${target.name}`);
         console.log(
           `  ☠️ [P${actionData.priority}] ${actor.name} poisoned ${target.name} (will die next day if not cured)`
         );
@@ -1094,7 +1215,22 @@ async function resolveNightActions(game, players) {
       }
 
       case "strong_poison": {
+        const actionState =
+          actor.night_action ||
+          actor.nightAction ||
+          (actor.night_action = { results: [] });
+        if (!actionState.results) actionState.results = [];
+        const results = actionState.results;
         // Strong poison - one-time use, activates after Doctor visit, cannot be healed
+        // Cannot poison dead players or players with pendingKill
+        const hasPendingKill = hasEffect(target, "pendingKill");
+        if (!target.alive || hasPendingKill) {
+          results.push(`failed:${target.name} je mrtvý - nemůžeš otrávit mrtvého hráče`);
+          console.log(
+            `  ⚠️ [P${actionData.priority}] ${actor.name} tried to use strong poison on dead player ${target.name}`
+          );
+          break;
+        }
         const actorRoleData = getRoleData(actor);
         const usesLeft =
           actorRoleData.usesRemaining !== undefined
@@ -1108,14 +1244,14 @@ async function resolveNightActions(game, players) {
             round: game.round,
             activated: false,
           });
-          actor.night_action.results.push(
-            `success:Použil silný jed na ${target.name} (${actor.role_data.usesRemaining} použití zbývá)`
+          results.push(
+            `success:Použil silný jed na ${target.name} (${actorRoleData.usesRemaining} použití zbývá)`
           );
           console.log(
             `  💀 [P${actionData.priority}] ${actor.name} used strong poison on ${target.name} (will activate after Doctor visit)`
           );
         } else {
-          actor.night_action.results.push("failed:Žádná použití silného jedu");
+          results.push("failed:Žádná použití silného jedu");
           console.log(
             `  ⚠️ [P${actionData.priority}] ${actor.name} tried to use strong poison but has no uses left`
           );

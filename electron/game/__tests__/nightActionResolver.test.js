@@ -2685,5 +2685,365 @@ describe('nightActionResolver', () => {
       expect(visitedResult).toContain('Poisoner');
     });
   });
+
+  describe('Reaper role', () => {
+    test('should kill target when Reaper correctly guesses good role', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Doctor', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, doctor]);
+
+      expect(doctor.alive).toBe(false);
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_success:Správně! Doctor je Doctor - zemřel/)
+      );
+    });
+
+    test('should kill Reaper when incorrectly guesses good role', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Investigator', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, doctor]);
+
+      expect(doctor.alive).toBe(true);
+      expect(reaper.alive).toBe(false);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_fail:Špatně! Doctor není Investigator, ale Doctor - zemřeš/)
+      );
+    });
+
+    test('should kill target when Reaper correctly guesses specific evil role', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Cleaner', results: [] }
+      });
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, cleaner]);
+
+      expect(cleaner.alive).toBe(false);
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_success:Správně! Cleaner je Cleaner - zemřel/)
+      );
+    });
+
+    test('should kill target when Reaper guesses "Shadows" for evil player', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Shadows', results: [] }
+      });
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, cleaner]);
+
+      // Should succeed because "Shadows" matches any evil role
+      expect(cleaner.alive).toBe(false);
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_success:Správně! Cleaner je Shadows/)
+      );
+    });
+
+    test('should kill target when Reaper guesses "Shadows" for Poisoner', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Shadows', results: [] }
+      });
+      const poisoner = createMockPlayer('2', 'Poisoner', 'Poisoner', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, poisoner]);
+
+      // Should succeed because "Shadows" matches any evil role
+      expect(poisoner.alive).toBe(false);
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_success:Správně! Poisoner je Shadows/)
+      );
+    });
+
+    test('should kill target when Reaper guesses any evil role for evil player', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Accuser', results: [] }
+      });
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, cleaner]);
+
+      // Should succeed because any evil role matches any evil player
+      expect(cleaner.alive).toBe(false);
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_success:Správně! Cleaner je Cleaner - zemřel/)
+      );
+    });
+
+    test('should kill Reaper when guesses "Shadows" for good player', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Shadows', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, doctor]);
+
+      // Should fail because "Shadows" only works for evil players
+      expect(doctor.alive).toBe(true);
+      expect(reaper.alive).toBe(false);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_fail:Špatně! Doctor není Shadows, ale Doctor - zemřeš/)
+      );
+    });
+
+    test('should kill Reaper when guesses "Shadows" for neutral player', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Shadows', results: [] }
+      });
+      const jester = createMockPlayer('2', 'Jester', 'Jester', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, jester]);
+
+      // Should fail because "Shadows" only works for evil players
+      expect(jester.alive).toBe(true);
+      expect(reaper.alive).toBe(false);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_fail:Špatně! Jester není Shadows, ale Jester - zemřeš/)
+      );
+    });
+
+    test('should kill Reaper when guesses evil role for good player', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Cleaner', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, doctor]);
+
+      expect(doctor.alive).toBe(true);
+      expect(reaper.alive).toBe(false);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_fail:Špatně! Doctor není Cleaner, ale Doctor - zemřeš/)
+      );
+    });
+
+    test('should fail when Reaper does not provide guessedRole', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, doctor]);
+
+      expect(doctor.alive).toBe(true);
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContain('failed:Nevybral jsi roli');
+    });
+
+    test('should fail when Reaper targets dead player', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Doctor', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: false
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, doctor]);
+
+      expect(doctor.alive).toBe(false);
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/failed:Nemůžeš uhodnout roli mrtvého hráče/)
+      );
+    });
+
+    test('should play before evil roles (priority 6 vs 7)', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Cleaner', results: [] }
+      });
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
+        alive: true,
+        nightAction: { targetId: '3', action: 'kill', results: [] }
+      });
+      const victim = createMockPlayer('3', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, cleaner, victim]);
+
+      // Reaper should kill Cleaner before Cleaner can act
+      expect(cleaner.alive).toBe(false);
+      // Cleaner's kill should not happen because Cleaner is dead
+      expect(victim.alive).toBe(true);
+    });
+
+    test('should not visit target (visitsTarget: false)', async () => {
+      const reaper = createMockPlayer('1', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Doctor', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [reaper, doctor]);
+
+      // Doctor should not see Reaper as visitor
+      const visitedResult = doctor.nightAction.results.find(r => r.startsWith('visited:'));
+      expect(visitedResult).toBeUndefined();
+    });
+
+    test('should succeed when Reaper correctly guesses role of player killed by Maniac same night', async () => {
+      const maniac = createMockPlayer('1', 'Maniac', 'Maniac', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const reaper = createMockPlayer('3', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Doctor', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [maniac, reaper, doctor]);
+
+      // Maniac kills Doctor first (priority 0)
+      expect(doctor.alive).toBe(false);
+      // Reaper should succeed because guess was correct, but doesn't know target was already dead
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_success:Správně! Doctor je Doctor - zemřel/)
+      );
+    });
+
+    test('should fail when Reaper incorrectly guesses role of player killed by Maniac same night', async () => {
+      const maniac = createMockPlayer('1', 'Maniac', 'Maniac', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const reaper = createMockPlayer('3', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Investigator', results: [] }
+      });
+      const doctor = createMockPlayer('2', 'Doctor', 'Doctor', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [maniac, reaper, doctor]);
+
+      // Maniac kills Doctor first (priority 0)
+      expect(doctor.alive).toBe(false);
+      // Reaper should fail because guess was wrong and target is dead
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/failed:Nemůžeš uhodnout roli mrtvého hráče/)
+      );
+    });
+
+    test('should succeed when Reaper correctly guesses evil role of player killed by Maniac same night', async () => {
+      const maniac = createMockPlayer('1', 'Maniac', 'Maniac', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const reaper = createMockPlayer('3', 'Reaper', 'Reaper', {
+        nightAction: { targetId: '2', action: 'reaper_guess_kill', guessedRole: 'Shadows', results: [] }
+      });
+      const cleaner = createMockPlayer('2', 'Cleaner', 'Cleaner', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [maniac, reaper, cleaner]);
+
+      // Maniac kills Cleaner first (priority 0)
+      expect(cleaner.alive).toBe(false);
+      // Reaper should succeed because "Shadows" matches evil role, but doesn't know target was already dead
+      expect(reaper.alive).toBe(true);
+      expect(reaper.nightAction.results).toContainEqual(
+        expect.stringMatching(/reaper_success:Správně! Cleaner je Shadows \(Cleaner\) - zemřel/)
+      );
+    });
+  });
+
+  describe('Evil roles targeting dead players', () => {
+    test('should succeed when Cleaner tries to kill player killed by Maniac same night', async () => {
+      const maniac = createMockPlayer('1', 'Maniac', 'Maniac', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const cleaner = createMockPlayer('3', 'Cleaner', 'Cleaner', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [maniac, cleaner, victim]);
+
+      // Maniac kills victim first (priority 0)
+      expect(victim.alive).toBe(false);
+      // Cleaner should succeed but get info that target was already dead
+      expect(cleaner.alive).toBe(true);
+      expect(cleaner.nightAction.results).toContainEqual(
+        expect.stringMatching(/success:Zaútočil Victim \(byl již mrtvý\)/)
+      );
+    });
+
+    test('should succeed when Accuser tries to kill player killed by Maniac same night', async () => {
+      const maniac = createMockPlayer('1', 'Maniac', 'Maniac', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const accuser = createMockPlayer('3', 'Accuser', 'Accuser', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [maniac, accuser, victim]);
+
+      // Maniac kills victim first (priority 0)
+      expect(victim.alive).toBe(false);
+      // Accuser should succeed but get info that target was already dead
+      expect(accuser.alive).toBe(true);
+      expect(accuser.nightAction.results).toContainEqual(
+        expect.stringMatching(/success:Zaútočil Victim \(byl již mrtvý\)/)
+      );
+    });
+
+    test('should fail when Poisoner tries to poison player killed by Maniac same night', async () => {
+      const maniac = createMockPlayer('1', 'Maniac', 'Maniac', {
+        nightAction: { targetId: '2', action: 'kill', results: [] }
+      });
+      const poisoner = createMockPlayer('3', 'Poisoner', 'Poisoner', {
+        nightAction: { targetId: '2', action: 'poison', results: [] }
+      });
+      const victim = createMockPlayer('2', 'Victim', 'Citizen', {
+        alive: true
+      });
+
+      await resolveNightActions({ round: 1 }, [maniac, poisoner, victim]);
+
+      // Maniac kills victim first (priority 0)
+      expect(victim.alive).toBe(false);
+      // Poisoner should not be able to poison dead player (poison is not kill action)
+      expect(poisoner.alive).toBe(true);
+      const hasPoisonEffect = victim.effects.some(e => e.type === 'poisoned');
+      expect(hasPoisonEffect).toBe(false);
+    });
+  });
 });
 

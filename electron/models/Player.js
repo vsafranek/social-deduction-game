@@ -34,7 +34,7 @@ const PlayerSchema = new mongoose.Schema({
     type: String,
     enum: ['Doctor', 'Jailer', 'Investigator', 'Coroner', 'Lookout', 'Guardian', 'Tracker',
       'Hunter', 'Citizen', 'Monk', 'Cleaner', 'Accuser', 'Consigliere',
-      'Maniac', 'Infected', 'Jester', 'Witch', null],
+      'Maniac', 'Infected', 'Jester', 'Witch', 'Reaper', null],
     default: null
   },
   modifier: {
@@ -73,11 +73,15 @@ const PlayerSchema = new mongoose.Schema({
       type: String,
       enum: ['protect', 'block', 'investigate', 'autopsy', 'watch', 'guard', 'track',
         'kill', 'clean_kill', 'clean_role', 'janitor_clean', 'frame',
-        'hunter_kill', 'consig_investigate', 'infect', 'witch_control', 'revive', null]
+        'hunter_kill', 'consig_investigate', 'infect', 'witch_control', 'revive', 'reaper_guess_kill', null]
     },
     puppetId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Player',
+      default: null
+    },
+    guessedRole: {
+      type: String,
       default: null
     },
     results: {

@@ -263,6 +263,25 @@ const ROLES = {
       soloWin: false,
       customRules: [] // Just needs to survive
     }
+  },
+
+  'Reaper': {
+    team: 'neutral',
+    description: 'Musí během noci uhodnout roli hráče. Pokud se trefí, hráč zemře. Pokud se netrefí, zemře Reaper.',
+    actionType: 'reaper_guess_kill',
+    nightPriority: 6, // Před evil (7)
+    canUseEveryNight: true,
+    visitsTarget: false, // Nikdy nevychází z domu
+    defaultAffiliations: ['neutral', 'solo'],
+    defaultVictory: {
+      canWinWithTeams: [],
+      soloWin: true,
+      customRules: [
+        { type: 'aliveExactly', team: 'neutral', count: 1 },
+        { type: 'aliveExactly', team: 'good', count: 0 },
+        { type: 'aliveExactly', team: 'evil', count: 0 }
+      ]
+    }
   }
 };
 

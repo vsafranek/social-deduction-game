@@ -1826,7 +1826,7 @@ router.post("/:gameId/end-phase", async (req, res) => {
 router.post("/:gameId/set-night-action", async (req, res) => {
   try {
     const { gameId } = req.params;
-    const { playerId, targetId, actionMode, puppetId } = req.body;
+    const { playerId, targetId, actionMode, puppetId, guessedRole } = req.body;
 
     if (!ensureUUID(gameId))
       return res.status(400).json({ error: "Invalid game id" });
@@ -1846,8 +1846,26 @@ router.post("/:gameId/set-night-action", async (req, res) => {
 
     const roleData = ROLES[player.role];
 
-    // Check if role is Witch (requires puppetId)
-    if (player.role === "Witch") {
+    // Check if role is Reaper (requires guessedRole)
+    if (player.role === "Reaper") {
+      if (!guessedRole || typeof guessedRole !== "string") {
+        return res.status(400).json({ error: "Reaper requires guessedRole" });
+      }
+      // Validate that guessedRole is a valid role or "Shadows" (team name for evil)
+      const validRoles = Object.keys(ROLES);
+      if (guessedRole !== "Shadows" && !validRoles.includes(guessedRole)) {
+        return res.status(400).json({ error: "Invalid guessed role" });
+      }
+
+      await updatePlayer(playerId, {
+        night_action: {
+          targetId,
+          action: "reaper_guess_kill",
+          guessedRole,
+          results: [],
+        },
+      });
+    } else if (player.role === "Witch") {
       if (!puppetId || !ensureUUID(puppetId)) {
         return res.status(400).json({ error: "Witch requires puppetId" });
       }

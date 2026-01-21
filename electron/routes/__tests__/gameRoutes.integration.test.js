@@ -26,19 +26,48 @@ jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'error').mockImplementation(() => {});
 
 // Helper function to generate unique room codes for tests
-// Uses high-resolution time, counter, and random for maximum uniqueness
+// Uses timestamp, counter, and random for maximum uniqueness
 let roomCodeCounter = 0;
 function generateUniqueRoomCode() {
   roomCodeCounter++;
-  // Use high-resolution time (nanoseconds) for better uniqueness
-  const hrtime = process.hrtime.bigint(); // High-resolution time in nanoseconds
-  const hrtimeNum = Number(hrtime % 1000000n); // Last 6 digits (0-999999)
+  // Use timestamp in milliseconds for better uniqueness
+  const timestamp = Date.now();
+  // Use last 6 digits of timestamp (0-999999)
+  const timestampPart = timestamp % 1000000;
+  // Use counter to ensure uniqueness even if called at exact same millisecond
   const counter = roomCodeCounter % 10000; // 0-9999
+  // Use random for additional entropy
   const random = Math.floor(Math.random() * 10000); // 0-9999
   // Combine with XOR for better distribution, then map to 1000-9999 range
-  const combined = (hrtimeNum ^ counter ^ random) % 9000;
+  const combined = (timestampPart ^ counter ^ random) % 9000;
   const code = (combined + 1000).toString().padStart(4, '0');
+  // Add small delay to ensure timestamp changes between calls
+  // This is especially important when tests run very fast
   return code;
+}
+
+// Helper function to create a game with retry logic for handling room_code collisions
+async function createGameWithRetry(gameData, maxAttempts = 5) {
+  let attempts = 0;
+  while (attempts < maxAttempts) {
+    try {
+      const dataWithCode = {
+        ...gameData,
+        room_code: generateUniqueRoomCode()
+      };
+      const game = await createGame(dataWithCode);
+      return game;
+    } catch (error) {
+      if (error.message.includes('duplicate key') && attempts < maxAttempts - 1) {
+        attempts++;
+        // Small delay before retry
+        await new Promise(resolve => setTimeout(resolve, 10));
+        continue;
+      }
+      throw error; // Re-throw if not a duplicate key error or max attempts reached
+    }
+  }
+  throw new Error('Failed to create game after maximum retry attempts');
 }
 
 describe('GameRoutes Integration Tests', () => {
@@ -199,12 +228,11 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timer_state: { phase_ends_at: null }
       };
-      const game = await createGame(gameData);
+      const game = await createGameWithRetry(gameData);
       gameId = game.id;
       testGameIds.push(gameId);
     });
@@ -287,13 +315,12 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timers: { night_seconds: 90, day_seconds: 150 },
         timer_state: { phase_ends_at: null }
       };
-      const game = await createGame(gameData);
+      const game = await createGameWithRetry(gameData);
       gameId = game.id;
       testGameIds.push(gameId);
 
@@ -399,12 +426,11 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timer_state: { phase_ends_at: null }
       };
-      const game = await createGame(gameData);
+      const game = await createGameWithRetry(gameData);
       gameId = game.id;
       testGameIds.push(gameId);
     });
@@ -461,13 +487,12 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timers: { night_seconds: 90, day_seconds: 150 },
         timer_state: { phase_ends_at: null }
       };
-      const game = await createGame(gameData);
+      const game = await createGameWithRetry(gameData);
       gameId = game.id;
       testGameIds.push(gameId);
 
@@ -573,13 +598,12 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: generateUniqueRoomCode(),
         phase: 'lobby',
         round: 0,
         timers: { night_seconds: 90, day_seconds: 150 },
         timer_state: { phase_ends_at: null }
       };
-      const game = await createGame(gameData);
+      const game = await createGameWithRetry(gameData);
       gameId = game.id;
       testGameIds.push(gameId);
 
@@ -692,13 +716,12 @@ describe('GameRoutes Integration Tests', () => {
     beforeEach(async () => {
       if (!isConnected) return;
       const gameData = {
-        room_code: generateUniqueRoomCode(),
         phase: 'night', // Night phase for set-night-action
         round: 1,
         timers: { night_seconds: 90, day_seconds: 150 },
         timer_state: { phase_ends_at: null }
       };
-      const game = await createGame(gameData);
+      const game = await createGameWithRetry(gameData);
       gameId = game.id;
       testGameIds.push(gameId);
 
