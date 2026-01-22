@@ -97,7 +97,10 @@ function clearExpiredEffects(players) {
 // Create game
 router.post("/create", async (req, res) => {
   try {
-    const { ip, port } = req.body || {};
+    const { ip, port, mode, hostName } = req.body || {};
+    
+    // Validate mode (default to 'party' for backward compatibility)
+    const gameMode = mode === 'classic' ? 'classic' : 'party';
     
     // Generate unique room code with retry logic
     let roomCode;
@@ -128,14 +131,60 @@ router.post("/create", async (req, res) => {
       phase: "lobby",
       round: 0,
       timer_state: { phaseEndsAt: null },
+      mode: gameMode,
     });
 
     await createGameLog({
       game_id: game.id,
-      message: `Game created. Room: ${roomCode}`,
+      message: `Game created. Room: ${roomCode}, Mode: ${gameMode}`,
     });
 
-    res.json({ success: true, gameId: game.id, roomCode });
+    // In classic mode, automatically create host player
+    let hostPlayerId = null;
+    let hostSessionId = null;
+    if (gameMode === 'classic') {
+      try {
+        // Generate unique session ID for host
+        hostSessionId = `host_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const hostNameFinal = hostName || 'Host';
+        const avatar = assignRandomAvatar();
+        
+        if (!avatar) {
+          console.error("❌ Failed to assign avatar to host player - no avatars available");
+          // Continue without host player - game can still work in party mode
+        } else {
+          const hostPlayer = await createPlayer({
+            game_id: game.id,
+            session_id: hostSessionId,
+            name: hostNameFinal,
+            role: null,
+            avatar,
+          });
+          
+          if (hostPlayer && hostPlayer.id) {
+            hostPlayerId = hostPlayer.id;
+            console.log(`✅ Created host player ${hostNameFinal} with avatar: ${avatar}`);
+            
+            await createGameLog({
+              game_id: game.id,
+              message: `${hostNameFinal} (host) joined.`,
+            });
+          }
+        }
+      } catch (hostError) {
+        console.error("⚠️ Failed to create host player:", hostError);
+        // Continue without host player - game can still work in party mode
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      gameId: game.id, 
+      roomCode,
+      mode: gameMode,
+      hostPlayerId,
+      hostSessionId,
+    });
   } catch (e) {
     console.error("create error:", e);
     res.status(500).json({ error: e.message });
@@ -414,19 +463,55 @@ router.delete("/:gameId/player/:playerId", async (req, res) => {
 
 // Helper function to format game state for response
 function formatGameStateResponse(game, players, logs) {
-  const publicPlayers = players.map((p) => ({
-    _id: p.id,
-    name: p.name,
-    role: p.role,
-    alive: p.alive,
-    hasVoted: p.has_voted,
-    voteFor: p.vote_for_id,
-    voteWeight: p.vote_weight || 1,
-    avatar: p.avatar,
-    nightResults: p.night_action?.results || [],
-    roleData: p.role_data || {}, // Add roleData for tracking visited players (Infected)
-    affiliations: p.affiliations || [], // Add affiliations for team identification
-  }));
+  // Find host player if game is in classic mode (for sessionId identification)
+  let hostSessionIdFromState = null;
+  if (game.mode === 'classic') {
+    const hostPlayer = players.find(p => p.session_id && p.session_id.startsWith('host_'));
+    if (hostPlayer) {
+      hostSessionIdFromState = hostPlayer.session_id;
+    }
+  }
+
+  const publicPlayers = players.map((p) => {
+    const playerData = {
+      _id: p.id,
+      name: p.name,
+      role: p.role,
+      alive: p.alive,
+      hasVoted: p.has_voted,
+      voteFor: p.vote_for_id,
+      voteWeight: p.vote_weight || 1,
+      avatar: p.avatar,
+      nightResults: p.night_action?.results || [],
+      roleData: p.role_data || {}, // Add roleData for tracking visited players (Infected)
+      affiliations: p.affiliations || [], // Add affiliations for team identification
+    };
+    
+    // Include nightAction for host player in classic mode (so they can see their target)
+    if (p.session_id && p.session_id.startsWith('host_') && p.night_action) {
+      // Try both snake_case and camelCase
+      const targetId = p.night_action.target_id || p.night_action.targetId;
+      const action = p.night_action.action;
+      const puppetId = p.night_action.puppet_id || p.night_action.puppetId;
+      const guessedRole = p.night_action.guessed_role || p.night_action.guessedRole;
+      
+      if (targetId || action) {
+        playerData.nightAction = {
+          targetId: targetId,
+          action: action,
+          puppetId: puppetId,
+          guessedRole: guessedRole
+        };
+      }
+    }
+    
+    // Only include sessionId for host player (security: don't expose other players' sessionIds)
+    if (p.session_id && p.session_id.startsWith('host_')) {
+      playerData.sessionId = p.session_id;
+    }
+    
+    return playerData;
+  });
 
   // Convert roleConfiguration (JSONB) to object for JSON response
   const roleConfigObj = game.role_configuration || game.roleConfiguration || {};
@@ -456,6 +541,18 @@ function formatGameStateResponse(game, players, logs) {
   const modifierConfigObj =
     game.modifier_configuration || game.modifierConfiguration || {};
 
+  // Find host player if game is in classic mode (host player has session_id starting with "host_")
+  let hostPlayerIdFromState = null;
+  if (game.mode === 'classic') {
+    const hostPlayer = players.find(p => p.session_id && p.session_id.startsWith('host_'));
+    if (hostPlayer) {
+      hostPlayerIdFromState = hostPlayer.id || hostPlayer._id;
+      if (!hostSessionIdFromState) {
+        hostSessionIdFromState = hostPlayer.session_id;
+      }
+    }
+  }
+
   return {
     game: {
       _id: game.id,
@@ -472,8 +569,11 @@ function formatGameStateResponse(game, players, logs) {
       roleMaxLimits: roleMaxLimitsObj,
       guaranteedRoles: guaranteedRolesArr,
       teamLimits: teamLimitsObj,
+      mode: game.mode || 'party', // Include game mode
     },
     players: publicPlayers,
+    hostPlayerId: hostPlayerIdFromState, // Include host player ID in game state
+    hostSessionId: hostSessionIdFromState, // Include host session ID in game state
     logs: logs.map((l) => ({
       _id: l.id,
       message: l.message,
@@ -1989,6 +2089,9 @@ router.post("/:gameId/set-night-action", async (req, res) => {
         puppetId ? ` (puppet: ${puppetId})` : ""
       }`
     );
+
+    // Emit game state update so frontend gets updated nightAction
+    await emitGameStateUpdate(gameId);
 
     res.json({ success: true });
   } catch (e) {

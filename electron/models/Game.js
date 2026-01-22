@@ -44,6 +44,12 @@ const GameSchema = new mongoose.Schema({
   ip: String,
   port: Number,
   
+  // Game mode: 'party' (moderator only) or 'classic' (host can also play)
+  mode: {
+    type: String,
+    enum: ['party', 'classic'],
+    default: 'party'
+  },
 
   roleConfiguration: {
     type: Map,

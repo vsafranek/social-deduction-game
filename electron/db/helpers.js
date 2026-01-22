@@ -62,11 +62,33 @@ async function createGame(gameData) {
     id: gameData.id || uuidv4(),
   };
 
+  // Remove mode if it's not supported yet (for backward compatibility during migration)
+  // The migration 006_add_game_mode.sql needs to be run first
+  // If mode column doesn't exist, Supabase will error, so we'll try without it as fallback
   const { data, error } = await supabase
     .from("games")
     .insert(dataToInsert)
     .select()
     .single();
+
+  // If error is about missing 'mode' column, retry without it (backward compatibility)
+  if (error && error.message && error.message.includes("mode") && error.message.includes("column")) {
+    console.warn("⚠️ 'mode' column not found, creating game without it. Please run migration 006_add_game_mode.sql");
+    const { mode, ...dataWithoutMode } = dataToInsert;
+    const { data: retryData, error: retryError } = await supabase
+      .from("games")
+      .insert(dataWithoutMode)
+      .select()
+      .single();
+    
+    if (retryError) {
+      handleSupabaseError(retryError, "createGame");
+      // handleSupabaseError throws, so this return is unreachable, but kept for clarity
+      return null;
+    }
+    
+    return retryData;
+  }
 
   handleSupabaseError(error, "createGame");
   return data;
