@@ -14,7 +14,7 @@ let playerWindows = {}; // Store open player windows
 
 const expressApp = express();
 const PORT = 3001;
-const NEXTJS_PORT = 3000;
+const NEXTJS_PORT = 3010;
 // Check both app.isPackaged and NODE_ENV to determine if we're in production
 // Note: NODE_ENV may be set later, so use a function to evaluate dynamically
 function isDev() {
@@ -63,7 +63,7 @@ app.whenReady().then(async () => {
     if (!process.env.NODE_ENV) {
       process.env.NODE_ENV = "development";
     }
-    
+
     // Now that NODE_ENV is set, log the mode
     console.log(`📦 Mode: ${isDev() ? "Development" : "Production"}`);
 
@@ -112,7 +112,7 @@ app.whenReady().then(async () => {
       // Silently accept telemetry/debug data (no-op)
       res.status(200).json({ status: "ok" });
     });
-    
+
     const INGEST_PORT = 7242;
     ingestApp.listen(INGEST_PORT, "127.0.0.1", () => {
       console.log(`🔍 Debug ingest endpoint: http://127.0.0.1:${INGEST_PORT}/ingest/:id`);
@@ -147,7 +147,7 @@ app.whenReady().then(async () => {
       const standalonePath = path.join(__dirname, "../frontend/.next/standalone");
       const staticPath = path.join(__dirname, "../frontend/.next/static");
       const publicPath = path.join(__dirname, "../frontend/public");
-      
+
       // Check if standalone build exists
       if (require("fs").existsSync(standalonePath)) {
         // Next.js standalone server runs on a different port internally
@@ -169,7 +169,7 @@ app.whenReady().then(async () => {
         if (require("fs").existsSync(staticPath)) {
           expressApp.use("/_next/static", express.static(staticPath));
         }
-        
+
         // Serve public files
         if (require("fs").existsSync(publicPath)) {
           expressApp.use(express.static(publicPath));
@@ -231,17 +231,17 @@ app.whenReady().then(async () => {
     });
 
     serverInstance.setMaxListeners(50);
-    
+
     serverInstance.on('error', (err) => {
       console.error("🔍 [DEBUG] Express server error:", err);
       if (err.code === 'EADDRINUSE') {
         console.error(`❌ Port ${PORT} is already in use!`);
       }
     });
-    
+
     // Show splash screen while main window loads
     splashWindow = await createSplashWindow();
-    
+
     createWindow();
   } catch (error) {
     console.error("❌ FATAL ERROR during startup:", error);
@@ -254,7 +254,7 @@ app.whenReady().then(async () => {
 function getIconPath() {
   const fs = require("fs");
   const buildDir = path.join(__dirname, "../build");
-  
+
   // Helper to check if file exists (case-insensitive on Windows)
   function fileExists(filePath) {
     try {
@@ -263,25 +263,25 @@ function getIconPath() {
       return false;
     }
   }
-  
+
   // Helper to find file with any case variation
   function findFile(dir, baseName, extensions) {
     for (const ext of extensions) {
       // Try exact case first
       let filePath = path.join(dir, `${baseName}${ext}`);
       if (fileExists(filePath)) return filePath;
-      
+
       // Try lowercase
       filePath = path.join(dir, `${baseName.toLowerCase()}${ext}`);
       if (fileExists(filePath)) return filePath;
-      
+
       // Try uppercase
       filePath = path.join(dir, `${baseName.toUpperCase()}${ext}`);
       if (fileExists(filePath)) return filePath;
     }
     return null;
   }
-  
+
   let iconPath;
   if (process.platform === "win32") {
     // Windows: prefer .ico, fallback to .png, then favicon.*
@@ -298,7 +298,7 @@ function getIconPath() {
     iconPath = findFile(buildDir, "icon", [".png", ".PNG"]);
     if (!iconPath) iconPath = findFile(buildDir, "favicon", [".png", ".PNG", ".ico", ".ICO"]);
   }
-  
+
   // Fallback path for logging; may not exist if icons are missing
   return iconPath || path.join(buildDir, "icon.png");
 }
@@ -310,13 +310,13 @@ async function createSplashWindow() {
   await settingsStore.initStore();
   const settings = settingsStore.getSettings();
   const willBeFullscreen = settings.fullscreen !== false; // Default true
-  
+
   // Main window dimensions
   const MAIN_WINDOW_WIDTH = 1400;
   const MAIN_WINDOW_HEIGHT = 900;
-  
+
   let splashOptions;
-  
+
   if (willBeFullscreen) {
     // If main window will be fullscreen, make splash fullscreen too
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -361,10 +361,10 @@ async function createSplashWindow() {
 
 function createWindow() {
   console.log("🪟 Creating Moderator window...");
-  
+
   // Get icon path using helper function
   const iconPath = getIconPath();
-  
+
   // Only set icon if file exists
   const iconOptions = {};
   if (require("fs").existsSync(iconPath)) {
@@ -394,7 +394,7 @@ function createWindow() {
   if (!isDev()) {
     try {
       mainWindow.setMenuBarVisibility(false);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   mainWindow.loadURL(`http://localhost:${PORT}?mode=moderator`);
@@ -402,23 +402,23 @@ function createWindow() {
   // Show window only when content is ready
   mainWindow.once("ready-to-show", async () => {
     console.log("✅ Window content ready, showing window...");
-    
+
     // Ensure store is initialized before loading settings
     await settingsStore.initStore();
-    
+
     // Load settings and apply them
     const settings = settingsStore.getSettings();
     console.log("📋 Loaded settings:", settings);
     const shouldFullscreen = settings.fullscreen !== false; // Default true
     const shouldAlwaysOnTop = settings.alwaysOnTop === true;
-    
+
     if (shouldFullscreen) {
       mainWindow.setFullScreen(true);
       console.log("🖥️ Window set to fullscreen mode (from saved settings)");
     } else {
       console.log("🖥️ Window will show with title bar (fullscreen disabled in settings)");
     }
-    
+
     if (shouldAlwaysOnTop) {
       mainWindow.setAlwaysOnTop(true);
       console.log("📌 Window set to always on top (from saved settings)");
@@ -427,10 +427,10 @@ function createWindow() {
       mainWindow.setAlwaysOnTop(false);
       console.log("📌 Window always on top disabled (from saved settings)");
     }
-    
+
     // Show main window first
     mainWindow.show();
-    
+
     // Close splash screen after a short delay to ensure React app is ready
     // This prevents flicker between splash and AppLoadingScreen (which is skipped in Electron)
     setTimeout(() => {
@@ -440,7 +440,7 @@ function createWindow() {
         console.log("🎬 Splash screen closed");
       }
     }, 300); // Small delay to let React app prepare
-    
+
     // Focus on window
     if (mainWindow) {
       mainWindow.focus();
@@ -513,7 +513,7 @@ function createPlayerWindow(playerName, roomCode, sessionId) {
   if (!isDev()) {
     try {
       playerWindow.setMenuBarVisibility(false);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // ✅ Add sessionId to URL
@@ -602,13 +602,13 @@ ipcMain.handle("window-set-always-on-top", (event, alwaysOnTop) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setAlwaysOnTop(alwaysOnTop);
     console.log(`📌 Always on top set to: ${alwaysOnTop}`);
-    
+
     // When disabling always on top, ensure window can be brought to front normally
     if (!alwaysOnTop) {
       mainWindow.show();
       mainWindow.focus();
     }
-    
+
     return { success: true };
   }
   return { success: false, error: "Window not available" };
@@ -648,7 +648,7 @@ ipcMain.handle("settings-get-setting", (event, key) => {
 ipcMain.handle("settings-set-setting", async (event, key, value) => {
   try {
     await settingsStore.setSetting(key, value);
-    
+
     // Apply changes immediately to main window
     if (mainWindow && !mainWindow.isDestroyed()) {
       if (key === "fullscreen") {
@@ -658,10 +658,10 @@ ipcMain.handle("settings-set-setting", async (event, key, value) => {
           if (value && mainWindow.webContents.isDevToolsOpened()) {
             mainWindow.webContents.closeDevTools();
           }
-          
+
           // Set fullscreen
           mainWindow.setFullScreen(value);
-          
+
           // Force window to update and show
           if (value) {
             // Entering fullscreen
@@ -686,7 +686,7 @@ ipcMain.handle("settings-set-setting", async (event, key, value) => {
       } else if (key === "alwaysOnTop") {
         mainWindow.setAlwaysOnTop(value);
         console.log(`📌 Always on top ${value ? 'enabled' : 'disabled'}`);
-        
+
         // When disabling always on top, ensure window can be brought to front normally
         if (!value) {
           // Bring window to front to ensure it's accessible
@@ -695,7 +695,7 @@ ipcMain.handle("settings-set-setting", async (event, key, value) => {
         }
       }
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error("Error setting setting:", error);

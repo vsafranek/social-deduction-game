@@ -8,8 +8,8 @@ module.exports = {
     '!electron/game/**/*.test.js'
   ],
   testMatch: [
-    '**/__tests__/**/*.js',
-    '**/?(*.)+(spec|test).js'
+    '**/__tests__/**/*.[jt]s?(x)',
+    '**/?(*.)+(spec|test).[jt]s?(x)'
   ],
   // Ignore tests in src/ that use ES6 modules (they need Babel)
   // Optionally skip integration tests if SKIP_INTEGRATION_TESTS is set
