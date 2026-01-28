@@ -5,8 +5,8 @@
   "main": "electron/main.js",
   "type": "commonjs",
   "scripts": {
-    "electron": "cross-env NODE_ENV=production wait-on http://localhost:3000 && cross-env NODE_ENV=production electron .",
-    "electron:dev": "cross-env NODE_ENV=development wait-on http://localhost:3000 && electron .",
+    "electron": "cross-env NODE_ENV=production wait-on http://localhost:3010 && cross-env NODE_ENV=production electron .",
+    "electron:dev": "cross-env NODE_ENV=development wait-on http://localhost:3010 && electron .",
     "dev": "cross-env NODE_ENV=development concurrently \"npm:frontend:dev\" \"npm:electron:dev\"",
     "frontend:dev": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build",

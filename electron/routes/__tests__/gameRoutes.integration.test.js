@@ -22,8 +22,8 @@ const {
 } = require('../../db/helpers');
 
 // Mock console.log to reduce noise
-jest.spyOn(console, 'log').mockImplementation(() => {});
-jest.spyOn(console, 'error').mockImplementation(() => {});
+jest.spyOn(console, 'log').mockImplementation(() => { });
+jest.spyOn(console, 'error').mockImplementation(() => { });
 
 // Helper function to generate unique room codes for tests
 // Uses timestamp, counter, and random for maximum uniqueness
@@ -39,8 +39,8 @@ function generateUniqueRoomCode() {
   // Use random for additional entropy
   const random = Math.floor(Math.random() * 10000); // 0-9999
   // Combine with XOR for better distribution, then map to 1000-9999 range
-  const combined = (timestampPart ^ counter ^ random) % 9000;
-  const code = (combined + 1000).toString().padStart(4, '0');
+  const combined = (timestampPart ^ counter ^ random) % 90000;
+  const code = (combined + 10000).toString().padStart(5, '0');
   // Add small delay to ensure timestamp changes between calls
   // This is especially important when tests run very fast
   return code;
@@ -80,10 +80,10 @@ describe('GameRoutes Integration Tests', () => {
     try {
       // Connect to Supabase test database with timeout
       const connectPromise = connectDB();
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Connection timeout')), 5000)
       );
-      
+
       await Promise.race([connectPromise, timeoutPromise]);
       isConnected = true;
       console.log('Connected to Supabase test database');
@@ -98,23 +98,23 @@ describe('GameRoutes Integration Tests', () => {
       // Clean up test data (with timeout protection)
       try {
         const supabase = getSupabase();
-        
+
         // Delete test logs in parallel
         if (testLogIds.length > 0) {
           await Promise.allSettled(
-            testLogIds.map(logId => 
+            testLogIds.map(logId =>
               supabase.from('game_logs').delete().eq('id', logId)
             )
           );
         }
-        
+
         // Delete test players in parallel
         if (testPlayerIds.length > 0) {
           await Promise.allSettled(
             testPlayerIds.map(playerId => deletePlayer(playerId))
           );
         }
-        
+
         // Delete test games in parallel
         if (testGameIds.length > 0) {
           await Promise.allSettled(
@@ -138,17 +138,17 @@ describe('GameRoutes Integration Tests', () => {
     // Clean up test data before each test (with timeout protection)
     try {
       const supabase = getSupabase();
-      
+
       // Delete test logs in parallel
       if (testLogIds.length > 0) {
         await Promise.allSettled(
-          testLogIds.map(logId => 
+          testLogIds.map(logId =>
             supabase.from('game_logs').delete().eq('id', logId)
           )
         );
         testLogIds.length = 0;
       }
-      
+
       // Delete test players in parallel
       if (testPlayerIds.length > 0) {
         await Promise.allSettled(
@@ -156,7 +156,7 @@ describe('GameRoutes Integration Tests', () => {
         );
         testPlayerIds.length = 0;
       }
-      
+
       // Delete test games in parallel
       if (testGameIds.length > 0) {
         await Promise.allSettled(
@@ -177,7 +177,7 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const roomCode = (Math.floor(1000 + Math.random() * 9000)).toString();
+      const roomCode = (Math.floor(10000 + Math.random() * 90000)).toString();
       const gameData = {
         room_code: roomCode,
         phase: 'lobby',
@@ -205,7 +205,7 @@ describe('GameRoutes Integration Tests', () => {
         return;
       }
 
-      const roomCode = (Math.floor(1000 + Math.random() * 9000)).toString();
+      const roomCode = (Math.floor(10000 + Math.random() * 90000)).toString();
       const gameData = {
         room_code: roomCode,
         phase: 'lobby',
@@ -473,7 +473,7 @@ describe('GameRoutes Integration Tests', () => {
       // Filter to only our test logs (there might be others)
       const testLogs = logs.filter(l => [log1.id, log2.id].includes(l.id));
       expect(testLogs.length).toBeGreaterThanOrEqual(2);
-      
+
       const messages = testLogs.map(l => l.message).sort();
       expect(messages).toContain('Log 1');
       expect(messages).toContain('Log 2');
@@ -644,12 +644,12 @@ describe('GameRoutes Integration Tests', () => {
       // Simulate start-config logic: initialize usesRemaining for limited-use roles
       const players = await findPlayersByGameId(gameId);
       const monkPlayer = players.find(p => p.id === monkPlayerId);
-      
+
       const currentRoleData = monkPlayer.role_data || {};
       if (roleData?.hasLimitedUses) {
         const usesRemaining = roleData.maxUses || 3;
         const updatedRoleData = { ...currentRoleData, usesRemaining };
-        
+
         await updatePlayersBatch([{
           id: monkPlayerId,
           updates: { role_data: updatedRoleData }
@@ -683,7 +683,7 @@ describe('GameRoutes Integration Tests', () => {
         if (!p.role) continue;
         const roleData = ROLES[p.role];
         const currentRoleData = p.role_data || {};
-        
+
         if (roleData?.hasLimitedUses) {
           const usesRemaining = roleData.maxUses || 3;
           const updatedRoleData = { ...currentRoleData, usesRemaining };
@@ -762,7 +762,7 @@ describe('GameRoutes Integration Tests', () => {
       // Get player and role data
       const player = await findPlayerById(monkPlayerId);
       const roleData = ROLES[player.role];
-      
+
       // Simulate set-night-action logic for limited-use roles
       const roleDataObj = player.role_data || {};
       const usesLeft = roleDataObj.usesRemaining || roleData.maxUses || 2;
@@ -839,7 +839,7 @@ describe('GameRoutes Integration Tests', () => {
       const player = await findPlayerById(newMonk.id);
       const roleData = ROLES[player.role];
       const roleDataObj = player.role_data || {};
-      
+
       // Initialize if not set (simulate endpoint logic)
       if (roleDataObj.usesRemaining === undefined || roleDataObj.usesRemaining === null) {
         roleDataObj.usesRemaining = roleData.maxUses || 2;
@@ -874,10 +874,10 @@ describe('GameRoutes Integration Tests', () => {
       const player = await findPlayerById(monkPlayerId);
       const roleData = ROLES[player.role];
       const target = await findPlayerById(targetPlayerId);
-      
+
       // Verify target is dead
       expect(target.alive).toBe(false);
-      
+
       // Verify role can target dead players (visitsTarget: false means doesn't visit, can target dead)
       expect(roleData.visitsTarget).toBe(false);
       expect(roleData.actionType).toBe('revive');
@@ -919,7 +919,7 @@ describe('GameRoutes Integration Tests', () => {
 
       // Get player
       const player = await findPlayerById(monkPlayerId);
-      
+
       // Verify target is alive
       const target = await findPlayerById(aliveTarget.id);
       expect(target.alive).toBe(true);
@@ -929,7 +929,7 @@ describe('GameRoutes Integration Tests', () => {
       // The validation happens in nightActionResolver, not in set-night-action endpoint
       // But we can verify the logic: if target is alive, revive should fail
       const roleDataObj = player.role_data || {};
-      
+
       // Set the action (endpoint doesn't validate target alive/dead status for revive)
       // Validation happens in nightActionResolver
       await updatePlayer(monkPlayerId, {
@@ -946,7 +946,7 @@ describe('GameRoutes Integration Tests', () => {
       const updatedPlayer = await findPlayerById(monkPlayerId);
       expect(updatedPlayer.night_action).toBeDefined();
       expect(updatedPlayer.night_action.targetId.toString()).toBe(aliveTarget.id);
-      
+
       // Note: The actual validation (preventing revive of alive players) 
       // happens in nightActionResolver, not in the endpoint
       // This test verifies the endpoint allows setting the action
