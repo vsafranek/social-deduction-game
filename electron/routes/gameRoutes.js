@@ -570,6 +570,8 @@ function formatGameStateResponse(game, players, logs) {
       guaranteedRoles: guaranteedRolesArr,
       teamLimits: teamLimitsObj,
       mode: game.mode || 'party', // Include game mode
+      allowChangeVoteTarget: game.allow_change_vote_target ?? false,
+      allowChangeNightActionTarget: game.allow_change_night_action_target ?? false,
     },
     players: publicPlayers,
     hostPlayerId: hostPlayerIdFromState, // Include host player ID in game state
@@ -852,6 +854,8 @@ router.post("/:gameId/start-config", async (req, res) => {
       roleMaxLimits,
       guaranteedRoles,
       teamLimits,
+      allowChangeVoteTarget,
+      allowChangeNightActionTarget,
     } = req.body || {};
 
     if (!ensureUUID(gameId))
@@ -1151,6 +1155,10 @@ router.post("/:gameId/start-config", async (req, res) => {
       };
       gameUpdates.modifier_configuration = modifierConfig;
     }
+
+    // Lobby settings: allow changing vote / night action target after confirm
+    gameUpdates.allow_change_vote_target = Boolean(allowChangeVoteTarget);
+    gameUpdates.allow_change_night_action_target = Boolean(allowChangeNightActionTarget);
 
     // Start by DAY with timer
     // Use new timer values from gameUpdates if available, otherwise fall back to existing game.timers
